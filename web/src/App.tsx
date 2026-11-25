@@ -158,6 +158,7 @@ const PHASES = [
 export function App() {
   const params = new URLSearchParams(location.search);
   const [demo, setDemo] = useState<DemoFile | null>(null);
+  const [demoState, setDemoState] = useState<"load" | "ready" | "missing">("load");
   const [block, setBlock] = useState(0n);
   const [snap, setSnap] = useState<Snap | null>(null);
   const [rpcError, setRpcError] = useState(false);
@@ -193,9 +194,15 @@ export function App() {
   const rpc = demo?.rpc || "http://127.0.0.1:18545";
   useEffect(() => {
     fetch("/demo.json")
-      .then((r) => (r.ok ? r.json() : null))
-      .then(setDemo)
-      .catch(() => setDemo({}));
+      .then((r) => (r.ok ? r.json() : Promise.reject(new Error("missing"))))
+      .then((data) => {
+        setDemo(data);
+        setDemoState("ready");
+      })
+      .catch(() => {
+        setDemo({});
+        setDemoState("missing");
+      });
   }, []);
   useEffect(() => {
     if (!demoOn) return;
@@ -633,8 +640,10 @@ export function App() {
       </header>
       <p className="status-line"><Zh text={mobileStatus(demo?.localFork, snap?.sources.some((item) => item.standIn))} /></p>
       <main className="screen" id="desk">
-        {!launcher && !rpcError && params.get("network") === "testnet" && <TestnetBoard />}
-        {!launcher && !rpcError && params.get("network") !== "testnet" && <Empty />}
+        {!launcher && !rpcError && !demoOn && params.get("network") === "testnet" && <TestnetBoard />}
+        {!launcher && !rpcError && !demoOn && params.get("network") !== "testnet" && <Empty />}
+        {demoOn && demoState === "load" && !launcher && <p className="status-line"><Zh text="正在读演示场。" /></p>}
+        {demoOn && demoState === "missing" && <DemoMissing />}
         {launcher && !snap && (rpcError || holdSkel) && (
           <div className="grid">
             <div className="col-form">
@@ -932,6 +941,24 @@ function TestnetBoard() {
             <a href={`https://testnet.bscscan.com/address/${row.address}`} target="_blank" rel="noreferrer">BscScan</a>
           </div>
         ))}
+      </div>
+    </div>
+  );
+}
+
+function DemoMissing() {
+  return (
+    <div className="grid">
+      <div>
+        <h1>同价发射</h1>
+        <p className="en">Uniform Launch</p>
+        <p className="user-line"><Zh text={USER_LINE} /></p>
+      </div>
+      <div className="plot-wrap empty-plot">
+        <div className="empty">
+          <p><Zh text="还没有演示场。" /></p>
+          <p><Zh text="先跑演示命令。命令跑完会写下地址，再刷新这个页面。" /></p>
+        </div>
       </div>
     </div>
   );
