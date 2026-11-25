@@ -39,7 +39,7 @@ if (!result.ok) process.exit(2);
 
 function sentence(command, result) {
   if (command === "status") {
-    return `${result.phase}。清算价 ${result.clearingPrice} BNB/枚。出价 ${result.bidCount} 笔，还差 ${result.seatsLeft} 笔。剩余 ${result.remainingBlocks} 个区块。保留价 ${result.floorPrice}。`;
+    return `${result.phase}。清算价 ${result.clearingPrice} BNB/枚。出价 ${result.bidCount} 笔，还差 ${result.seatsLeft} 笔。剩余 ${result.remainingBlocks} 个区块。保留价 ${result.floorPrice}。身份来源 ${result.sources.length} 个。`;
   }
   if (command === "simulate") {
     const gate = result.meetsMinPool ? "过了最小入池" : "还没到最小入池";
