@@ -91,9 +91,11 @@ node agent/cli.mjs identity --launcher 0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a
   "ok": true,
   "to": "0xdA237694120AFC09f2005b0F00dAfA70974ABe82",
   "value": "0",
+  "valueBnb": "0",
   "data": "0x11da60b4",
   "gas": "8000000",
-  "chainId": 97
+  "chainId": 97,
+  "instruction": "在 BNB Smart Chain 测试网操作。链编号 97。\n先做完这三步，缺一步就停止，不要发交易：\n1. 跑 baw wallet chains。确认有 BSC 测试网。没有就停，不要改用 56。\n2. 确认身份。币安 Agent ID 或 ERC-8004 有一个即可。两个都没有就停。\n3. 跑 baw wallet settings。Developer Mode 要开着，余额不能超限。\n然后只准备这一笔。不要改金额，不要多发一笔。先用 baw 预览，确认后再执行。\n合约：0xdA237694120AFC09f2005b0F00dAfA70974ABe82\n金额 0。\n动作：结算。燃料上限 8000000，不要用估算值。"
 }
 ```
 
