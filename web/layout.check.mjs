@@ -25,6 +25,8 @@ const rails = await desk.evaluate(() => ({
   mid: getComputedStyle(document.querySelector(".bid.mid")).backgroundImage.includes("repeating-linear-gradient"),
   solid: getComputedStyle(document.querySelector(".bid.in")).boxShadow.includes("rgb(240, 185, 11)"),
 }));
+const limitStroke = await desk.evaluate(() => getComputedStyle(document.querySelector(".your-line")).stroke);
+assert.ok(limitStroke.includes("240"), `接单页限价线不是金色 ${limitStroke}`);
 assert.ok(rails.mid, "边际行不是虚线");
 assert.ok(rails.solid, "价内行不是实线");
 const stack = await desk.evaluate(() => {
