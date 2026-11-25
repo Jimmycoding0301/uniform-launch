@@ -1,5 +1,3 @@
-import { CORNER_RATIO } from "./theme";
-
 export type Bid = { budget: bigint; maxPrice: bigint };
 
 export type Tier = {
@@ -211,7 +209,7 @@ export function buildStepPath(
 
 export function pathFromPoints(pts: Pt[], bottom: number): { stroke: string; fill: string } {
   const clean = dedupe(pts);
-  const stroke = smoothPolyline(clean);
+  const stroke = polyline(clean);
   if (!stroke || clean.length < 2) return { stroke: "", fill: "" };
   const first = clean[0];
   const last = clean[clean.length - 1];
@@ -281,34 +279,9 @@ export function easeOut(t: number): number {
   return ((ay * u + by) * u + cy) * u;
 }
 
-function smoothPolyline(pts: { x: number; y: number }[]): string {
+function polyline(pts: { x: number; y: number }[]): string {
   if (pts.length < 2) return "";
-  const parts = [`M ${pts[0].x.toFixed(2)} ${pts[0].y.toFixed(2)}`];
-  for (let i = 1; i < pts.length - 1; i++) {
-    const prev = pts[i - 1];
-    const curr = pts[i];
-    const next = pts[i + 1];
-    const d1 = Math.hypot(curr.x - prev.x, curr.y - prev.y);
-    const d2 = Math.hypot(next.x - curr.x, next.y - curr.y);
-    const cut = Math.min(d1, d2) * CORNER_RATIO;
-    if (cut < 0.5 || d1 === 0 || d2 === 0) {
-      parts.push(`L ${curr.x.toFixed(2)} ${curr.y.toFixed(2)}`);
-      continue;
-    }
-    const pin = {
-      x: curr.x - ((curr.x - prev.x) / d1) * cut,
-      y: curr.y - ((curr.y - prev.y) / d1) * cut,
-    };
-    const pout = {
-      x: curr.x + ((next.x - curr.x) / d2) * cut,
-      y: curr.y + ((next.y - curr.y) / d2) * cut,
-    };
-    parts.push(`L ${pin.x.toFixed(2)} ${pin.y.toFixed(2)}`);
-    parts.push(`Q ${curr.x.toFixed(2)} ${curr.y.toFixed(2)} ${pout.x.toFixed(2)} ${pout.y.toFixed(2)}`);
-  }
-  const last = pts[pts.length - 1];
-  parts.push(`L ${last.x.toFixed(2)} ${last.y.toFixed(2)}`);
-  return parts.join(" ");
+  return pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" ");
 }
 
 export function formatRemain(blocks: bigint): string {

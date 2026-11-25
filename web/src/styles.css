@@ -326,10 +326,10 @@ h1 .char { display: inline-block; }
 @keyframes skel { 0%, 100% { opacity: 0.45; } 50% { opacity: 0.9; } }
 .axis { stroke: rgba(255,255,255,0.16); stroke-width: 1; }
 .tick { fill: #9A9AA2; font-size: 12px; font-family: "Geist Mono", ui-monospace, monospace; }
-.step, .clear-line, .volume, .reserve { vector-effect: non-scaling-stroke; }
-.step { fill: none; stroke: #F0B90B; stroke-width: 1.5px; }
+.clear-line, .volume, .reserve { vector-effect: non-scaling-stroke; }
+.step { fill: none; stroke: #F0B90B; stroke-width: 1.5px; stroke-linejoin: miter; stroke-linecap: butt; shape-rendering: geometricPrecision; }
 .step.failed { stroke: #C8C8CE; stroke-width: 1.5px; }
-.step-fill { stroke: none; }
+.step-fill { stroke: none; shape-rendering: geometricPrecision; }
 .clear-line { stroke: #F0B90B; stroke-width: 2px; stroke-opacity: 0.9; fill: none; }
 .step.ghost { opacity: 0.25; }
 .step-fill.ghost { opacity: 0.25; }
