@@ -1,6 +1,6 @@
 # 代理接口
 
-命令在仓库根目录跑。默认读 `.env` 的 `BSC_TESTNET_RPC_URL`，没有就用公共测试网。下面的输出是本机分叉 `http://127.0.0.1:18545` 上的真实结果。工具不签名，不广播。
+先在 `agent/` 里执行 `npm ci`，再回仓库根目录跑命令。默认读 `.env` 的 `BSC_TESTNET_RPC_URL`，没有就用公共测试网。下面的输出是本机分叉 `http://127.0.0.1:18545` 上的真实结果。工具不签名，不广播。
 
 ## 不带 --json
 
@@ -47,6 +47,8 @@ node agent/cli.mjs simulate --launcher 0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a
   "poolQuote": "10"
 }
 ```
+
+不带 `--json`：如果现在加上这一笔，清算价 0.00002，成交 50,000 枚，实付 1 BNB，退回 0 BNB。入池 10 BNB，过了最小入池。
 
 ## identity
 

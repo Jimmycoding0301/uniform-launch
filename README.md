@@ -79,9 +79,9 @@ Not executed on testnet. The script refuses a remote broadcast.
 node agent/cli.mjs status --launcher 0x… --rpc http://127.0.0.1:18545 --json
 ```
 
-MCP 配置和一次真实调用在 [agent/README.md](agent/README.md)。给代理读的说明是 [web/public/llms.txt](web/public/llms.txt)。
+先在 `agent/` 执行 `npm ci`。MCP 配置和一次真实调用在 [agent/README.md](agent/README.md)。给代理读的说明是 [web/public/llms.txt](web/public/llms.txt)。
 
-The tools return unsigned transactions. The user confirms in the Binance app.
+Run `npm ci` in `agent/` first. The tools return unsigned transactions. The user confirms in the Binance app.
 
 ## 安全
 

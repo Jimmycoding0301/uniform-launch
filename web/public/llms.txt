@@ -30,6 +30,8 @@
 
 ## 命令
 
+先在 `agent/` 执行 `npm ci`。
+
 ```
 node agent/cli.mjs status --launcher 0x… --rpc http://127.0.0.1:18545 --json
 node agent/cli.mjs simulate --launcher 0x… --budget 1 --max-price 0.00003 --json
