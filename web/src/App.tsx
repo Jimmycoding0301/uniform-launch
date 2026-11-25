@@ -233,6 +233,7 @@ export function App() {
     if (seenLauncher.current && seenLauncher.current !== launcher) {
       setSnap(null);
       setHoldSkel(true);
+      setSourceIndex(0);
     }
     seenLauncher.current = launcher;
     const client = createPublicClient({ transport: http(rpc) });
