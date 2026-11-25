@@ -225,10 +225,12 @@ button.primary:disabled { opacity: 0.4; cursor: default; }
 }
 .facts span:last-child { color: #F5F5F5; font-family: "Geist Mono", ui-monospace, monospace; }
 .plot-wrap { position: relative; flex: 1; min-height: 240px; display: flex; }
+.empty-plot { min-height: 640px; }
+.empty-plot svg { width: 100%; height: 100%; }
 .stage { position: relative; flex: 1; min-height: 240px; margin-top: 4px; }
 svg.plot { width: 100%; height: 100%; display: block; overflow: visible; touch-action: none; }
 .fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
-.cross { stroke: rgba(240,185,11,0.55); stroke-width: 1; vector-effect: non-scaling-stroke; }
+.cross { stroke: rgba(240,185,11,0.85); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .crosshair { transition: opacity var(--hover) var(--ease); }
 .cross-read { fill: #F0B90B; font-size: 12px; font-family: "Geist Mono", ui-monospace, monospace; }
 .clear-glow { stroke: #F0B90B; stroke-width: 8; opacity: 0.35; filter: blur(6px); }
@@ -326,10 +328,14 @@ h1 .char { display: inline-block; }
   color: #F0B90B;
   background: none;
   border: 0;
-  padding: 0;
+  min-height: 32px;
+  padding: 0 4px;
+  display: inline-flex;
+  align-items: center;
   font: inherit;
   cursor: pointer;
 }
+.addrs { margin-top: 8px; }
 @media (max-width: 900px) {
   html, body, #root, .page { height: auto; }
   .page { display: block; }
@@ -343,21 +349,18 @@ h1 .char { display: inline-block; }
   .en { font-size: 20px; line-height: 24px; }
   .user-line { margin-top: 6px; }
   .phases { margin-top: 10px; }
-  .plot-wrap, .stage { height: 268px; min-height: 260px; flex: none; }
+  .plot-wrap, .stage { height: 260px; min-height: 260px; flex: none; }
+  .empty-plot { min-height: 280px; height: 280px; }
   .tick { font-size: 22px; }
   .chart-price { font-size: 32px; line-height: 36px; }
   .clock, .floor b { font-size: 22px; line-height: 26px; }
-  label { margin-top: 8px; }
-  button.primary {
-    position: fixed;
-    left: 16px;
-    right: 16px;
-    bottom: 12px;
-    width: auto;
-    height: 48px;
-    margin: 0;
-    z-index: 5;
-  }
+  .user-line { font-size: 13px; line-height: 18px; }
+  .phases { margin-top: 8px; }
+  .cap, .metrics { margin-top: 8px; }
+  label { margin-top: 6px; }
+  input { height: 36px; }
+  .screen { padding-bottom: 24px; }
+  button.primary { margin-top: 8px; }
   .phases li { font-size: 11px; }
   .facts { margin-top: 10px; }
 }

@@ -47,7 +47,7 @@ contract DeskScript is Script {
         }
 
         if (keccak256(bytes(kind)) == keccak256("clip")) {
-            UniformLauncher clipL = _create(portal, launcherFactory, fee, 1e13, 400, "CLIP", bytes32("desk-clip-5"));
+            UniformLauncher clipL = _create(portal, launcherFactory, fee, 1e13, 400, "CLIP", bytes32("desk-clip-6"));
             _clip(clipL);
             (bool ok, uint256 price, uint256 quote) = clipL.preview();
             console.log("CLIP_OK", ok);

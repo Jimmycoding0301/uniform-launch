@@ -415,9 +415,12 @@ function Empty() {
         <h1>同价发射</h1>
         <p className="en">Uniform Launch</p>
         <p className="user-line">{USER_LINE}</p>
-        <p className="user-line tight">还没有这场拍卖。</p>
       </div>
-      <div className="plot-wrap">
+      <div className="plot-wrap empty-plot">
+        <svg className="plot" viewBox="0 0 640 360" preserveAspectRatio="none" aria-hidden="true">
+          <line className="axis" x1="78" y1="18" x2="78" y2="332" />
+          <line className="axis" x1="78" y1="332" x2="622" y2="332" />
+        </svg>
         <div className="empty">还没有这场拍卖。</div>
       </div>
     </div>
@@ -490,7 +493,7 @@ function noteBudget(raw: string): { error: boolean; text: string } {
   if (value === null) return { error: true, text: "用十进制数字，例如 1.5。" };
   if (value < 10n ** 16n) return { error: true, text: "单笔至少 0.01 BNB。" };
   if (value > 100n * 10n ** 18n) return { error: true, text: "单笔最多 100 BNB。" };
-  return { error: false, text: `换算 ${groupWei(value)} wei` };
+  return { error: false, text: `链上 ${compactWei(value)} wei` };
 }
 
 function notePrice(raw: string, floor: bigint): { error: boolean; text: string } {
@@ -498,11 +501,19 @@ function notePrice(raw: string, floor: bigint): { error: boolean; text: string }
   const value = parseBnb(raw);
   if (value === null) return { error: true, text: "用十进制数字，例如 0.00003。" };
   if (value < floor) return { error: true, text: "低于保留价，这笔不会入场。" };
-  return { error: false, text: `换算 ${groupWei(value)} wei` };
+  return { error: false, text: `链上 ${compactWei(value)} wei` };
 }
 
-function groupWei(value: bigint): string {
-  return value.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+function compactWei(value: bigint): string {
+  if (value === 0n) return "0";
+  let zeros = 0;
+  let rest = value;
+  while (rest % 10n === 0n) {
+    rest /= 10n;
+    zeros += 1;
+  }
+  if (rest < 1000n && zeros >= 3) return `${rest}e${zeros}`;
+  return rest.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",") + (zeros ? `e${zeros}` : "");
 }
 
 function sameSnap(a: Snap, b: Snap) {
@@ -541,7 +552,7 @@ function Addr({ label, value }: { label: string; value: string }) {
       <span>
         {label} {value.slice(0, 6)}…{value.slice(-4)}
       </span>
-      <button onClick={() => navigator.clipboard.writeText(value)}>复制</button>
+      <button type="button" aria-label={`复制${label}地址`} onClick={() => navigator.clipboard.writeText(value)}>复制</button>
       <a href={`https://testnet.bscscan.com/address/${value}`} target="_blank" rel="noreferrer">
         浏览器
       </a>
