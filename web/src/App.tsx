@@ -162,6 +162,7 @@ export function App() {
   const [block, setBlock] = useState(0n);
   const [snap, setSnap] = useState<Snap | null>(null);
   const [rpcError, setRpcError] = useState(false);
+  const [rpcNote, setRpcNote] = useState("");
   const [budget, setBudget] = useState("1");
   const [maxPrice, setMaxPrice] = useState("0.00003");
   const [sourceIndex, setSourceIndex] = useState(0);
@@ -241,8 +242,9 @@ export function App() {
     const client = createPublicClient({ transport: http(rpc, { timeout: 8_000 }) });
     let stop = false;
     let inflight = false;
+    let dead = false;
     const load = async () => {
-      if (inflight) return;
+      if (inflight || dead) return;
       inflight = true;
       const slow = window.setTimeout(() => {
         if (!stop) setRpcError(true);
@@ -336,9 +338,21 @@ export function App() {
         };
         setBlock((prev) => (prev === b ? prev : (b as bigint)));
         setRpcError(false);
+        setRpcNote("");
         setSnap((prev) => (prev && sameSnap(prev, next) ? prev : next));
-      } catch {
-        if (!stop) setRpcError(true);
+      } catch (error) {
+        if (!stop) {
+          const err = error as { shortMessage?: string; message?: string };
+          const text = `${err.shortMessage || ""} ${err.message || ""}`;
+          if (/returned no data/i.test(text)) {
+            dead = true;
+            setRpcError(false);
+            setRpcNote("这个地址上没有这场拍卖。检查地址是不是这一场的合约。");
+          } else {
+            setRpcNote("");
+            setRpcError(true);
+          }
+        }
       } finally {
         inflight = false;
         window.clearTimeout(slow);
@@ -654,7 +668,7 @@ export function App() {
           {snap?.sources.some((item) => item.standIn) ? <span className="meta-line"><Zh text="测试网 Agent ID 为替身" /></span> : null}
           <span className="meta-line">{demo?.localFork ? <Zh text="本地分叉，不是测试网" /> : "BSC 测试网"}</span>
           {block > 0n && <span className="meta-line">区块 {groupFull(block)}</span>}
-          {rpcError ? <span className="meta-line"><Zh text="刚刚没刷新成功，正在重试。" /></span> : null}
+          {rpcNote ? <span className="meta-line"><Zh text={rpcNote} /></span> : rpcError ? <span className="meta-line"><Zh text="刚刚没刷新成功，正在重试。" /></span> : null}
         </span>
       </header>
       <p className="status-line"><Zh text={mobileStatus(demo?.localFork, snap?.sources.some((item) => item.standIn))} /></p>
@@ -663,7 +677,15 @@ export function App() {
         {!launcher && !rpcError && !demoOn && params.get("network") !== "testnet" && <Empty />}
         {demoOn && demoState === "load" && !launcher && <p className="status-line"><Zh text="正在读演示场。" /></p>}
         {demoOn && demoState === "missing" && <DemoMissing />}
-        {launcher && !snap && (rpcError || holdSkel) && (
+        {launcher && !snap && rpcNote && (
+          <div className="grid">
+            <div>
+              <h1>同价发射</h1>
+              <p><Zh text={rpcNote} /></p>
+            </div>
+          </div>
+        )}
+        {launcher && !snap && !rpcNote && (rpcError || holdSkel) && (
           <div className="grid">
             <div className="col-form">
               <h1>同价发射</h1>
