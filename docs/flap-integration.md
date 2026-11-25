@@ -79,4 +79,4 @@ node /tmp/flap-template/scripts/launcher-check-source.mjs \
 | Vault `pl-v1` | `UniformVaultFactory` 返回 `pl-v1` |
 | 税进 Vault，owner 可提 | 买卖税各 3%，100% 进 `UniformVault`。owner 随时 `withdrawAll` |
 
-四种渲染见 `qa/r15/flap-mock-null.png`、`flap-mock-0.png`、`flap-mock-1.png`、`flap-mock-2.png`。假数据只用于截图。
+四种渲染见 `qa/r15/flap-mock-null.png`、`flap-mock-0.png`、`flap-mock-1.png`、`flap-mock-2.png`。地址用的是本机分叉上的三场。卡片上的读数是为了空、接单、已发射、失败四种状态摆的，不是那一刻的链上快照。
