@@ -11,3 +11,5 @@ Wed Nov 25 07:34:23 PM UTC 2026
 v4 代理接口。status、simulate、identity、bid-tx、settle-tx、claim-tx、refund-tx 都对着本机分叉跑出真实结果。MCP initialize、tools/list、tools/call simulate_bid 通过。扫描没有签名或广播。
 Wed Nov 25 07:40:19 PM UTC 2026
 v5 端到端。UniformE2EForkTest 两条新测试通过。e2e-fork.sh 从零跑完七个阶段，金库增加 27516256919450703 wei，owner 增加相同数额。公共测试网不广播时停在未开权限；带广播时脚本拒绝。
+Wed Nov 25 07:43:46 PM UTC 2026
+v6 对照。同一组出价，同价单价比是 1，常数乘积曲线在总募资相同的口径下是 2.8284。数字写进 docs/why-uniform.md，并标明是模拟。
