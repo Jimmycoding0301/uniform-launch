@@ -101,7 +101,7 @@ node agent/cli.mjs identity --launcher 0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a
 
 ## claim-tx
 
-已发射场 `0xE20f0043F32E2E38d3F3d76Ec48Cfcdb0FdC4806` 返回 `data` `0x4e71d92d`，金额 0。接单场返回「现在不能领取」。
+已发射场 `0xE20f0043F32E2E38d3F3d76Ec48Cfcdb0FdC4806` 返回 `data` `0x4e71d92d`，金额 0。接单场返回「现在不能领取」。没成交的预算也用领取退回，失败之后才用退款。
 
 ## refund-tx
 
