@@ -876,6 +876,9 @@ export function App() {
             </div>
           </div>
         )}
+        {demoOn && scene === 3 && vaultBal !== null && (
+          <pre className="slip">金库余额 {formatBnb(vaultBal)} BNB</pre>
+        )}
         {demoOn && scene === 2 && sim && (
           <pre className="slip">
             {`清算价 ${formatPrice(sim.clearingPrice)}\n成交 ${formatTokens(sim.fills.at(-1)?.tokens ?? 0n)} 枚\n实付 ${formatBnb(sim.fills.at(-1)?.spend ?? 0n)} BNB\n退回 ${formatBnb(sim.fills.at(-1)?.refund ?? 0n)} BNB\n入池 ${formatBnb(sim.poolQuote)} BNB`}

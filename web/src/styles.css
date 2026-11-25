@@ -598,6 +598,15 @@ svg.plot { display: block; touch-action: none; background: var(--bg); }
   text-align: left;
   white-space: pre-wrap;
 }
+@media (max-width: 900px) {
+  .slip {
+    top: auto;
+    right: 16px;
+    left: 16px;
+    bottom: 168px;
+    width: auto;
+  }
+}
 .script { max-width: 720px; padding: var(--space-7) var(--pad); }
 .script h1 { font-size: var(--fs-48); line-height: var(--lh-52); font-weight: 400; }
 .lede, .script li, .script h2 { font-size: var(--fs-14); line-height: var(--lh-22); color: var(--text-2); font-weight: 500; }
