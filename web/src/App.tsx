@@ -802,9 +802,9 @@ export function App() {
               </div>
               <div className="plot-wrap">
                 <PlotStage
-                  bids={params.get("preview") === "wait" ? [] : snap.bids}
+                  bids={phase === "wait" ? [] : snap.bids}
                   floor={snap.floor}
-                  clearing={params.get("preview") === "wait" || failed ? null : clearingNow > 0n ? clearingNow : null}
+                  clearing={phase === "wait" || failed ? null : clearingNow > 0n ? clearingNow : null}
                   failed={failed}
                   settle={snap.status === 1}
                   intro={showIntro}
