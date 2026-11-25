@@ -306,7 +306,7 @@ button.primary:disabled { opacity: 0.4; cursor: default; }
 }
 .chart-price.dim { color: var(--text); }
 .fail-line { margin: var(--space-1) 0 0; font-size: var(--fs-12); line-height: var(--lh-16); color: var(--muted); }
-.plot-wrap { position: relative; flex: 1; min-height: 240px; min-width: 0; width: 100%; display: flex; background: var(--bg); }
+.plot-wrap { position: relative; flex: 1; min-height: 240px; max-height: 320px; min-width: 0; width: 100%; display: flex; background: var(--bg); }
 .stage {
   position: relative;
   flex: 1;

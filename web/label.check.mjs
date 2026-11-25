@@ -71,3 +71,39 @@ for (const [width, height] of [[920, 288], [358, 260]]) {
   }
 }
 console.log("五组出价的标注都不出图、不重叠");
+
+const { chromium } = await import("playwright");
+const browser = await chromium.launch();
+const pages = [
+  ["1440", 1440, 900, "http://127.0.0.1:4317/?launcher=0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a1"],
+  ["390", 390, 844, "http://127.0.0.1:4317/?launcher=0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a1"],
+  ["done", 1440, 900, "http://127.0.0.1:4317/?launcher=0xE20f0043F32E2E38d3F3d76Ec48Cfcdb0FdC4806"],
+  ["failed", 1440, 900, "http://127.0.0.1:4317/?launcher=0x6f10Eb8eD5c3B033a9EAB172544A4a86420eb128"],
+];
+for (const [name, width, height, url] of pages) {
+  const page = await browser.newPage({ viewport: { width, height } });
+  await page.goto(url, { waitUntil: "domcontentloaded" });
+  await page.waitForSelector("svg.plot");
+  const problem = await page.evaluate(() => {
+    const svg = document.querySelector("svg.plot");
+    const view = svg.viewBox.baseVal;
+    const texts = [...svg.querySelectorAll("text")].map((el) => {
+      const b = el.getBBox();
+      return { t: el.textContent.trim(), x: b.x, y: b.y, w: b.width, h: b.height };
+    });
+    const hits = [];
+    for (let i = 0; i < texts.length; i++) {
+      const a = texts[i];
+      if (a.x < -2 || a.y < -2 || a.x + a.w > view.width + 2 || a.y + a.h > view.height + 4) hits.push("出图 " + a.t);
+      for (let j = i + 1; j < texts.length; j++) {
+        const b = texts[j];
+        if (a.x < b.x + b.w - 1 && a.x + a.w > b.x + 1 && a.y < b.y + b.h - 1 && a.y + a.h > b.y + 1) hits.push(a.t + " / " + b.t);
+      }
+    }
+    return hits;
+  });
+  assert.deepEqual(problem, [], `${name} 标注：${problem.join("；")}`);
+  await page.close();
+}
+await browser.close();
+console.log("页面上的标注也不出图、不重叠");
