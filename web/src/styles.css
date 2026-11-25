@@ -278,6 +278,7 @@ button.primary:disabled { opacity: 0.4; cursor: default; }
 .hash-toggle:hover { color: var(--text); }
 .hash { margin-top: var(--space-3); }
 .text-btn {
+  min-width: 5em;
   min-height: 44px;
   margin-top: var(--space-2);
   padding: 0;
