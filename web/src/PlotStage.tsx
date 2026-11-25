@@ -143,7 +143,10 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
 
   function hideTip() {
     locked.current = false;
-    if (tipRef.current) tipRef.current.style.opacity = "0";
+    if (tipRef.current) {
+      tipRef.current.style.transitionDuration = "100ms";
+      tipRef.current.style.opacity = "0";
+    }
     if (vRef.current) vRef.current.style.opacity = "0";
   }
 
@@ -167,6 +170,7 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
     const left = Math.min(Math.max(plot.left, mid + 8), plot.right - 140);
     tipRef.current.style.left = `${left}px`;
     tipRef.current.style.top = `${Math.max(8, tier.y - 72)}px`;
+    tipRef.current.style.transitionDuration = "140ms";
     tipRef.current.style.opacity = "1";
     return tier;
   }
