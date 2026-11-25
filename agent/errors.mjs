@@ -33,5 +33,5 @@ export function explain(error) {
   if (/fetch|network|ECONN|ENOTFOUND|ETIMEDOUT|timeout|HTTP request failed/i.test(text)) {
     return { ok: false, reason: "读不到链", next: "换一个 RPC 地址后重试" };
   }
-  return { ok: false, reason: "没有完成", next: "看上面的原因，改完再试。" };
+  return { ok: false, reason: "没有完成", next: "换个参数或换一场再试。" };
 }
