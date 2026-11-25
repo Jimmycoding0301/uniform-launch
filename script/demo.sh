@@ -26,5 +26,13 @@ if [ -z "$OPEN" ] || [ -z "$CODE" ] || [ "$CODE" = "0x" ]; then
   echo "这个地址在本机分叉上没有代码。先跑 bash script/local-fork.sh，再跑本命令。"
   exit 1
 fi
+node --input-type=module << EOF
+import { readFileSync, writeFileSync } from "node:fs";
+const path = "web/public/demo.json";
+const data = JSON.parse(readFileSync(path, "utf8"));
+data.localFork = true;
+data.rpc = "$ANVIL_RPC";
+writeFileSync(path, JSON.stringify(data, null, 2) + "\n");
+EOF
 echo "页面 $WEB/?launcher=$OPEN"
 echo "演示 $WEB/?demo=1"

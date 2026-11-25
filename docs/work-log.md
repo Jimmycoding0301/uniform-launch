@@ -59,3 +59,5 @@ Wed Nov 25 08:04:26 PM UTC 2026
 README 写上了检查命令。链接和单价比仍然对得上。
 Wed Nov 25 08:04:43 PM UTC 2026
 余额不够时打印差额，不再打英文字段 short。
+Wed Nov 25 08:05:33 PM UTC 2026
+demo.sh 会把本机 RPC 写回 demo.json，地址不变。快速检查脚本覆盖链接、单价比、证据哈希、签名扫描、金额、清算边界和 Flap 自查。
