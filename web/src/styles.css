@@ -372,7 +372,7 @@ svg.plot { display: block; touch-action: none; background: var(--bg); }
   border-top: 1px solid var(--rule);
   color: var(--text);
 }
-.bid.head { height: 24px; color: var(--muted); border-top: 0; }
+.bid.head { position: sticky; top: 0; z-index: 2; height: 24px; color: var(--muted); border-top: 0; background: var(--bg); }
 .bid.out { color: var(--muted); }
 .bid.in { box-shadow: inset 2px 0 0 var(--accent); }
 .bid.mid {
