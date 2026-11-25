@@ -109,6 +109,8 @@ node agent/cli.mjs identity --launcher 0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a
 
 ## MCP
 
+服务接受 `initialize`、`ping`、`tools/list`、`tools/call`。`ping` 返回空结果。
+
 ```json
 {"jsonrpc":"2.0","id":1,"method":"initialize","params":{"protocolVersion":"2025-06-18","capabilities":{},"clientInfo":{"name":"check","version":"0"}}}
 {"jsonrpc":"2.0","id":3,"method":"tools/call","params":{"name":"simulate_bid","arguments":{"launcher":"0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a1","rpc":"http://127.0.0.1:18545","budget":"1","maxPrice":"0.00003"}}}

@@ -39,6 +39,6 @@ node agent/cli.mjs identity --launcher 0x… --address 0x… --agent-id 1 --json
 node agent/cli.mjs bid-tx --launcher 0x… --budget 1 --max-price 0.00003 --source 0 --agent-id 1 --address 0x… --json
 ```
 
-MCP 用 stdio，方法是 initialize、tools/list、tools/call。工具名：status、simulate_bid、check_identity、build_bid_tx、build_settle_tx、build_claim_tx、build_refund_tx。
+MCP 用 stdio。方法是 initialize、ping、tools/list、tools/call。工具名：status、simulate_bid、check_identity、build_bid_tx、build_settle_tx、build_claim_tx、build_refund_tx。
 
 工具不签名，不广播。
