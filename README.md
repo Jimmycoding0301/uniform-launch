@@ -1,3 +1,5 @@
-# New repo
+# 同价发射
 
-This repo was created by a Cursor cloud agent.
+BNB Chain 黑客松的选题和开发说明在 [docs/brief.md](docs/brief.md)。
+
+这一轮只有说明，没有合约和页面。
