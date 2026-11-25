@@ -207,3 +207,5 @@ Wed Nov 25 08:59:57 PM UTC 2026
 forge test --fuzz-runs 1024 又过了一遍。61 个通过，1 个跳过，没有失败。跳过的是没有主网 RPC 的 Agent ID 测试。
 Wed Nov 25 09:00:07 PM UTC 2026
 30 秒短版写明点五次下一幕再到对照。
+Wed Nov 25 09:00:20 PM UTC 2026
+已发射文案缺键时退回出价文案，不显示 undefined。官方检查器仍通过。

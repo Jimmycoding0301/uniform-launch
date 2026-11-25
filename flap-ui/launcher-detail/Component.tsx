@@ -145,9 +145,9 @@ export function Launcher({ context, messages }: LauncherProps) {
   const template = status === 2n
     ? `${messages.refundTemplate}\n${context.launcherAddress}\n${messages.chain}\n${messages.refundAction}`
     : status === 1n
-      ? `${messages.claimTemplate}\n${context.launcherAddress}\n${messages.chain}\n${messages.claimAction}`
+      ? `${messages.claimTemplate || messages.bidTemplate}\n${context.launcherAddress}\n${messages.chain}\n${messages.claimAction || messages.bidAction}`
       : `${messages.bidTemplate}\n${context.launcherAddress}\n${messages.chain}\n${messages.bidAction}`;
-  const heading = status === 1n ? messages.claim : messages.agent;
+  const heading = status === 1n ? messages.claim || messages.agent : messages.agent;
   return (
     <section style={card}>
       <div style={grid}>
