@@ -597,6 +597,9 @@ svg.plot { display: block; touch-action: none; background: var(--bg); }
   }
 }
 .page.demo { padding-bottom: 72px; }
+@media (min-width: 901px) {
+  .page.demo .bids { max-height: 240px; overflow: auto; }
+}
 .page.demo .hash-toggle,
 .page.demo #txhash,
 .page.demo .paste { scroll-margin-bottom: 88px; }
