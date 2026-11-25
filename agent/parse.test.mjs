@@ -10,6 +10,10 @@ assert.equal(parseBnb("0.00003"), 30000000000000n);
 for (const bad of ["", "abc", "1.2.3", "0.0000000000000000001", "-1"]) {
   assert.throws(() => parseBnb(bad), bad);
 }
+const offline = await status("http://127.0.0.1:1", "0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a1");
+assert.equal(offline.reason, "读不到链");
+assert.equal(offline.next, "换一个 RPC 地址后重试");
+assert.equal(JSON.stringify(offline).includes("HttpRequestError"), false);
 const badAddr = await status("http://127.0.0.1:1", "nope");
 assert.equal(badAddr.reason, "地址不对");
 const badSource = await bidTx("http://127.0.0.1:1", "0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a1", "1", "0.00003", "abc", "1");
