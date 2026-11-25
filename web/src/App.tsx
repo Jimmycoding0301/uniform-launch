@@ -689,6 +689,7 @@ export function App() {
             <div>
               <h1>同价发射</h1>
               <p><Zh text={rpcNote} /></p>
+              <p><a href="/?demo=1">打开演示脚本</a></p>
             </div>
           </div>
         )}
