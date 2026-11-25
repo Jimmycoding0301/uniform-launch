@@ -20,7 +20,7 @@ for (const path of pages) {
   await page.waitForTimeout(400);
   const words = await page.evaluate(() => {
     const root = document.body.cloneNode(true);
-    root.querySelectorAll(".bid, textarea, .paste").forEach((node) => node.remove());
+    root.querySelectorAll(".bid, textarea, .paste, .roller").forEach((node) => node.remove());
     return root.innerText;
   });
   const phrases = ["pancakeswap", "bscscan", "uniform launch", "agent id", "erc-8004", "bnb chain", "flap vault", "binance", "uniform", "launch", "agent", "flap", "vault", "chain", "bnb", "erc", "id"];
@@ -30,6 +30,8 @@ for (const path of pages) {
   const extra = found.filter((word) => !allow.has(word) && !/^[0-9a-f]+$/.test(word));
   assert.deepEqual(extra, [], `${path} 界面英文：${extra.join(", ")}`);
   assert.equal(words.includes("·"), false, `${path} 还有中点拼接`);
+  const bareNumbers = words.match(/(?<![\d.,])\d{5,}(?![\d.,])/g) ?? [];
+  assert.deepEqual(bareNumbers, [], `${path} 缺千分位：${bareNumbers.join(", ")}`);
   const sizes = await page.evaluate(() => {
     const seen = new Set();
     for (const el of document.querySelectorAll("body *")) {

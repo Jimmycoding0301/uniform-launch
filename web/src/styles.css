@@ -223,7 +223,7 @@ label { display: block; margin-top: var(--space-2); font-size: var(--fs-12); lin
   cursor: pointer;
 }
 .seg button[aria-checked="true"] { color: var(--accent); }
-.help, .estimate { min-height: 16px; margin: var(--space-1) 0 0; font-size: var(--fs-12); line-height: var(--lh-16); color: var(--muted); }
+.help, .estimate, .field-help { min-height: 16px; margin: var(--space-2) 0 0; font-size: var(--fs-12); line-height: var(--lh-16); color: var(--muted); }
 .help.bad, .estimate.bad { color: var(--text); }
 .mark { display: inline-block; width: 6px; height: 6px; margin-right: var(--space-2); border: 1px solid var(--accent); vertical-align: 1px; }
 .mark.solid { background: var(--accent); }

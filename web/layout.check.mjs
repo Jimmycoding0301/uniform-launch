@@ -19,6 +19,8 @@ const after = await desk.evaluate(() => {
   const btn = document.querySelector("button.primary").getBoundingClientRect();
   return { form: form.height, top: btn.top };
 });
+const helpMargin = await desk.evaluate(() => getComputedStyle(document.querySelector(".help")).marginTop);
+assert.equal(helpMargin, "8px", `帮助行间距 ${helpMargin}`);
 assert.ok(before.bottom <= 860, `桌面按钮下沿 ${before.bottom}`);
 assert.ok(before.formBottom <= 900, `左栏下沿 ${before.formBottom}`);
 assert.ok(Math.abs(before.form - after.form) <= 2, `表单高度差 ${Math.abs(before.form - after.form)}`);
@@ -52,5 +54,11 @@ const covered = await phone.evaluate(() => {
   return bad;
 });
 assert.deepEqual(covered, [], `被挡住的出价行：${covered.join(" | ")}`);
+const reduced = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" });
+await reduced.goto("http://127.0.0.1:4317/?launcher=0xE20f0043F32E2E38d3F3d76Ec48Cfcdb0FdC4806", { waitUntil: "domcontentloaded" });
+await reduced.waitForSelector(".uniform-rect");
+await reduced.waitForTimeout(300);
+const running = await reduced.evaluate(() => document.getAnimations().filter((item) => item.playState === "running").length);
+assert.equal(running, 0, `减少动态后仍有 ${running} 个动画`);
 await browser.close();
-console.log("布局检查通过", { desk: before, mobile, covered: covered.length });
+console.log("布局检查通过", { desk: before, mobile, covered: covered.length, reducedMotion: running });

@@ -23,3 +23,4 @@ ADMIN=$(cast call 0x0000Ed588dfc01749C20bA69b5f8c77d706E0000 "owner()(address)" 
 cast rpc anvil_setBalance "$ADMIN" 0x3635C9ADC5DEA00000 --rpc-url "$ANVIL_RPC" >/dev/null
 
 forge script script/LocalFork.s.sol --rpc-url "$ANVIL_RPC" --broadcast --unlocked --sender 0x00000000000000000000000000000000C0DE0001 -vv
+bash script/phase-shot.sh

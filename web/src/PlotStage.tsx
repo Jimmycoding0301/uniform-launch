@@ -258,13 +258,13 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
           {!failed && !plot.inStroke && plot.stroke && <path ref={strokeRef} className="step" d={plot.stroke} />}
         </g>
         <line className="reserve" x1={hair(plot.left)} x2={hair(plot.right)} y1={hair(plot.reserveY)} y2={hair(plot.reserveY)} />
-        <text className="tick" x={plot.left + 4} y={plot.reserveY + (plot.clearingY != null && Math.abs(plot.clearingY - plot.reserveY) < 18 ? 14 : -6)}>
+        <text className="tick" x={plot.left + 4} y={Math.min(plot.bottom - 4, Math.max(14, plot.reserveY + (plot.clearingY != null && Math.abs(plot.clearingY - plot.reserveY) < 18 ? 14 : -6)))}>
           保留价 {formatPrice(floor)}
         </text>
         {plot.yourY != null && (
           <>
             <line className={priceIn ? "your-line in" : "your-line"} x1={hair(plot.left)} x2={hair(plot.right)} y1={hair(plot.yourY)} y2={hair(plot.yourY)} />
-            <text className="tick" x={plot.left + 4} y={plot.yourY - 6}>
+            <text className="tick" x={plot.left + 4} y={Math.min(plot.bottom - 4, Math.max(14, plot.yourY <= plot.reserveY ? plot.yourY + 14 : plot.yourY - 6))}>
               你的限价 {formatPrice(yourPrice ?? 0n)}
             </text>
           </>
@@ -274,7 +274,7 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
             <line className="volume" x1={hair(plot.crossX ?? plot.left)} x2={hair(plot.crossX ?? plot.left)} y1={hair(plot.clearingY)} y2={hair(plot.bottom)} />
             <line className="clear-glow" x1={hair(plot.left)} x2={hair(plot.right)} y1={hair(plot.clearingY)} y2={hair(plot.clearingY)} />
             <line className="clear-line" x1={hair(plot.left)} x2={hair(plot.right)} y1={hair(plot.clearingY)} y2={hair(plot.clearingY)} />
-            <text className="badge" x={plot.right - 4} y={plot.clearingY - 8} textAnchor="end">
+            <text className="badge" x={plot.right - 4} y={Math.max(14, plot.clearingY - 8)} textAnchor="end">
               清算价 {formatPrice(clearing ?? 0n)}
             </text>
             <text
