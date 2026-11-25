@@ -63,6 +63,8 @@ body {
 }
 .top-meta { text-align: right; line-height: 16px; }
 .meta-line { display: block; }
+.status-line { display: none; margin: 0; }
+.dock-fade { display: none; }
 .top b { color: #F5F5F5; font-weight: 500; font-size: 14px; letter-spacing: -0.02em; }
 .script-link { margin-left: 12px; color: #F0B90B; font-weight: 400; font-size: 12px; text-decoration: none; }
 .script-link:hover { color: #FFC83D; }
@@ -202,8 +204,37 @@ input:focus, select:focus { outline: none; }
 input:focus-visible, select:focus-visible { outline: 2px solid #F0B90B; outline-offset: 3px; border-bottom-color: #F0B90B; }
 select { appearance: none; cursor: pointer; }
 select option { background: #0B0B0D; color: #F5F5F5; }
-.id-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
-.id-row label { margin-top: 12px; }
+.seg {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 1fr;
+  margin-top: 4px;
+  border: 1px solid rgba(255,255,255,0.28);
+}
+.seg button {
+  height: 40px;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  border: 0;
+  border-radius: 0;
+  color: #9A9AA2;
+  font: 500 14px/20px "Geist Sans", "WenQuanYi Micro Hei", sans-serif;
+  cursor: pointer;
+}
+.seg button + button { border-left: 1px solid rgba(255,255,255,0.28); }
+.seg button[aria-checked="true"] { color: #F0B90B; }
+.seg button:focus-visible { outline: 2px solid #F0B90B; outline-offset: -2px; }
+.id-lock {
+  margin: 4px 0 0;
+  min-height: 40px;
+  display: flex;
+  align-items: center;
+  border-bottom: 1px solid rgba(255,255,255,0.16);
+  color: #9A9AA2;
+  font-size: 14px;
+  line-height: 20px;
+}
 .field-help, .field-error { min-height: 16px; margin: 4px 0 0; font-size: 12px; line-height: 16px; }
 .field-help { color: #9A9AA2; }
 .field-error { color: #E7B3A8; }
@@ -445,9 +476,16 @@ h1 .char { display: inline-block; }
   html, body, #root, .page { height: auto; }
   .page { display: block; }
   .top, .screen { padding-left: 16px; padding-right: 16px; }
-  .top { flex-wrap: wrap; row-gap: 0; }
+  .top { flex-wrap: nowrap; }
   .top b { white-space: nowrap; }
-  .top-meta { flex-basis: 100%; text-align: left; }
+  .top-meta { display: none; }
+  .status-line {
+    display: block;
+    padding: 0 16px 8px;
+    font-size: 12px;
+    line-height: 16px;
+    color: #9A9AA2;
+  }
   input, select { height: 36px; }
   .screen { display: block; padding-bottom: 88px; }
   .grid { display: flex; flex-direction: column; gap: 8px; height: auto; }
@@ -458,10 +496,10 @@ h1 .char { display: inline-block; }
   .en { font-size: 20px; line-height: 24px; }
   .user-line { margin-top: 6px; }
   .phases { margin-top: 10px; }
-  .plot-wrap { height: 184px; min-height: 184px; flex: none; padding-left: 0; padding-right: 0; }
-  .stage { height: 184px; min-height: 184px; margin-top: 0; flex: none; }
-  form > .field-help:last-of-type { display: none; }
-  html { scroll-padding-bottom: 80px; }
+  .plot-wrap { height: 104px; min-height: 104px; flex: none; padding-left: 0; padding-right: 0; }
+  .stage { height: 104px; min-height: 104px; margin-top: 0; flex: none; }
+  form { padding-bottom: 64px; }
+  html { scroll-padding-bottom: 120px; }
   input, select, button { scroll-margin-bottom: 80px; }
   .empty-plot { min-height: 280px; height: 280px; }
   .tick { font-size: 12px; }
@@ -475,7 +513,6 @@ h1 .char { display: inline-block; }
   .cap, .metrics { margin-top: 8px; }
   label { margin-top: 6px; }
   input { height: 36px; }
-  .screen { padding-bottom: 24px; }
   button.primary {
     position: fixed;
     left: 16px;
@@ -485,7 +522,18 @@ h1 .char { display: inline-block; }
     margin-top: 0;
     z-index: 4;
   }
-  .screen { padding-bottom: 76px; }
+  .dock-fade {
+    display: block;
+    position: fixed;
+    left: 0;
+    right: 0;
+    bottom: 60px;
+    height: 32px;
+    background: linear-gradient(to top, #0B0B0D 0%, rgba(11,11,13,0) 100%);
+    pointer-events: none;
+    z-index: 3;
+  }
+  .screen { padding-bottom: 108px; }
   .phases li { font-size: 11px; }
   .facts { margin-top: 10px; }
 }

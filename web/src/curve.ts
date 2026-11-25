@@ -169,7 +169,7 @@ export function buildStepPath(
   for (const p of tickPrices) {
     if (p <= 0n) continue;
     const y = yOf(p);
-    if (ticks.some((t) => Math.abs(t.y - y) < 18)) continue;
+    if (ticks.some((t) => Math.abs(t.y - y) < 22)) continue;
     ticks.push({ y, text: formatPrice(p) });
   }
 

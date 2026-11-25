@@ -391,10 +391,15 @@ export function App() {
     if (!snap || !launcher) return;
     const picked = snap.sources[sourceIndex];
     const sourceName = picked ? sourceTag(picked.sourceId) || `来源 ${sourceIndex}` : `来源 ${sourceIndex}`;
-    const agentLine = /^\d+$/.test(agentIdInput.trim()) ? agentIdInput.trim() : "（填你的编号）";
+    const autoAgent = !picked || sourceTag(picked.sourceId) !== "8004";
+    const agentLine = autoAgent
+      ? "按钱包地址自动识别。合约能调用 tokenOfOwnerByIndex 时用 tokenId，否则用 uint160(你的地址)，把这个数作为第三参。"
+      : /^\d+$/.test(agentIdInput.trim())
+        ? agentIdInput.trim()
+        : "（你在 ERC-8004 登记的编号）";
     const action =
       phase === "open"
-        ? `data: bid(uint256,uint8,uint256)\n- maxPrice wei: ${priceWei}\n- 最高价：${priceWei ? formatPrice(priceWei) : ""} BNB/枚\n- sourceIndex: ${sourceIndex}\n- 来源：${sourceName}\n- agentId: ${agentLine}\n- agentId 说明：选 Agent ID 时，合约若能调用 tokenOfOwnerByIndex 就填那个 tokenId，否则填 uint160(你的地址)。选 8004 时，填官方 Identity Registry 的 agentId，并且这个钱包必须是 ownerOf(agentId) 或 getAgentWallet(agentId)。同一来源的同一个 agentId 只能出一笔。\n- value wei: ${budgetWei}\n- 预算：${budget} BNB`
+        ? `data: bid(uint256,uint8,uint256)\n- maxPrice wei: ${priceWei}\n- 最高价：${priceWei ? formatPrice(priceWei) : ""} BNB/枚\n- sourceIndex: ${sourceIndex}\n- 来源：${sourceName}\n- agentId: ${agentLine}\n- agentId 说明：Agent ID 不用手填，按上面的规则从钱包地址得出。8004 填官方 Identity Registry 的编号，并且这个钱包必须是 ownerOf(agentId) 或 getAgentWallet(agentId)。同一来源的同一个 agentId 只能出一笔。\n- value wei: ${budgetWei}\n- 预算：${budget} BNB`
         : phase === "ready"
           ? `data: settle()\n- value wei: 0\n- gas limit: ${SETTLE_GAS_LIMIT}\n\ngas limit 固定为 ${SETTLE_GAS_LIMIT}，不要用节点估算值。估算往往只有一两百万。进入 settle 时如果剩余 gas 低于 ${MIN_SETTLE_GAS}，合约直接回滚，这场拍卖保持开放，不会被记成失败。${SETTLE_GAS_LIMIT} 扣掉基础 gas 后仍高于这条线，也够一次发射。`
           : phase === "failed"
@@ -459,6 +464,7 @@ export function App() {
 
   return (
     <div className={showIntro ? "page intro" : "page"} style={{ backgroundColor: COLOR_BG }}>
+      {button ? <div className="dock-fade" aria-hidden="true" /> : null}
       <a className="skip" href="#desk">跳到拍卖</a>
       <header className="top">
         <b>
@@ -471,6 +477,7 @@ export function App() {
           {rpcError && snap ? <Zh text=" · 刚刚没刷新成功。" /> : ""}
         </span>
       </header>
+      <p className="status-line"><Zh text={mobileStatus(demo?.localFork, snap?.sources.some((item) => item.standIn))} /></p>
       <section className="screen" id="desk">
         {!launcher && !rpcError && <Empty />}
         {launcher && !snap && !rpcError && <Skeleton />}
@@ -490,7 +497,7 @@ export function App() {
                   ))}
                 </h1>
                 <p className="en char" style={{ animationDelay: "340ms" }}>Uniform Launch</p>
-                <p className="user-line char" style={{ animationDelay: "410ms" }}><Zh text={USER_LINE} /></p>
+                <p className="user-line"><Zh text={USER_LINE} /></p>
                 </div>
                 <ol className="phases">
                   {PHASES.map((item) => (
@@ -531,20 +538,26 @@ export function App() {
                     <label htmlFor="price">最高价 BNB/枚</label>
                     <input id="price" value={maxPrice} inputMode="decimal" autoComplete="off" spellCheck={false} placeholder={formatPrice(snap.floor)} aria-invalid={priceNote.error} aria-describedby="price-help" onChange={(e) => setMaxPrice(e.target.value)} />
                     <p id="price-help" className={priceNote.error ? "field-error" : "field-help"} role={priceNote.error ? "alert" : undefined} title={priceNote.wei ? `${priceNote.wei} wei` : undefined}><Zh text={priceNote.text} /></p>
-                    <div className="id-row">
-                      <div>
-                        <label htmlFor="source">身份来源</label>
-                        <select id="source" value={sourceIndex} onChange={(e) => setSourceIndex(Number(e.target.value))}>
-                          {(snap.sources.length > 0 ? snap.sources : [{ sourceId: "0x" as `0x${string}`, standIn: false }]).map((item, index) => (
-                            <option key={item.sourceId + index} value={index}>{sourceTag(item.sourceId) || `来源 ${index}`}</option>
-                          ))}
-                        </select>
-                      </div>
-                      <div>
-                        <label htmlFor="agent">agentId</label>
-                        <input id="agent" value={agentIdInput} inputMode="numeric" autoComplete="off" spellCheck={false} placeholder="例如 42" onChange={(e) => setAgentIdInput(e.target.value.replace(/[^\d]/g, ""))} />
-                      </div>
+                    <label id="source-label">身份来源</label>
+                    <div className="seg" role="radiogroup" aria-labelledby="source-label">
+                      {(snap.sources.length > 0 ? snap.sources : [{ sourceId: BINANCE_SOURCE, standIn: false }]).map((item, index) => (
+                        <button
+                          key={item.sourceId + index}
+                          type="button"
+                          role="radio"
+                          aria-checked={sourceIndex === index}
+                          onClick={() => setSourceIndex(index)}
+                        >
+                          {sourceTag(item.sourceId) || `来源 ${index}`}
+                        </button>
+                      ))}
                     </div>
+                    <label htmlFor="agent">代理编号</label>
+                    {sourceTag(snap.sources[sourceIndex]?.sourceId ?? "") === "8004" ? (
+                      <input id="agent" value={agentIdInput} inputMode="numeric" autoComplete="off" spellCheck={false} placeholder="你在 ERC-8004 登记的编号" onChange={(e) => setAgentIdInput(e.target.value.replace(/[^\d]/g, ""))} />
+                    ) : (
+                      <p className="id-lock" id="agent">按钱包地址自动识别</p>
+                    )}
                     <p className="estimate"><Zh text={estimate} /></p>
                     <p className="field-help"><Zh text="编号怎么填，写在复制出的指令里。" /></p>
                     {button && (
@@ -702,6 +715,12 @@ function BidTable({ rows, phase, clearing }: { rows: Row[]; phase: string; clear
 
 const BINANCE_SOURCE = keccak256(toBytes("binance-agent-id"));
 const ERC8004_SOURCE = keccak256(toBytes("erc-8004"));
+
+function mobileStatus(localFork: boolean | undefined, standIn: boolean | undefined): string {
+  if (localFork && standIn) return "本地分叉 · 测试网 Agent ID 为替身";
+  if (localFork) return "本地分叉，不是测试网";
+  return "BSC 测试网";
+}
 
 function sourceTag(sourceId: string): string {
   const id = sourceId.toLowerCase();
