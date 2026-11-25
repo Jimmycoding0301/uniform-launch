@@ -209,7 +209,7 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
 
   const plot = resting ? ghost : shown;
   const hair = (n: number) => Math.round(n) + 0.5;
-  const priceIn = yourPrice != null && (clearing == null || yourPrice >= clearing);
+  const priceIn = yourPrice != null && clearing != null && yourPrice >= clearing;
   return (
     <div className="stage" ref={stageRef}>
       <svg
