@@ -187,11 +187,25 @@ function explainInput(error) {
   if (text.includes("十进制") || text.includes("小数")) {
     return { ok: false, reason: text, next: "按 BNB 填写，例如 1 或 0.00003。" };
   }
+  if (text.includes("身份编号")) {
+    return { ok: false, reason: "身份编号要用整数", next: "Agent ID 填地址对应的整数，ERC-8004 填登记编号。" };
+  }
   return explain(error);
+}
+
+function agentIdOf(agentId) {
+  try {
+    if (!/^\d+$/.test(String(agentId).trim())) throw new Error("bad");
+    return BigInt(agentId);
+  } catch {
+    const error = new Error("身份编号要用整数");
+    throw error;
+  }
 }
 
 export async function identity(rpc, launcher, account, agentId) {
   try {
+    const id = agentIdOf(agentId);
     const snap = await read(rpc, launcher);
     const results = [];
     for (let i = 0; i < snap.sources.length; i++) {
@@ -201,7 +215,7 @@ export async function identity(rpc, launcher, account, agentId) {
           address: source,
           abi: launcherAbi,
           functionName: "verify",
-          args: [addr(account), BigInt(agentId)],
+          args: [addr(account), id],
         });
         results.push({ index: i, ok: Boolean(got[0]), name: sourceName(got[1]) });
       } catch {
@@ -212,7 +226,7 @@ export async function identity(rpc, launcher, account, agentId) {
     if (!passed) return { ok: false, reason: "身份不过", next: "换一个已登记的身份，或换一个身份来源。", results };
     return { ok: true, results };
   } catch (error) {
-    return explain(error);
+    return explainInput(error);
   }
 }
 
@@ -244,7 +258,8 @@ export async function bidTx(rpc, launcher, budgetText, priceText, sourceIndex, a
   try {
     const budget = parseBnb(budgetText);
     const price = parseBnb(priceText);
-    const built = tx(launcher, "bid", [price, Number(sourceIndex), BigInt(agentId)], budget);
+    const id = agentIdOf(agentId);
+    const built = tx(launcher, "bid", [price, Number(sourceIndex), id], budget);
     built.instruction = instruction("动作：出价。", launcher, `预算 ${budgetText} BNB，最高价 ${priceText} BNB/枚。`);
     return built;
   } catch (error) {
