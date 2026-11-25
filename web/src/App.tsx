@@ -60,6 +60,13 @@ const SUPPLY = 1_000_000n * 10n ** 18n;
 const PORTAL_ABI = [
   {
     type: "function",
+    name: "getLaunchVault",
+    stateMutability: "view",
+    inputs: [{ type: "address" }],
+    outputs: [{ type: "address" }, { type: "address" }],
+  },
+  {
+    type: "function",
     name: "launchQuoteConfig",
     stateMutability: "view",
     inputs: [{ type: "uint8" }, { type: "address" }],
@@ -158,6 +165,7 @@ export function App() {
   const [copied, setCopied] = useState(false);
   const [copyFail, setCopyFail] = useState("");
   const [launchLine, setLaunchLine] = useState("");
+  const [vault, setVault] = useState("");
   const [intro, setIntro] = useState(() => !window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   const initialStatus = useRef<number | null>(null);
   const animStarted = useRef(false);
@@ -424,6 +432,26 @@ export function App() {
     };
   }, [launcher, phase, rpc, snap]);
 
+  useEffect(() => {
+    if (!snap || snap.status !== 1 || snap.token === ZERO) {
+      setVault("");
+      return;
+    }
+    let stop = false;
+    const client = createPublicClient({ transport: http(rpc) });
+    client
+      .readContract({ address: PORTAL, abi: PORTAL_ABI, functionName: "getLaunchVault", args: [snap.token] })
+      .then((got) => {
+        if (!stop) setVault((got as readonly [Address, Address])[0]);
+      })
+      .catch(() => {
+        if (!stop) setVault("");
+      });
+    return () => {
+      stop = true;
+    };
+  }, [rpc, snap]);
+
   async function copyInstruction() {
     if (!launcher) return;
     const picked = snap?.sources[sourceIndex];
@@ -643,6 +671,7 @@ export function App() {
                         <div className="result-row"><span>入池 BNB</span><b>{formatBnb(snap.poolQuote)} BNB</b></div>
                         {showToken && snap.token !== ZERO && <Addr label="代币" value={snap.token} />}
                         {showPool && snap.pool !== ZERO && <Addr label="池子" value={snap.pool} swap={snap.token !== ZERO ? pancakeSwapLink(snap.token) : ""} />}
+                        {vault && vault !== ZERO && <Addr label="Flap Vault" value={vault} />}
                       </div>
                     ) : (
                       <>

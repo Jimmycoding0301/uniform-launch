@@ -62,7 +62,7 @@ body {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
 }
-.top-meta { text-align: right; }
+.top-meta { text-align: right; min-height: 48px; }
 .meta-line { display: block; }
 .status-line { display: none; margin: 0; }
 .screen {
