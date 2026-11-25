@@ -4,14 +4,16 @@ import zh from "./launcher-detail/i18n.json";
 
 const messages = zh.zh;
 const host = {};
-const address = "0xE82642aC5c3B3B4b7D4cDeaf6a251Dc0BB7AcEfd";
+const open = "0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a1";
+const launched = "0xE20f0043F32E2E38d3F3d76Ec48Cfcdb0FdC4806";
+const failed = "0x6f10Eb8eD5c3B033a9EAB172544A4a86420eb128";
 
 const cases = [
   { id: "null", context: { launcherAddress: null, snapshot: null } },
   {
     id: "0",
     context: {
-      launcherAddress: address,
+      launcherAddress: open,
       snapshot: {
         statusCode: "0",
         bidCount: "9",
@@ -27,7 +29,7 @@ const cases = [
   {
     id: "1",
     context: {
-      launcherAddress: address,
+      launcherAddress: launched,
       snapshot: {
         statusCode: "1",
         bidCount: "8",
@@ -43,7 +45,7 @@ const cases = [
   {
     id: "2",
     context: {
-      launcherAddress: address,
+      launcherAddress: failed,
       snapshot: {
         statusCode: "2",
         bidCount: "6",
