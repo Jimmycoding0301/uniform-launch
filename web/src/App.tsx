@@ -746,7 +746,7 @@ export function App() {
                         <div className="result-row"><span>成交量</span><b>{formatBnb(snap.previewQuote > 0n ? snap.previewQuote : snap.poolQuote)} BNB</b></div>
                         <div className="result-row"><span>入池 BNB</span><b>{formatBnb(snap.poolQuote)} BNB</b></div>
                         {showToken && snap.token !== ZERO && <Addr label="代币" value={snap.token} />}
-                        {showPool && snap.pool !== ZERO && <Addr label="池子" value={snap.pool} swap={snap.token !== ZERO ? pancakeSwapLink(snap.token) : ""} />}
+                        {showPool && snap.pool !== ZERO && <Addr label="池子" value={snap.pool} swap={snap.token !== ZERO && !demo?.localFork ? pancakeSwapLink(snap.token) : ""} />}
                         {vault && vault !== ZERO && <Addr label="金库" value={vault} />}
                         {vaultBal !== null && <div className="result-row"><span>金库余额</span><b>{formatBnb(vaultBal)} BNB</b></div>}
                       </div>

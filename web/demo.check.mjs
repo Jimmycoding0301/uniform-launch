@@ -21,6 +21,8 @@ await page.locator("#budget").fill("1");
 await page.getByText("入池").first().waitFor();
 await page.getByRole("button", { name: "下一幕" }).click();
 await expectScene(4, "金库余额");
+await page.getByText("池子", { exact: true }).waitFor({ timeout: 8000 });
+assert.equal(await page.getByText("PancakeSwap").count(), 0);
 await page.getByRole("button", { name: "下一幕" }).click();
 await expectScene(5, "出价全额退回");
 await page.getByRole("button", { name: "下一幕" }).click();
