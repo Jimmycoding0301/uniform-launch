@@ -70,7 +70,7 @@ node /tmp/flap-template/scripts/launcher-check-source.mjs \
 | --- | --- |
 | 工厂继承 Launcher 工厂基类，`factorySpecVersion()` 返回 `lf-v1` | `UniformLauncherFactory` 继承 `LauncherFactoryBase`，基类返回 `lf-v1` |
 | 经 Portal `newLauncher` 创建 | `script/LocalFork.s.sol`、`script/E2ETestnet.s.sol` |
-| 锁 salt，代币地址尾号 `7777` | `initialize` 里 `lockSalt`，salt 挖到尾号 `0x7777` |
+| 锁 salt，代币地址尾号 `7777` | 脚本把 salt 挖到预测代币地址尾号 `0x7777`，`initialize` 里调用 `lockSalt` |
 | 只发射一次 | `status` 离开 Open 之后不能再 `settle` |
 | `encodeCreator` | `UniformLauncher` 调 `LaunchExtensionHelper.encodeCreator` |
 | Guardian 只能把实现升级或把金库提到 owner | 工厂 `upgradeVaultImplementation` 是 `onlyGuardian`；金库 `withdrawAll` 对 Guardian 只提到 owner |
