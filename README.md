@@ -64,9 +64,9 @@ Addresses are the verified BSC testnet deployments. The factories are not enable
 bash script/demo.sh
 ```
 
-跑完后终端打印页面地址和 `/?demo=1`。没有演示场时，这条命令会在本机分叉上造三场：9 笔接单、一场已发射、一场失败，并写 `web/public/demo.json`。接单场清算价 0.00002、入池 10 BNB。已发射场开盘价 0.00008、入池 40 BNB。新造的金库还没有成交税，余额是 0。已有能读到代码的场次就接着用，不重造。演示条有六幕，左右方向键切换，Esc 退出。检查用 `cd web && npm test`、`forge test`、`node agent/edge.test.mjs`、`node script/check-links.mjs`、`node script/check-why.mjs`、`node script/check-evidence.mjs`。
+跑完后终端打印页面地址和 `/?demo=1`。没有演示场时，这条命令会在本机分叉上造三场：9 笔接单、一场已发射、一场失败，并写 `web/public/demo.json`。接单场清算价 0.00002、入池 10 BNB。已发射场开盘价 0.00008、入池 40 BNB。新造的金库还没有成交税，余额是 0。已有能读到代码的场次就接着用，不重造。演示条有六幕，左右方向键切换，Esc 退出。`docker-compose.yml` 里的 anvil 打开了自动模拟账户，这台机器没有装 Docker，所以那份文件没实测。检查用 `cd web && npm test`、`forge test`、`node agent/edge.test.mjs`、`node script/check-links.mjs`、`node script/check-why.mjs`、`node script/check-evidence.mjs`。
 
-One command starts the local fork and the page, then prints both URLs. If no demo file is present it creates an open book (clearing price 0.00002, 10 BNB), a launched auction (open price 0.00008, 40 BNB) and a failed auction, then writes `web/public/demo.json`. A freshly launched vault is 0 until someone trades. `docker-compose.yml` describes the same two processes. Docker was not run in this environment. `script/demo.sh` does not need it. The check commands are in the paragraph above.
+One command starts the local fork and the page, then prints both URLs. If no demo file is present it creates an open book (clearing price 0.00002, 10 BNB), a launched auction (open price 0.00008, 40 BNB) and a failed auction, then writes `web/public/demo.json`. A freshly launched vault is 0 until someone trades. `docker-compose.yml` describes the same two processes and turns on anvil auto-impersonation. Docker was not run in this environment. `script/demo.sh` does not need it. The check commands are in the paragraph above.
 
 ## 测试网
 

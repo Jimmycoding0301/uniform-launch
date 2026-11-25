@@ -157,3 +157,5 @@ Wed Nov 25 08:52:08 PM UTC 2026
 空地址不再说没有完成，改成这个地址上没有这场拍卖。
 Wed Nov 25 08:52:25 PM UTC 2026
 没有 demo.json 时，预览对照测试跳过，不再抛出找不到文件。
+Wed Nov 25 08:52:38 PM UTC 2026
+docker-compose 的 anvil 打开自动模拟账户。这台机器没有 Docker，文件仍写明未实测。

@@ -11,6 +11,7 @@ services:
       - "18545"
       - --chain-id
       - "97"
+      - --auto-impersonate
     ports:
       - "18545:18545"
   web:
