@@ -3,7 +3,6 @@ import {
   buildStepPath,
   easeOut,
   formatBnb,
-  formatGwei,
   formatPrice,
   pathFromPoints,
   resample,
@@ -32,7 +31,12 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
     () => buildStepPath(bids, VB_W, vbH, floor, clearing, settle && !failed ? 1 : 0),
     [bids, floor, clearing, settle, failed, vbH],
   );
+  const ghost = useMemo(
+    () => buildStepPath(bids, VB_W, vbH, floor, clearing, 0),
+    [bids, floor, clearing, vbH],
+  );
   const [shown, setShown] = useState<Plot>(target);
+  const [resting, setResting] = useState(settle && !failed);
   const shownRef = useRef(target);
   const targetRef = useRef(target);
   targetRef.current = target;
@@ -69,6 +73,7 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
       setShown(to);
       burst(canvasRef.current, svgRef.current, to, reduced);
       setSweep(true);
+      setResting(true);
       return;
     }
     const t0 = performance.now();
@@ -81,6 +86,7 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
       if (t < 1) frame = requestAnimationFrame(step);
       else {
         setSweep(true);
+        setResting(true);
         burst(canvasRef.current, svgRef.current, to, false);
         window.setTimeout(() => setPulse(true), 700);
       }
@@ -164,7 +170,7 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
     const quote = plot.total === 0n ? 0n : BigInt(Math.round(((p.x - plot.left) / (plot.right - plot.left)) * Number(plot.total)));
     const tier = plot.tiers.find((item) => p.x >= item.x1 && p.x <= item.x2);
     readRef.current.textContent = tier
-      ? `${formatGwei(price)} gwei · ${tier.count} 笔 · ${formatBnb(tier.budget)} BNB`
+      ? `${formatPrice(price)} BNB/枚 · ${tier.count} 笔 · ${formatBnb(tier.budget)} BNB`
       : `${formatPrice(price)} · ${formatBnb(quote)} BNB`;
     const readX = p.x > plot.right - 160 ? p.x - 8 : p.x + 8;
     readRef.current.setAttribute("x", String(readX));
@@ -176,7 +182,7 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
     if (crossRef.current) crossRef.current.style.opacity = "0";
   }
 
-  const plot = shown;
+  const plot = resting ? ghost : shown;
   return (
     <div className="stage">
       <svg
@@ -213,9 +219,11 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
         <clipPath id="drawClip">
           <rect className="draw-rect" x="0" y="0" width={VB_W} height={vbH} />
         </clipPath>
-        <g clipPath={intro && !reduced ? "url(#drawClip)" : undefined}>
-          {plot.fill && <path ref={fillRef} className={failed ? "step-fill failed" : "step-fill"} d={plot.fill} fill={failed ? "url(#fillGray)" : "url(#fillGold)"} />}
-          {plot.stroke && <path ref={strokeRef} className={failed ? "step failed" : "step"} d={plot.stroke} />}
+        <g clipPath={intro && !reduced && !resting ? "url(#drawClip)" : undefined}>
+          {resting && ghost.fill && <path className="step-fill ghost" d={ghost.fill} fill="url(#fillGold)" />}
+          {resting && ghost.stroke && <path className="step ghost" d={ghost.stroke} />}
+          {!resting && plot.fill && <path ref={fillRef} className={failed ? "step-fill failed" : "step-fill"} d={plot.fill} fill={failed ? "url(#fillGray)" : "url(#fillGold)"} />}
+          {!resting && plot.stroke && <path ref={strokeRef} className={failed ? "step failed" : "step"} d={plot.stroke} />}
         </g>
         <line className="reserve" x1={plot.left} x2={plot.right} y1={plot.reserveY} y2={plot.reserveY} />
         {plot.clearingY != null && !failed && (

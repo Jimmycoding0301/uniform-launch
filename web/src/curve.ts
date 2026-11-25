@@ -133,7 +133,7 @@ export function buildStepPath(
     if (p <= 0n) continue;
     const y = yOf(p);
     if (ticks.some((t) => Math.abs(t.y - y) < 18)) continue;
-    ticks.push({ y, text: formatGwei(p) });
+    ticks.push({ y, text: formatPrice(p) });
   }
 
   const bottom = padT + innerH;

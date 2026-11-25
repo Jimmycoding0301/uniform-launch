@@ -11,6 +11,23 @@ export function useReducedMotion(): boolean {
   return reduced;
 }
 
+const WIDE = "，。？、；：（）";
+
+export function Zh({ text }: { text: string }) {
+  const parts = text.split(/([，。？、；：（）])/);
+  return (
+    <>
+      {parts.map((part, i) =>
+        part.length === 1 && WIDE.includes(part) ? (
+          <span key={i} className="fw-punct">{part}</span>
+        ) : (
+          <span key={i}>{part}</span>
+        ),
+      )}
+    </>
+  );
+}
+
 export function Roller({ text }: { text: string }) {
   return (
     <span className="roller" aria-label={text}>
