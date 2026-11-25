@@ -144,7 +144,10 @@ export function Launcher({ context, messages }: LauncherProps) {
   const pool = shownAddress(snap.pool);
   const template = status === 2n
     ? `${messages.refundTemplate}\n${context.launcherAddress}\n${messages.chain}\n${messages.refundAction}`
-    : `${messages.bidTemplate}\n${context.launcherAddress}\n${messages.chain}\n${messages.bidAction}`;
+    : status === 1n
+      ? `${messages.claimTemplate}\n${context.launcherAddress}\n${messages.chain}\n${messages.claimAction}`
+      : `${messages.bidTemplate}\n${context.launcherAddress}\n${messages.chain}\n${messages.bidAction}`;
+  const heading = status === 1n ? messages.claim : messages.agent;
   return (
     <section style={card}>
       <div style={grid}>
@@ -157,7 +160,7 @@ export function Launcher({ context, messages }: LauncherProps) {
         <Row name={messages.token} text={token || messages.none} />
         <Row name={messages.pool} text={pool || messages.none} />
       </div>
-      <p style={note}>{messages.agent}</p>
+      <p style={note}>{heading}</p>
       <p style={note}>{messages.agentBody}</p>
       <pre style={pre}>{template}</pre>
     </section>
