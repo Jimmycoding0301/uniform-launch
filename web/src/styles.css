@@ -61,7 +61,7 @@ body {
 }
 .top b { color: var(--text); font-weight: 500; font-size: var(--fs-14); }
 .script-link { margin-left: var(--space-3); color: var(--accent); font-weight: 400; font-size: var(--fs-12); text-decoration: none; }
-.back-link { color: var(--accent); font-size: var(--fs-14); text-decoration: none; }
+.back-link { display: inline-flex; align-items: center; min-height: 44px; color: var(--accent); font-size: var(--fs-14); text-decoration: none; }
 .script-link:focus-visible, button:focus-visible, a:focus-visible, input:focus-visible, textarea:focus-visible {
   outline: 2px solid var(--accent);
   outline-offset: 3px;
