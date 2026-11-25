@@ -1,0 +1,56 @@
+import assert from "node:assert/strict";
+import { chromium } from "playwright";
+
+const base = process.env.CHART_URL ?? "http://127.0.0.1:4317/?launcher=0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a1";
+const browser = await chromium.launch();
+
+const desk = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await desk.goto(base, { waitUntil: "domcontentloaded" });
+await desk.waitForSelector("button.primary");
+const before = await desk.evaluate(() => {
+  const form = document.querySelector(".col-form").getBoundingClientRect();
+  const btn = document.querySelector("button.primary").getBoundingClientRect();
+  return { form: form.height, top: btn.top, bottom: btn.bottom, formBottom: form.bottom };
+});
+await desk.getByRole("radio", { name: "8004" }).click();
+await desk.waitForTimeout(250);
+const after = await desk.evaluate(() => {
+  const form = document.querySelector(".col-form").getBoundingClientRect();
+  const btn = document.querySelector("button.primary").getBoundingClientRect();
+  return { form: form.height, top: btn.top };
+});
+assert.ok(before.bottom <= 860, `桌面按钮下沿 ${before.bottom}`);
+assert.ok(before.formBottom <= 900, `左栏下沿 ${before.formBottom}`);
+assert.ok(Math.abs(before.form - after.form) <= 2, `表单高度差 ${Math.abs(before.form - after.form)}`);
+assert.ok(Math.abs(before.top - after.top) <= 2, `按钮位移 ${Math.abs(before.top - after.top)}`);
+
+const phone = await browser.newPage({ viewport: { width: 390, height: 844 } });
+await phone.goto(base, { waitUntil: "domcontentloaded" });
+await phone.waitForSelector("button.primary");
+const mobile = await phone.evaluate(() => {
+  const btn = document.querySelector("button.primary").getBoundingClientRect();
+  const help = [...document.querySelectorAll(".help")].at(-1)?.getBoundingClientRect();
+  const next = help ? document.elementFromPoint(help.x + 8, help.bottom + 8) : null;
+  return {
+    btnTop: btn.top,
+    btnBottom: btn.bottom,
+    helpGap: help ? Math.round((next?.getBoundingClientRect().top ?? help.bottom) - help.bottom) : null,
+  };
+});
+assert.ok(mobile.btnTop >= 0 && mobile.btnBottom <= 844, `手机按钮 ${mobile.btnTop}-${mobile.btnBottom}`);
+await phone.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
+await phone.waitForTimeout(200);
+const covered = await phone.evaluate(() => {
+  const rows = [...document.querySelectorAll(".bid:not(.head)")];
+  const bad = [];
+  for (const row of rows) {
+    row.scrollIntoView({ block: "center" });
+    const box = row.getBoundingClientRect();
+    const hit = document.elementFromPoint(box.x + box.width / 2, box.y + box.height / 2);
+    if (!row.contains(hit)) bad.push(row.innerText.slice(0, 24));
+  }
+  return bad;
+});
+assert.deepEqual(covered, [], `被挡住的出价行：${covered.join(" | ")}`);
+await browser.close();
+console.log("布局检查通过", { desk: before, mobile, covered: covered.length });

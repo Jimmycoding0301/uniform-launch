@@ -6,7 +6,8 @@ import { Roller, useReducedMotion, Zh } from "./motion";
 import { PlotStage } from "./PlotStage";
 import { ScriptPage } from "./ScriptPage";
 import { pancakeSwapLink } from "./dex";
-import { ADDR_STAGGER_MS, COLOR_BG, MIN_SETTLE_GAS, RISK_LINE, SETTLE_GAS_LIMIT, SETTLE_MS, SWEEP_MS, USER_LINE } from "./theme";
+import { ADDR_STAGGER_MS, COPY_MS, MIN_SETTLE_GAS, RISK_LINE, SETTLE_GAS_LIMIT, SETTLE_MS, SWEEP_MS, USER_LINE } from "./theme";
+import { TESTNET_ROWS } from "./networks";
 
 const ABI = [
   { type: "function", name: "status", stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
@@ -150,9 +151,12 @@ export function App() {
   const [hashInput, setHashInput] = useState("");
   const [hashNote, setHashNote] = useState("");
   const [hashOpen, setHashOpen] = useState(false);
+  const [hashReceipt, setHashReceipt] = useState<{ hash: string; block: string; amount: string; limit: string } | null>(null);
+  const [hashBusy, setHashBusy] = useState(false);
   const [showToken, setShowToken] = useState(false);
   const [showPool, setShowPool] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [copyFail, setCopyFail] = useState("");
   const [launchLine, setLaunchLine] = useState("");
   const [intro, setIntro] = useState(() => !window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   const initialStatus = useRef<number | null>(null);
@@ -161,7 +165,8 @@ export function App() {
   const reduced = useReducedMotion();
 
   const forceEmpty = params.get("empty") === "1";
-  const launcher = (forceEmpty ? "" : params.get("launcher") || demo?.open || "") as Address;
+  const testnetBoard = params.get("network") === "testnet" && !params.get("launcher");
+  const launcher = (forceEmpty || testnetBoard ? "" : params.get("launcher") || demo?.open || "") as Address;
   const rpc = demo?.rpc || "http://127.0.0.1:18545";
   useEffect(() => {
     fetch("/demo.json")
@@ -303,7 +308,7 @@ export function App() {
     window.setTimeout(() => setIntro(false), 1600);
   }, [snap, reduced]);
 
-  const phase = useMemo(() => {
+  const chainPhase = useMemo(() => {
     if (!snap) return "empty";
     if (snap.status === 2) return "failed";
     if (snap.status === 1) return "done";
@@ -312,6 +317,7 @@ export function App() {
     if (block >= snap.end - 20n) return "closed";
     return "open";
   }, [snap, block]);
+  const phase = params.get("preview") || chainPhase;
 
   const clearingNow = snap && snap.status === 1 ? snap.clearing : snap?.previewOk ? snap.previewPrice : 0n;
 
@@ -410,21 +416,53 @@ export function App() {
 - binanceChainId: 第 1 步看到的测试网 id
 
 先 contract-call preview，把模拟结果给我。我确认之后再 execute。不要改金额，不要多发一笔。`;
-    await navigator.clipboard.writeText(text);
-    setCopied(true);
+    try {
+      await navigator.clipboard.writeText(text);
+      setCopyFail("");
+      setCopied(true);
+    } catch {
+      setCopyFail(text);
+      setCopied(false);
+    }
     window.clearTimeout(copyTimer.current);
-    copyTimer.current = window.setTimeout(() => setCopied(false), 1200);
+    copyTimer.current = window.setTimeout(() => setCopied(false), COPY_MS);
   }
 
   async function checkHash() {
-    if (!hashInput || !launcher) return;
+    if (!launcher) return;
+    const hash = hashInput.trim();
+    setHashReceipt(null);
+    if (!/^0x[0-9a-fA-F]{64}$/.test(hash)) {
+      setHashNote("哈希是 0x 开头的 66 位字符。");
+      return;
+    }
+    setHashBusy(true);
+    setHashNote("");
     try {
       const client = createPublicClient({ transport: http(rpc) });
-      const tx = await client.getTransaction({ hash: hashInput as `0x${string}` });
-      const ok = tx.to?.toLowerCase() === launcher.toLowerCase();
-      setHashNote(ok ? "交易已核对。" : "这笔交易对不上当前指令。");
+      const tx = await client.getTransaction({ hash: hash as `0x${string}` });
+      const receipt = await client.getTransactionReceipt({ hash: hash as `0x${string}` });
+      if (tx.to?.toLowerCase() !== launcher.toLowerCase()) {
+        setHashNote("这笔交易对不上当前指令。检查是否发到了 chainId 97 的这场合约。");
+        return;
+      }
+      if (receipt.status === "reverted") {
+        setHashNote("这笔交易在链上失败了，出价没有进场。按指令重新发一次。");
+        return;
+      }
+      const bidSelector = keccak256(toBytes("bid(uint256,uint8,uint256)")).slice(0, 10);
+      const limit = tx.input.startsWith(bidSelector) ? formatPrice(BigInt(`0x${tx.input.slice(10, 74)}`)) : "";
+      setHashReceipt({
+        hash,
+        block: groupFull(receipt.blockNumber),
+        amount: formatBnb(tx.value),
+        limit,
+      });
+      setHashNote("");
     } catch {
-      setHashNote("这笔交易对不上当前指令。");
+      setHashNote("这笔交易对不上当前指令。检查是否发到了 chainId 97 的这场合约。");
+    } finally {
+      setHashBusy(false);
     }
   }
 
@@ -438,7 +476,7 @@ export function App() {
 
   if (scriptView) {
     return (
-      <div className="page scroll" style={{ backgroundColor: COLOR_BG }}>
+      <div className="page scroll">
         <a className="skip" href="#script">跳到脚本</a>
         <header className="top">
           <b>
@@ -455,7 +493,7 @@ export function App() {
   }
 
   return (
-    <div className={showIntro ? "page intro" : "page"} style={{ backgroundColor: COLOR_BG }}>
+    <div className={showIntro ? "page intro" : "page"}>
       {button ? <div className="dock-fade" aria-hidden="true" /> : null}
       <a className="skip" href="#desk">跳到拍卖</a>
       <header className="top">
@@ -465,13 +503,15 @@ export function App() {
         </b>
         <span className="top-meta">
           {snap?.sources.some((item) => item.standIn) ? <span className="meta-line"><Zh text="测试网 Agent ID 为替身" /></span> : null}
-          <span className="meta-line">{demo?.localFork ? <Zh text="本地分叉，不是测试网" /> : "BSC 测试网"} {block.toString()}</span>
-          {rpcError && snap ? <Zh text=" · 刚刚没刷新成功。" /> : ""}
+          <span className="meta-line">{demo?.localFork ? <Zh text="本地分叉，不是测试网" /> : "BSC 测试网"}</span>
+          {block > 0n && <span className="meta-line">区块 {groupFull(block)}</span>}
+          {rpcError && snap ? <span className="meta-line"><Zh text="刚刚没刷新成功，正在重试。" /></span> : null}
         </span>
       </header>
       <p className="status-line"><Zh text={mobileStatus(demo?.localFork, snap?.sources.some((item) => item.standIn))} /></p>
       <section className="screen" id="desk">
-        {!launcher && !rpcError && <Empty />}
+        {!launcher && !rpcError && params.get("network") === "testnet" && <TestnetBoard />}
+        {!launcher && !rpcError && params.get("network") !== "testnet" && <Empty />}
         {launcher && !snap && !rpcError && <Skeleton />}
         {rpcError && !snap && <p className="user-line"><Zh text="这场合约现在读不到。过几秒会再试。" /></p>}
         {snap && (
@@ -483,17 +523,13 @@ export function App() {
             <div className="col-form">
               <div>
                 <div className="brand-desk">
-                <h1>
-                  {"同价发射".split("").map((ch, i) => (
-                    <span className="char" key={ch} style={{ animationDelay: `${60 + i * 70}ms` }}>{ch}</span>
-                  ))}
-                </h1>
-                <p className="en char" style={{ animationDelay: "340ms" }}>Uniform Launch</p>
+                <h1>同价发射</h1>
+                <p className="en">Uniform Launch</p>
                 <p className="user-line"><Zh text={USER_LINE} /></p>
                 </div>
                 <ol className="phases">
                   {PHASES.map((item) => (
-                    <li key={item.id} className={phaseClass(item.id, phase)}>
+                    <li key={item.id} className={phaseClass(item.id, phase)} aria-current={phaseClass(item.id, phase) === "now" ? "step" : undefined}>
                       {item.label}
                     </li>
                   ))}
@@ -510,96 +546,144 @@ export function App() {
                 <div className="metrics">
                 <div>
                   <b className="clock"><Roller text={formatRemain(remain)} /></b>
-                  <small>剩余 · {remain.toString()} 块 · 0.75 秒/块</small>
+                  <small>剩余 {groupFull(remain)} 块，每块 0.75 秒</small>
                 </div>
                   <div className="floor">
                     <b>{formatPrice(snap.floor)}</b>
                     <small>保留价 BNB/枚</small>
                   </div>
                 </div>
-                {phase === "open" && (
-                  <form
-                    onSubmit={(event) => {
-                      event.preventDefault();
-                      if (bidReady) void copyInstruction();
-                    }}
-                  >
-                    <label htmlFor="budget">预算 BNB</label>
-                    <input id="budget" value={budget} inputMode="decimal" autoComplete="off" spellCheck={false} aria-invalid={budgetNote.error} aria-describedby="budget-help" onChange={(e) => setBudget(e.target.value)} />
-                    <p id="budget-help" className={budgetNote.error ? "field-error" : "field-help"} role={budgetNote.error ? "alert" : undefined} title={budgetNote.wei ? `${budgetNote.wei} wei` : undefined}><Zh text={budgetNote.text} /></p>
-                    <label htmlFor="price">最高价 BNB/枚</label>
-                    <input id="price" value={maxPrice} inputMode="decimal" autoComplete="off" spellCheck={false} placeholder={formatPrice(snap.floor)} aria-invalid={priceNote.error} aria-describedby="price-help" onChange={(e) => setMaxPrice(e.target.value)} />
-                    <p id="price-help" className={priceNote.error ? "field-error" : "field-help"} role={priceNote.error ? "alert" : undefined} title={priceNote.wei ? `${priceNote.wei} wei` : undefined}><Zh text={priceNote.text} /></p>
+                <form
+                  className="ticket"
+                  onSubmit={(event) => {
+                    event.preventDefault();
+                    if (phase === "open" && !bidReady) {
+                      document.getElementById(budgetNote.error ? "budget" : "price")?.focus();
+                      return;
+                    }
+                    if (button) void copyInstruction();
+                  }}
+                >
+                  <div className="fields">
+                    {phase === "failed" ? (
+                      <div className="result-card">
+                        <h2>没有成交</h2>
+                        <p className="help">未达保留价。出价按原数退回，退回后这一行会写成已退回。</p>
+                      </div>
+                    ) : phase === "done" ? (
+                      <div className="result-card">
+                        <h2>成交回执</h2>
+                        <div className="result-row"><span>开盘价</span><b>{formatPrice(snap.clearing)} BNB/枚</b></div>
+                        <div className="result-row"><span>成交量</span><b>{formatBnb(snap.previewQuote > 0n ? snap.previewQuote : snap.poolQuote)} BNB</b></div>
+                        <div className="result-row"><span>入池 BNB</span><b>{formatBnb(snap.poolQuote)} BNB</b></div>
+                        {showToken && snap.token !== ZERO && <Addr label="代币" value={snap.token} />}
+                        {showPool && snap.pool !== ZERO && <Addr label="池子" value={snap.pool} swap={snap.token !== ZERO ? pancakeSwapLink(snap.token) : ""} />}
+                      </div>
+                    ) : (
+                      <>
+                    <label htmlFor="budget">预算</label>
+                    <div className={`${budgetNote.error && phase === "open" ? "window bad" : "window"}${phase === "open" ? "" : " ro"}`}>
+                      <input id="budget" value={budget} readOnly={phase !== "open"} inputMode="decimal" autoComplete="off" spellCheck={false} aria-invalid={phase === "open" && budgetNote.error} aria-describedby="budget-help" onChange={(e) => setBudget(e.target.value)} />
+                      <span className="unit">BNB</span>
+                    </div>
+                    <p id="budget-help" className={phase === "open" && budgetNote.error ? "help bad" : "help"} role={phase === "open" && budgetNote.error ? "alert" : undefined}><Zh text={phase === "open" ? budgetNote.text : " "} /></p>
+                    <label htmlFor="price">最高价</label>
+                    <div className={`${priceNote.error && phase === "open" ? "window bad" : "window"}${phase === "open" ? "" : " ro"}`}>
+                      <input id="price" value={maxPrice} readOnly={phase !== "open"} inputMode="decimal" autoComplete="off" spellCheck={false} placeholder={formatPrice(snap.floor)} aria-invalid={phase === "open" && priceNote.error} aria-describedby="price-help" onChange={(e) => setMaxPrice(e.target.value)} />
+                      <span className="unit">BNB/枚</span>
+                    </div>
+                    <p id="price-help" className={phase === "open" && priceNote.error ? "help bad" : "help"} role={phase === "open" && priceNote.error ? "alert" : undefined}><Zh text={phase === "open" ? priceNote.text : " "} /></p>
                     <label id="source-label">身份来源</label>
-                    <div className="seg" role="radiogroup" aria-labelledby="source-label">
-                      {(snap.sources.length > 0 ? snap.sources : [{ sourceId: BINANCE_SOURCE, standIn: false }]).map((item, index) => (
+                    <div
+                      className="seg"
+                      role="radiogroup"
+                      aria-labelledby="source-label"
+                      data-on={sourceIndex === 1 ? "1" : "0"}
+                      data-lock={phase === "open" ? "0" : "1"}
+                      onKeyDown={(event) => {
+                        if (phase !== "open") return;
+                        if (event.key === "ArrowRight") setSourceIndex(1);
+                        if (event.key === "ArrowLeft") setSourceIndex(0);
+                      }}
+                    >
+                      <i className="thumb" />
+                      {(snap.sources.length > 0 ? snap.sources : [{ sourceId: BINANCE_SOURCE, standIn: false }, { sourceId: ERC8004_SOURCE, standIn: false }]).slice(0, 2).map((item, index) => (
                         <button
                           key={item.sourceId + index}
                           type="button"
                           role="radio"
                           aria-checked={sourceIndex === index}
-                          onClick={() => setSourceIndex(index)}
+                          tabIndex={phase === "open" && sourceIndex === index ? 0 : -1}
+                          onClick={() => phase === "open" && setSourceIndex(index)}
                         >
-                          {sourceTag(item.sourceId) || `来源 ${index}`}
+                          {sourceTag(item.sourceId) || (index === 0 ? "Agent ID" : "8004")}
                         </button>
                       ))}
                     </div>
                     <label htmlFor="agent">代理编号</label>
                     {sourceTag(snap.sources[sourceIndex]?.sourceId ?? "") === "8004" ? (
-                      <input id="agent" value={agentIdInput} inputMode="numeric" autoComplete="off" spellCheck={false} placeholder="你在 ERC-8004 登记的编号" onChange={(e) => setAgentIdInput(e.target.value.replace(/[^\d]/g, ""))} />
+                      <div className={phase === "open" ? "window" : "window ro"}>
+                        <input id="agent" value={agentIdInput} readOnly={phase !== "open"} inputMode="numeric" autoComplete="off" spellCheck={false} placeholder="你在 ERC-8004 登记的编号" onChange={(e) => setAgentIdInput(e.target.value.replace(/[^\d]/g, ""))} />
+                      </div>
                     ) : (
-                      <p className="id-lock" id="agent">按钱包地址自动识别</p>
+                      <p className="id-lock" id="agent">按钱包地址自动识别<i>只读</i></p>
                     )}
-                    <p className="estimate"><Zh text={estimate} /></p>
-                    <p className="field-help"><Zh text="编号怎么填，写在复制出的指令里。" /></p>
-                    {button && (
-                      <button className="primary" type="submit" disabled={rpcError || !bidReady} aria-live="polite">
-                        <span className="btn-stack">
-                          <span className={copied ? "off" : "on"}>{button}</span>
-                          <span className={copied ? "on" : "off"}>已复制 ✓</span>
-                        </span>
+                    <p className="estimate"><Zh text={phase === "open" ? estimate : " "} /></p>
+                    {phase === "open" && <p className="field-help"><Zh text="编号怎么填，写在复制出的指令里。" /></p>}
+                      </>
+                    )}
+                  </div>
+                  <div className="action">
+                    {phase === "open" && snap.bids.length >= 32 ? (
+                      <div className="notice">本场出价已满 32 笔，不再接新单。</div>
+                    ) : phase === "wait" ? (
+                      <div className="notice">开始后可以复制出价指令。</div>
+                    ) : phase === "closed" ? (
+                      <div className="notice">已停止接单，等待结算。</div>
+                    ) : button ? (
+                      <button className="primary" type="submit" aria-live="polite">
+                        <span>{copied ? "已复制" : button}</span>
                       </button>
-                    )}
-                  </form>
+                    ) : null}
+                    {phase === "open" && snap.bids.length < 32 && <p className="risk"><Zh text={RISK_LINE} /></p>}
+                    {phase === "ready" && <p className="help"><Zh text="结算要用的燃料上限已写在指令里，照指令发。" /></p>}
+                  </div>
+                </form>
+                {copyFail && (
+                  <>
+                    <p className="help bad"><i className="mark" />没复制上。长按下面的指令全选复制。</p>
+                    <textarea className="paste" readOnly value={copyFail} />
+                  </>
                 )}
-                {phase === "wait" && <p className="user-line tight"><Zh text="窗口还没开。" /></p>}
-                {phase === "closed" && <p className="user-line tight"><Zh text="已停止接单。" /></p>}
-                {phase === "ready" && <p className="user-line tight"><Zh text="等待结算。gas limit 用 8000000，不要用估算值。" /></p>}
-                {phase === "ready" && launchLine && <p className="user-line tight"><Zh text={launchLine} /></p>}
-                {button && phase !== "open" && (
-                  <button className="primary" type="button" disabled={rpcError} onClick={() => void copyInstruction()} aria-live="polite">
-                    <span className="btn-stack">
-                      <span className={copied ? "off" : "on"}>{button}</span>
-                      <span className={copied ? "on" : "off"}>已复制 ✓</span>
-                    </span>
-                  </button>
-                )}
-                {phase === "open" && <p className="risk"><Zh text={RISK_LINE} /></p>}
                 <button type="button" className="hash-toggle" aria-expanded={hashOpen} onClick={() => setHashOpen((open) => !open)}>
-                  <Zh text="已发送？贴哈希核对（可选）" />
+                  <Zh text="已发送？贴哈希核对" />
                 </button>
                 {hashOpen && (
                   <div className="hash">
                     <label htmlFor="txhash">交易哈希</label>
-                    <input id="txhash" value={hashInput} spellCheck={false} autoComplete="off" onChange={(e) => setHashInput(e.target.value)} onBlur={checkHash} />
-                    {hashNote && <p className="note" role="status">{hashNote}</p>}
+                    <div className={hashNote.startsWith("哈希") ? "window bad" : "window"}>
+                      <input id="txhash" value={hashInput} spellCheck={false} autoComplete="off" onChange={(e) => setHashInput(e.target.value)} />
+                    </div>
+                    <button className="text-btn" type="button" onClick={() => void checkHash()} disabled={hashBusy}>
+                      {hashBusy ? "核对中…" : "核对"}
+                    </button>
+                    {hashNote && <p className="help bad" role="status"><i className="mark" />{hashNote}</p>}
+                    {hashReceipt && (
+                      <div className="result-card">
+                        <h2>交易已核对</h2>
+                        <div className="result-row"><span>交易</span><b>{hashReceipt.hash.slice(0, 6)}…{hashReceipt.hash.slice(-4)}</b></div>
+                        <div className="result-row"><span>区块</span><b>{hashReceipt.block}</b></div>
+                        <div className="result-row"><span>出价</span><b>{hashReceipt.amount} BNB</b></div>
+                        {hashReceipt.limit && <div className="result-row"><span>限价</span><b>{hashReceipt.limit} BNB/枚</b></div>}
+                        {demo?.localFork ? (
+                          <p className="help">本地分叉上的交易，BscScan 还没有这笔。</p>
+                        ) : (
+                          <a href={`https://testnet.bscscan.com/tx/${hashReceipt.hash}`} target="_blank" rel="noreferrer">BscScan</a>
+                        )}
+                      </div>
+                    )}
                   </div>
                 )}
-                {phase === "done" && (
-                  <div className="result-card">
-                    <div className="result-row"><span>开盘价</span><b>{formatPrice(snap.clearing)} BNB/枚</b></div>
-                    <div className="result-row"><span>入池 BNB</span><b>{formatBnb(snap.poolQuote)} BNB</b></div>
-                    {showToken && snap.token !== ZERO && <Addr label="代币" value={snap.token} />}
-                    {showPool && snap.pool !== ZERO && <Addr label="池子" value={snap.pool} swap={snap.token !== ZERO ? pancakeSwapLink(snap.token) : ""} />}
-                  </div>
-                )}
-                <h2 className="group-title">本场参数</h2>
-                <ul className="facts">
-                  <li><span>出售</span><span>500,000 枚</span></li>
-                  <li><span>入池代币</span><span>500,000 枚</span></li>
-                  <li><span>买入税 / 卖出税</span><span>3% / 3%</span></li>
-                  <li><span>本场出价</span><span>{snap.bids.length} / 32</span></li>
-                </ul>
               </div>
             </div>
             <div className="col-chart">
@@ -611,9 +695,10 @@ export function App() {
                   </div>
                   {failed && <p className="fail-line"><Zh text="未达保留价，出价全额退回。" /></p>}
                 </div>
-                <div className="axis-note">纵轴 BNB/枚 · 横轴累计 BNB</div>
+                <div className="axis-note" />
               </div>
               <div className="plot-wrap">
+                {phase === "wait" && <div className="empty">接单还没开始，开始区块 {groupFull(snap.start)}。</div>}
                 <PlotStage
                   bids={snap.bids}
                   floor={snap.floor}
@@ -622,10 +707,18 @@ export function App() {
                   settle={snap.status === 1}
                   intro={showIntro}
                   reduced={reduced}
+                  yourPrice={phase === "open" ? priceWei : null}
                 />
               </div>
             </div>
             <div className="col-bids">
+              <h2 className="group-title">本场参数</h2>
+              <ul className="facts">
+                <li><span>出售</span><span>500,000 枚</span></li>
+                <li><span>入池代币</span><span>500,000 枚</span></li>
+                <li><span>买入税 / 卖出税</span><span>3% / 3%</span></li>
+                <li><span>本场出价</span><span>{snap.bids.length} / 32</span></li>
+              </ul>
               <BidTable rows={snap.bids} phase={phase} clearing={clearingNow} />
             </div>
           </div>
@@ -634,6 +727,30 @@ export function App() {
     </div>
   );
 
+}
+
+function TestnetBoard() {
+  return (
+    <div className="grid">
+      <div>
+        <h1>同价发射</h1>
+        <p className="en">Uniform Launch</p>
+        <p className="user-line"><Zh text={USER_LINE} /></p>
+      </div>
+      <div className="plaque">
+        <p>工厂已部署，Flap 开通权限后开第一场。</p>
+        {TESTNET_ROWS.map((row) => (
+          <div className="row" key={row.address}>
+            <span className="name">{row.name}</span>
+            <span className="addr">{row.address.slice(0, 6)}…{row.address.slice(-4)}</span>
+            {row.standIn && <span className="tag">替身</span>}
+            <button type="button" onClick={() => navigator.clipboard.writeText(row.address)}>复制</button>
+            <a href={`https://testnet.bscscan.com/address/${row.address}`} target="_blank" rel="noreferrer">BscScan</a>
+          </div>
+        ))}
+      </div>
+    </div>
+  );
 }
 
 function Empty() {
@@ -688,7 +805,7 @@ function BidTable({ rows, phase, clearing }: { rows: Row[]; phase: string; clear
         const label = agentLabel(row.agent);
         const id = row.agent.toLowerCase();
         return (
-          <div className={fresh.has(id) ? "bid fresh" : "bid"} key={row.agent}>
+          <div className={`${fresh.has(id) ? "bid fresh" : "bid"} ${mark.label === "价内" || mark.label === "待领取" ? "in" : mark.label === "边际" ? "mid" : mark.label === "价外" ? "out" : ""}`} key={row.agent}>
             <i className={mark.dot} />
             <span className={label.named ? "agent-name" : "agent-addr"}>
               {label.text}
@@ -708,9 +825,9 @@ const BINANCE_SOURCE = keccak256(toBytes("binance-agent-id"));
 const ERC8004_SOURCE = keccak256(toBytes("erc-8004"));
 
 function mobileStatus(localFork: boolean | undefined, standIn: boolean | undefined): string {
-  if (localFork && standIn) return "本地分叉 · 测试网 Agent ID 为替身";
+  if (localFork && standIn) return "本地分叉，测试网 Agent ID 为替身";
   if (localFork) return "本地分叉，不是测试网";
-  return "BSC 测试网";
+  return "BNB Chain 测试网";
 }
 
 function sourceTag(sourceId: string): string {
@@ -815,11 +932,11 @@ function Addr({ label, value, swap }: { label: string; value: string; swap?: str
       <span className="addr-value">{value.slice(0, 6)}…{value.slice(-4)}</span>
       <button type="button" aria-label={`复制${label}地址`} onClick={() => navigator.clipboard.writeText(value)}>复制</button>
       <a href={`https://testnet.bscscan.com/address/${value}`} target="_blank" rel="noreferrer">
-        浏览器
+        BscScan
       </a>
       {swap && (
         <a href={swap} target="_blank" rel="noreferrer">
-          Pancake
+          PancakeSwap
         </a>
       )}
     </div>

@@ -3,6 +3,7 @@ out/
 node_modules/
 web/node_modules/
 web/dist/
+web/tsconfig.tsbuildinfo
 broadcast/
 .env
 web/public/demo.json

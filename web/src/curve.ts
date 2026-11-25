@@ -14,6 +14,8 @@ export type Pt = { x: number; y: number };
 export type Plot = {
   stroke: string;
   fill: string;
+  inStroke: string;
+  outStroke: string;
   pts: Pt[];
   reserveY: number;
   clearingY: number | null;
@@ -28,6 +30,9 @@ export type Plot = {
   lo: bigint;
   ceil: bigint;
   total: bigint;
+  rect: { x: number; y: number; w: number; h: number } | null;
+  yourY: number | null;
+  filled: bigint;
 };
 
 export function parseBnb(input: string): bigint | null {
@@ -117,6 +122,7 @@ export function buildStepPath(
   floor: bigint,
   clearing: bigint | null,
   progress: number,
+  yourPrice: bigint | null = null,
 ): Plot {
   const padT = 14;
   const padB = 28;
@@ -163,28 +169,30 @@ export function buildStepPath(
   };
   const xOf = (q: bigint) => padL + (total === 0n ? 0 : (Number(q) / Number(total)) * innerW);
 
-  const tickPrices = [hi, floor];
-  if (clearing && clearing > 0n) tickPrices.splice(1, 0, clearing);
-  const ticks: { y: number; text: string }[] = [];
-  for (const p of tickPrices) {
-    if (p <= 0n) continue;
-    const y = yOf(p);
-    if (ticks.some((t) => Math.abs(t.y - y) < 22)) continue;
-    ticks.push({ y, text: formatPrice(p) });
-  }
-
   const bottom = padT + innerH;
   const left = padL;
   const right = width - padR;
-  const xTicks = [
-    { x: left, text: "0" },
-    { x: right, text: total === 0n ? "0 BNB" : `${formatBnb(total)} BNB` },
-  ];
-  const frame = { ticks, xTicks, left, right, top: padT, bottom, lo, ceil, total };
+  const ticks = niceYTicks(lo, ceil, yOf, bottom);
+  const frame = { ticks, xTicks: [] as { x: number; text: string }[], left, right, top: padT, bottom, lo, ceil, total };
 
   if (grouped.length === 0) {
     const reserveY = floor > 0n ? yOf(floor) : bottom;
-    return { stroke: "", fill: "", pts: [], reserveY, clearingY: null, crossX: null, tiers: [], ...frame };
+    frame.xTicks = xMarks(left, right, 0n, total, xOf);
+    return {
+      stroke: "",
+      fill: "",
+      inStroke: "",
+      outStroke: "",
+      pts: [],
+      reserveY,
+      clearingY: clearing && clearing > 0n ? yOf(clearing) : null,
+      crossX: null,
+      tiers: [],
+      rect: null,
+      yourY: yourPrice && yourPrice > 0n ? yOf(yourPrice) : null,
+      filled: 0n,
+      ...frame,
+    };
   }
 
   const target = clearing && clearing > 0n ? Number(clearing) : null;
@@ -203,18 +211,119 @@ export function buildStepPath(
   }
   const corners = dedupe(pts);
   const painted = pathFromPoints(corners, bottom);
+  const rounded = roundPolyline(corners, 2);
   const clearingY = clearing && clearing > 0n ? yOf(clearing) : null;
   const crossX = clearingY == null ? null : xOf(filled);
+  const split = splitAt(corners, crossX);
+  frame.xTicks = xMarks(left, right, filled, total, xOf);
+  const rect =
+    clearingY != null && crossX != null && crossX > left + 1
+      ? { x: left, y: Math.min(clearingY, bottom), w: crossX - left, h: Math.abs(bottom - clearingY) }
+      : null;
   return {
-    stroke: painted.stroke,
+    stroke: rounded || painted.stroke,
     fill: painted.fill,
+    inStroke: roundPolyline(split.left, 2),
+    outStroke: roundPolyline(split.right, 2),
     pts: corners,
     reserveY: yOf(floor),
     clearingY,
     crossX,
     tiers,
+    rect,
+    yourY: yourPrice && yourPrice > 0n ? yOf(yourPrice) : null,
+    filled,
     ...frame,
   };
+}
+
+function niceYTicks(lo: bigint, hi: bigint, yOf: (p: bigint) => number, bottom: number) {
+  const span = Number(hi - lo);
+  const step = niceStep(Math.max(span, 1), 4);
+  const start = Math.ceil(Number(lo) / step) * step;
+  const values: bigint[] = [];
+  for (let v = start; v <= Number(hi) + step * 0.01 && values.length < 5; v += step) {
+    if (v >= Number(lo) && v <= Number(hi)) values.push(BigInt(Math.round(v)));
+  }
+  while (values.length < 4) {
+    const mid = lo + ((hi - lo) * BigInt(values.length + 1)) / 5n;
+    values.push(mid);
+    if (values.length > 6) break;
+  }
+  const ticks: { y: number; text: string }[] = [];
+  for (const p of values) {
+    if (p <= 0n) continue;
+    const y = yOf(p);
+    if (y < 8 || y > bottom - 4) continue;
+    if (ticks.some((t) => Math.abs(t.y - y) < 18)) continue;
+    ticks.push({ y, text: formatPrice(p) });
+  }
+  return ticks.slice(0, 5);
+}
+
+function niceStep(span: number, count: number) {
+  const rough = span / Math.max(count, 1);
+  const exp = Math.floor(Math.log10(Math.max(rough, 1e-12)));
+  const base = 10 ** exp;
+  const err = rough / base;
+  const nice = err >= 7.5 ? 10 : err >= 3.5 ? 5 : err >= 1.5 ? 2 : 1;
+  return nice * base;
+}
+
+function xMarks(left: number, right: number, filled: bigint, total: bigint, xOf: (q: bigint) => number) {
+  const mid = filled > 0n && filled < total ? filled : total > 1n ? total / 2n : 0n;
+  const marks = [
+    { x: left, text: "0" },
+    { x: xOf(mid), text: formatBnb(mid) },
+    { x: right, text: `${formatBnb(total)} BNB` },
+  ];
+  const out: { x: number; text: string }[] = [];
+  for (const mark of marks) {
+    if (out.some((item) => Math.abs(item.x - mark.x) < 28)) continue;
+    out.push(mark);
+  }
+  if (out.length < 3 && !out.some((item) => item.x === right)) out.push(marks[2]);
+  return out;
+}
+
+function splitAt(pts: Pt[], x: number | null): { left: Pt[]; right: Pt[] } {
+  if (x == null || pts.length < 2) return { left: pts, right: [] };
+  const left: Pt[] = [];
+  const right: Pt[] = [];
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i];
+    const prev = pts[i - 1];
+    if (p.x < x - 0.01) left.push(p);
+    else if (prev && prev.x < x && p.x > x) {
+      const t = (x - prev.x) / (p.x - prev.x || 1);
+      const mid = { x, y: prev.y + (p.y - prev.y) * t };
+      left.push(mid);
+      right.push(mid, p);
+    } else right.push(p);
+  }
+  return { left, right };
+}
+
+function roundPolyline(pts: Pt[], radius: number): string {
+  const clean = dedupe(pts);
+  if (clean.length < 2) return "";
+  if (clean.length === 2) return polyline(clean);
+  const r = radius;
+  let d = `M ${clean[0].x.toFixed(2)} ${clean[0].y.toFixed(2)}`;
+  for (let i = 1; i < clean.length - 1; i++) {
+    const a = clean[i - 1];
+    const b = clean[i];
+    const c = clean[i + 1];
+    const ab = Math.hypot(b.x - a.x, b.y - a.y) || 1;
+    const bc = Math.hypot(c.x - b.x, c.y - b.y) || 1;
+    const r1 = Math.min(r, ab / 2, bc / 2);
+    const p1 = { x: b.x - ((b.x - a.x) / ab) * r1, y: b.y - ((b.y - a.y) / ab) * r1 };
+    const p2 = { x: b.x + ((c.x - b.x) / bc) * r1, y: b.y + ((c.y - b.y) / bc) * r1 };
+    d += ` L ${p1.x.toFixed(2)} ${p1.y.toFixed(2)} Q ${b.x.toFixed(2)} ${b.y.toFixed(2)} ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
+  }
+  const last = clean[clean.length - 1];
+  d += ` L ${last.x.toFixed(2)} ${last.y.toFixed(2)}`;
+  return d;
 }
 
 export function pathFromPoints(pts: Pt[], bottom: number): { stroke: string; fill: string } {

@@ -20,9 +20,10 @@ type Props = {
   settle: boolean;
   intro: boolean;
   reduced: boolean;
+  yourPrice: bigint | null;
 };
 
-export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduced }: Props) {
+export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduced, yourPrice }: Props) {
   const stageRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   useLayoutEffect(() => {
@@ -42,12 +43,12 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
   const vw = Math.max(size.w, 1);
   const vh = Math.max(size.h, 1);
   const target = useMemo(
-    () => buildStepPath(bids, vw, vh, floor, clearing, settle && !failed ? 1 : 0),
-    [bids, floor, clearing, settle, failed, vw, vh],
+    () => buildStepPath(bids, vw, vh, floor, clearing, settle && !failed ? 1 : 0, yourPrice),
+    [bids, floor, clearing, settle, failed, vw, vh, yourPrice],
   );
   const ghost = useMemo(
-    () => buildStepPath(bids, vw, vh, floor, clearing, 0),
-    [bids, floor, clearing, vw, vh],
+    () => buildStepPath(bids, vw, vh, floor, clearing, 0, yourPrice),
+    [bids, floor, clearing, vw, vh, yourPrice],
   );
   const [shown, setShown] = useState<Plot>(target);
   const [resting, setResting] = useState(settle && !failed);
@@ -57,11 +58,10 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
   const svgRef = useRef<SVGSVGElement>(null);
   const strokeRef = useRef<SVGPathElement>(null);
   const fillRef = useRef<SVGPathElement>(null);
-  const crossRef = useRef<SVGGElement>(null);
-  const readRef = useRef<SVGTextElement>(null);
-  const hRef = useRef<SVGLineElement>(null);
   const vRef = useRef<SVGLineElement>(null);
-  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const tipRef = useRef<HTMLDivElement>(null);
+  const tipLines = useRef<Array<HTMLParagraphElement | null>>([]);
+  const locked = useRef(false);
   const sawSettle = useRef<boolean | null>(null);
   const [sweep, setSweep] = useState(false);
   const [pulse, setPulse] = useState(false);
@@ -83,7 +83,6 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
     if (reduced || from.pts.length === 0) {
       shownRef.current = to;
       setShown(to);
-      burst(canvasRef.current, svgRef.current, to, reduced);
       setSweep(true);
       setResting(true);
       return;
@@ -99,8 +98,6 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
       else {
         setSweep(true);
         setResting(true);
-        burst(canvasRef.current, svgRef.current, to, false);
-        window.setTimeout(() => setPulse(true), 700);
       }
     };
     frame = requestAnimationFrame(step);
@@ -134,47 +131,82 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
     if (!intro && !settle) setPulse(true);
   }, [intro, settle]);
 
-  function onMove(event: PointerEvent<SVGSVGElement>) {
+  function pointOf(event: PointerEvent<SVGSVGElement>) {
     const svg = svgRef.current;
-    const plot = shownRef.current;
-    if (!svg || !crossRef.current || !hRef.current || !vRef.current || !readRef.current) return;
+    if (!svg) return null;
     const pt = svg.createSVGPoint();
     pt.x = event.clientX;
     pt.y = event.clientY;
     const ctm = svg.getScreenCTM();
-    if (!ctm) return;
-    const p = pt.matrixTransform(ctm.inverse());
-    if (p.x < plot.left || p.x > plot.right || p.y < plot.top || p.y > plot.bottom) {
-      crossRef.current.style.opacity = "0";
-      return;
+    if (!ctm) return null;
+    return pt.matrixTransform(ctm.inverse());
+  }
+
+  function hideTip() {
+    locked.current = false;
+    if (tipRef.current) tipRef.current.style.opacity = "0";
+    if (vRef.current) vRef.current.style.opacity = "0";
+  }
+
+  function showTip(x: number) {
+    const plot = shownRef.current;
+    const tier = plot.tiers.find((item) => x >= item.x1 && x <= item.x2);
+    if (!tier || !vRef.current || !tipRef.current) {
+      if (!locked.current) hideTip();
+      return null;
     }
-    crossRef.current.style.opacity = "1";
-    hRef.current.setAttribute("x1", String(plot.left));
-    hRef.current.setAttribute("x2", String(plot.right));
-    hRef.current.setAttribute("y1", String(p.y));
-    hRef.current.setAttribute("y2", String(p.y));
+    const mid = Math.round((tier.x1 + tier.x2) / 2) + 0.5;
+    vRef.current.setAttribute("x1", String(mid));
+    vRef.current.setAttribute("x2", String(mid));
     vRef.current.setAttribute("y1", String(plot.top));
     vRef.current.setAttribute("y2", String(plot.bottom));
-    vRef.current.setAttribute("x1", String(p.x));
-    vRef.current.setAttribute("x2", String(p.x));
-    const span = Number(plot.ceil - plot.lo) || 1;
-    const price = plot.lo + BigInt(Math.round(((plot.bottom - p.y) / (plot.bottom - plot.top)) * span));
-    const quote = plot.total === 0n ? 0n : BigInt(Math.round(((p.x - plot.left) / (plot.right - plot.left)) * Number(plot.total)));
-    const tier = plot.tiers.find((item) => p.x >= item.x1 && p.x <= item.x2);
-    readRef.current.textContent = tier
-      ? `${formatPrice(price)} BNB/枚 · ${tier.count} 笔 · ${formatBnb(tier.budget)} BNB`
-      : `${formatPrice(price)} · ${formatBnb(quote)} BNB`;
-    const readX = p.x > plot.right - 160 ? p.x - 8 : p.x + 8;
-    readRef.current.setAttribute("x", String(readX));
-    readRef.current.setAttribute("y", String(Math.max(plot.top + 14, p.y - 8)));
-    readRef.current.setAttribute("text-anchor", p.x > plot.right - 160 ? "end" : "start");
+    vRef.current.style.opacity = "1";
+    const lines = [`限价 ${formatPrice(tier.price)} BNB/枚`, `${tier.count} 笔`, `${formatBnb(tier.budget)} BNB`];
+    lines.forEach((line, i) => {
+      if (tipLines.current[i]) tipLines.current[i]!.textContent = line;
+    });
+    const left = Math.min(Math.max(plot.left, mid + 8), plot.right - 140);
+    tipRef.current.style.left = `${left}px`;
+    tipRef.current.style.top = `${Math.max(8, tier.y - 72)}px`;
+    tipRef.current.style.opacity = "1";
+    return tier;
+  }
+
+  function onMove(event: PointerEvent<SVGSVGElement>) {
+    if (window.matchMedia("(pointer: coarse)").matches) return;
+    const p = pointOf(event);
+    const plot = shownRef.current;
+    if (!p || p.x < plot.left || p.x > plot.right || p.y < plot.top || p.y > plot.bottom) {
+      hideTip();
+      return;
+    }
+    showTip(p.x);
+  }
+
+  function onChartClick(event: PointerEvent<SVGSVGElement>) {
+    if (!window.matchMedia("(pointer: coarse)").matches) return;
+    const p = pointOf(event);
+    const plot = shownRef.current;
+    if (!p || p.x < plot.left || p.x > plot.right) {
+      hideTip();
+      return;
+    }
+    if (locked.current) {
+      hideTip();
+      return;
+    }
+    const tier = showTip(p.x);
+    locked.current = Boolean(tier);
   }
 
   function onLeave() {
-    if (crossRef.current) crossRef.current.style.opacity = "0";
+    if (locked.current) return;
+    hideTip();
   }
 
   const plot = resting ? ghost : shown;
+  const hair = (n: number) => Math.round(n) + 0.5;
+  const priceIn = yourPrice != null && (clearing == null || yourPrice >= clearing);
   return (
     <div className="stage" ref={stageRef}>
       <svg
@@ -186,28 +218,25 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
         preserveAspectRatio="xMinYMin meet"
         onPointerMove={onMove}
         onPointerLeave={onLeave}
+        onClick={onChartClick}
         role="img"
         aria-label="限价台阶和清算价"
       >
-        <defs>
-          <linearGradient id="fillGold" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#F0B90B" stopOpacity="0.18" />
-            <stop offset="100%" stopColor="#F0B90B" stopOpacity="0" />
-          </linearGradient>
-          <linearGradient id="fillGray" x1="0" y1="0" x2="0" y2="1">
-            <stop offset="0%" stopColor="#9A9AA2" stopOpacity="0.2" />
-            <stop offset="100%" stopColor="#9A9AA2" stopOpacity="0" />
-          </linearGradient>
-        </defs>
-        <line className="axis" x1={plot.left} y1={plot.top} x2={plot.left} y2={plot.bottom} />
-        <line className="axis" x1={plot.left} y1={plot.bottom} x2={plot.right} y2={plot.bottom} />
+        <rect className="plot-bg" x="0" y="0" width={vw} height={vh} />
         {plot.ticks.map((tick) => (
-          <text className="tick" key={tick.text + tick.y} x={plot.left - 8} y={tick.y + 4} textAnchor="end">
+          <line key={`g-${tick.y}`} className="grid-line" x1={hair(plot.left)} x2={hair(plot.right)} y1={hair(tick.y)} y2={hair(tick.y)} />
+        ))}
+        <line className="baseline" x1={hair(plot.left)} x2={hair(plot.right)} y1={hair(plot.bottom)} y2={hair(plot.bottom)} />
+        {plot.ticks.map((tick) => (
+          <text className="tick y-tick" key={tick.text + tick.y} x={plot.left - 8} y={tick.y + 4} textAnchor="end">
             {tick.text}
           </text>
         ))}
+        <text className="tick unit" x={plot.left - 8} y={12} textAnchor="end">
+          BNB/枚
+        </text>
         {plot.xTicks.map((tick) => (
-          <text className="tick" key={tick.text + tick.x} x={tick.x} y={plot.bottom + 16} textAnchor={tick.x === plot.left ? "start" : "end"}>
+          <text className="tick x-tick" key={tick.text + tick.x} x={tick.x} y={plot.bottom + 16} textAnchor={tick.x === plot.left ? "start" : "end"}>
             {tick.text}
           </text>
         ))}
@@ -215,37 +244,50 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
           <rect className="draw-rect" x="0" y="0" width={vw} height={vh} />
         </clipPath>
         <g clipPath={intro && !reduced && !resting ? "url(#drawClip)" : undefined}>
-          {resting && ghost.fill && <path className="step-fill ghost" d={ghost.fill} fill="url(#fillGold)" />}
-          {resting && ghost.stroke && <path className="step ghost" d={ghost.stroke} />}
-          {!resting && plot.fill && <path ref={fillRef} className={failed ? "step-fill failed" : "step-fill"} d={plot.fill} fill={failed ? "url(#fillGray)" : "url(#fillGold)"} />}
-          {!resting && plot.stroke && <path ref={strokeRef} className={failed ? "step failed" : "step"} d={plot.stroke} strokeDasharray="none" />}
+          {plot.rect && !failed && (
+            <rect className={sweep && !reduced ? "uniform-rect play" : "uniform-rect"} x={plot.rect.x} y={plot.rect.y} width={plot.rect.w} height={Math.max(plot.rect.h, 0)} />
+          )}
+          {failed && plot.stroke && <path className="step failed" d={plot.stroke} />}
+          {!failed && plot.inStroke && <path className={settle ? "step-in ghost" : "step-in"} d={plot.inStroke} />}
+          {!failed && plot.outStroke && <path className="step-out" d={plot.outStroke} />}
+          {!failed && !plot.inStroke && plot.stroke && <path ref={strokeRef} className="step" d={plot.stroke} />}
         </g>
-        <line className="reserve" x1={plot.left} x2={plot.right} y1={plot.reserveY} y2={plot.reserveY} />
+        <line className="reserve" x1={hair(plot.left)} x2={hair(plot.right)} y1={hair(plot.reserveY)} y2={hair(plot.reserveY)} />
+        <text className="tick" x={plot.left + 4} y={plot.reserveY + (plot.clearingY != null && Math.abs(plot.clearingY - plot.reserveY) < 18 ? 14 : -6)}>
+          保留价 {formatPrice(floor)}
+        </text>
+        {plot.yourY != null && (
+          <>
+            <line className={priceIn ? "your-line in" : "your-line"} x1={hair(plot.left)} x2={hair(plot.right)} y1={hair(plot.yourY)} y2={hair(plot.yourY)} />
+            <text className="tick" x={plot.left + 4} y={plot.yourY - 6}>
+              你的限价 {formatPrice(yourPrice ?? 0n)}
+            </text>
+          </>
+        )}
         {plot.clearingY != null && !failed && (
           <>
-            <line className="volume" x1={plot.crossX ?? plot.left} x2={plot.crossX ?? plot.left} y1={plot.clearingY} y2={plot.bottom} />
-            <text
-              className="tick vol"
-              x={(plot.crossX ?? plot.left) > plot.right - 72 ? (plot.crossX ?? plot.left) - 8 : (plot.crossX ?? plot.left) + 8}
-              y={plot.bottom - 8}
-              textAnchor={(plot.crossX ?? plot.left) > plot.right - 72 ? "end" : "start"}
-            >
-              成交量
+            <line className="volume" x1={hair(plot.crossX ?? plot.left)} x2={hair(plot.crossX ?? plot.left)} y1={hair(plot.clearingY)} y2={hair(plot.bottom)} />
+            <line className="clear-glow" x1={hair(plot.left)} x2={hair(plot.right)} y1={hair(plot.clearingY)} y2={hair(plot.clearingY)} />
+            <line className="clear-line" x1={hair(plot.left)} x2={hair(plot.right)} y1={hair(plot.clearingY)} y2={hair(plot.clearingY)} />
+            <text className="badge" x={plot.right - 4} y={plot.clearingY - 8} textAnchor="end">
+              清算价 {formatPrice(clearing ?? 0n)}
             </text>
-            <line className="clear-glow" x1={plot.left} x2={plot.right} y1={plot.clearingY} y2={plot.clearingY} />
-            <line className="clear-line" x1={plot.left} x2={plot.right} y1={plot.clearingY} y2={plot.clearingY} />
-            <g transform={`translate(${plot.crossX ?? plot.left} ${plot.clearingY})`}>
-              <circle className={pulse && !intro ? "dot-core idle" : "dot-core"} r="5" />
+            <text className="tick" x={(plot.crossX ?? plot.left) + 6} y={Math.min(plot.bottom - 8, (plot.clearingY ?? plot.bottom) + 16)}>
+              成交 {formatBnb(plot.filled)} BNB
+            </text>
+            <g className={pulse ? "clear-dot once" : "clear-dot"} transform={`translate(${plot.crossX ?? plot.left} ${plot.clearingY})`}>
+              <circle className="dot-ring" r="7" />
+              <circle className="dot-core" r="3" />
             </g>
           </>
         )}
-        <g ref={crossRef} className="crosshair" style={{ opacity: 0 }}>
-          <line ref={hRef} className="cross" />
-          <line ref={vRef} className="cross" />
-          <text ref={readRef} className="cross-read" />
-        </g>
+        <line ref={vRef} className="cross" style={{ opacity: 0 }} />
       </svg>
-      <canvas ref={canvasRef} className={sweep ? "fx play" : "fx"} />
+      <div ref={tipRef} className="tip" style={{ opacity: 0 }}>
+        <p ref={(node) => { tipLines.current[0] = node; }} />
+        <p ref={(node) => { tipLines.current[1] = node; }} />
+        <p ref={(node) => { tipLines.current[2] = node; }} />
+      </div>
       {bids.length === 0 && <div className="empty">还没有出价</div>}
     </div>
   );
@@ -273,55 +315,3 @@ function mixPlot(from: Plot, to: Plot, t: number): Plot {
   };
 }
 
-function burst(canvas: HTMLCanvasElement | null, svg: SVGSVGElement | null, plot: Plot, reduced: boolean) {
-  if (!canvas || !svg || reduced || plot.clearingY == null || plot.crossX == null) return;
-  const rect = svg.getBoundingClientRect();
-  const dpr = Math.min(2, window.devicePixelRatio || 1);
-  canvas.width = Math.max(1, Math.floor(rect.width * dpr));
-  canvas.height = Math.max(1, Math.floor(rect.height * dpr));
-  const ctx = canvas.getContext("2d");
-  if (!ctx) return;
-  const mapX = (x: number) => (x / Number(svg.viewBox.baseVal.width || rect.width)) * rect.width;
-  const mapY = (y: number) => (y / Number(svg.viewBox.baseVal.height || rect.height)) * rect.height;
-  const goal = { x: mapX(plot.crossX), y: mapY(plot.clearingY) };
-  const seeds = plot.pts.length > 0 ? plot.pts : [{ x: plot.left, y: plot.clearingY }];
-  const count = Math.min(64, Math.max(24, seeds.length * 6));
-  const parts = Array.from({ length: count }, (_, i) => {
-    const src = seeds[i % seeds.length];
-    const x = mapX(src.x);
-    const y = mapY(src.y);
-    return {
-      x,
-      y,
-      vx: (goal.x - x) * (0.018 + (i % 5) * 0.004),
-      vy: (goal.y - y) * (0.018 + (i % 5) * 0.004),
-      r: 1 + (i % 3) * 0.4,
-      life: 1,
-    };
-  });
-  const t0 = performance.now();
-  const draw = (now: number) => {
-    const t = Math.min(1, (now - t0) / 700);
-    ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
-    ctx.clearRect(0, 0, rect.width, rect.height);
-    const bandX = mapX(plot.left) + (mapX(plot.right) - mapX(plot.left)) * easeOut(Math.min(1, t / 0.85));
-    const grad = ctx.createLinearGradient(bandX - 70, 0, bandX + 18, 0);
-    grad.addColorStop(0, "rgba(240,185,11,0)");
-    grad.addColorStop(0.7, "rgba(240,185,11,0.45)");
-    grad.addColorStop(1, "rgba(240,185,11,0)");
-    ctx.fillStyle = grad;
-    ctx.fillRect(bandX - 70, goal.y - 5, 88, 10);
-    for (const p of parts) {
-      p.x += p.vx;
-      p.y += p.vy;
-      p.life = 1 - t;
-      ctx.beginPath();
-      ctx.fillStyle = `rgba(240,185,11,${0.85 * p.life})`;
-      ctx.arc(p.x, p.y, p.r, 0, Math.PI * 2);
-      ctx.fill();
-    }
-    if (t < 1) requestAnimationFrame(draw);
-    else ctx.clearRect(0, 0, rect.width, rect.height);
-  };
-  requestAnimationFrame(draw);
-}
