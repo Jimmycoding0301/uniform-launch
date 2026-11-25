@@ -43,6 +43,7 @@ function fail(id, code, message) {
 }
 
 const rl = readline.createInterface({ input: process.stdin });
+rl.on("close", () => process.exit(0));
 rl.on("line", (line) => {
   if (!line.trim()) return;
   let msg;
