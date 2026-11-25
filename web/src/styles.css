@@ -66,6 +66,7 @@ body {
 .meta-line { display: block; }
 .status-line { display: none; margin: 0; }
 .screen {
+  margin: 0;
   flex: 1;
   min-height: 0;
   padding: var(--space-1) var(--pad) var(--space-4);

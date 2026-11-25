@@ -524,9 +524,9 @@ export function App() {
           </b>
           <span className="top-meta">{demo?.localFork ? <Zh text="本地分叉，不是测试网" /> : "BSC 测试网"}</span>
         </header>
-        <section className="screen" id="script">
+        <main className="screen" id="script">
           <ScriptPage demo={demo} />
-        </section>
+        </main>
       </div>
     );
   }
@@ -548,7 +548,7 @@ export function App() {
         </span>
       </header>
       <p className="status-line"><Zh text={mobileStatus(demo?.localFork, snap?.sources.some((item) => item.standIn))} /></p>
-      <section className="screen" id="desk">
+      <main className="screen" id="desk">
         {!launcher && !rpcError && params.get("network") === "testnet" && <TestnetBoard />}
         {!launcher && !rpcError && params.get("network") !== "testnet" && <Empty />}
         {launcher && !snap && (rpcError || holdSkel) && (
@@ -729,10 +729,10 @@ export function App() {
                     <div className={hashNote.startsWith("哈希") ? "window bad" : "window"}>
                       <input id="txhash" value={hashInput} spellCheck={false} autoComplete="off" onChange={(e) => setHashInput(e.target.value)} />
                     </div>
+                    {hashNote && <p className="help bad" role="status"><i className="mark" />{hashNote}</p>}
                     <button className="text-btn" type="button" onClick={() => void checkHash()} disabled={hashBusy}>
                       {hashBusy ? "核对中…" : "核对"}
                     </button>
-                    {hashNote && <p className="help bad" role="status"><i className="mark" />{hashNote}</p>}
                     {hashReceipt && (
                       <div className="result-card">
                         <h2>交易已核对</h2>
@@ -788,7 +788,7 @@ export function App() {
             </div>
           </div>
         )}
-      </section>
+      </main>
     </div>
   );
 

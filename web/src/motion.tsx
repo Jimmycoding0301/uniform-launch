@@ -30,7 +30,7 @@ export function Zh({ text }: { text: string }) {
 
 export function Roller({ text }: { text: string }) {
   return (
-    <span className="roller" aria-label={text}>
+    <span className="roller" role="img" aria-label={text}>
       {[...text].map((ch, i) =>
         ch >= "0" && ch <= "9" ? (
           <span className="roll-digit" key={`${i}-${text.length}`} aria-hidden="true">
