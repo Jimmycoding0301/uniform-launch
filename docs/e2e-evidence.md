@@ -10,16 +10,16 @@
 
 | 阶段 | 交易哈希 | 结果 |
 | --- | --- | --- |
-| 创建 | `0xe6f05c56afbe3f094f05efc375b665f1eef5754ce0b94cd4e929bacd4390e1fe` | Launcher `0x67d6d25bcfc55c906B9628a31F96E81EFf7682e3`，创建费 0.005 BNB |
-| Alice 领身份并出价 20 BNB | `0x9a4518b293e5ecb7f08a35a1ed575910c7162cb558cd3ac5632785aaf4938406`、`0x9d1a41c7140df1b0698f78c1f4a055e8befac6eb0cc18ea1a35ef7cfc6c0c97f` | Agent ID 替身 |
-| Bob 登记 ERC-8004 并出价 20 BNB | `0xcac2ea87b5d99183f728ffa21e02575368c72a2290ac66f40a3ea86d047e7fd5`、`0x2b474f78218bd82d7ec598d02eb9e023e29ac77a9a2d2d59e687a43967d37591` | 身份编号 2929 |
-| Carol 出价 1 BNB，最高价低于清算价 | `0x59882ee05ac2306037023dfc429e53e4682828016d8f05b6cb14da54037cb864`、`0x7d93cca9c32b5920f73341e20c1e4d2682ba2f346372ab97deba3d98e9894d2e` | 最高价 0.00002 BNB/枚 |
-| 结算 | `0xd37d8c76bb7b3bb23778f67f837200d7d9195250f8b70baedb81f52f7451b853` | 清算价 0.00008 BNB/枚，入池 40 BNB |
-| 领取 | `0x380ec6858fa06cb5cb200ccddb10e950f99b6084c331a4fa6d91b63be973d186`、`0x21e61ed105cb8717a94dee2547b7621ee9e6df3e03ee290cd3cce9992819601b`、`0xffa682b3f0b2e2ed75956f6b84151fa7696231a0b4da5dce71f59872723fb7e8` | Alice 250000 枚，Bob 250000 枚，Carol 0 枚 |
-| 买、卖、分税 | `0x4e5c56eee3464e9958fc893d03619e6486e1de315fff8e0530e00d79ad3c5644`、`0x34c96fda14062653b2007e77549086fb673e345b3f37a4dceb6aa45a23587dbf`、`0xc8231bfc923c3b382bbe470fc0fb649a3cba6505e9ee795eff4542c268560850`、`0x77f98a1498f58b952ed33804cc8364cc5c2af9f2d43f564f69f0a4845b2e3e51` | 金库从 0 增到 27516256919450703 wei |
-| 提走 | `0x5b9ff2b1acb9b70b13794c23f774f17c773d139a15439fc91c3347561cb24f93` | owner 余额增加 27516256919450703 wei，和金库减少的数额相同 |
+| 创建 | `0xcf8b021e5341d1528d71d293abf84c15b1143ebf9e8e5cdfa4798613b51dc5ce` | Launcher `0x98a26CE56ccaA76C216d99529281a591b6dA1933`，创建费 0.005 BNB |
+| Alice 领身份并出价 20 BNB | `0x258d746a0c68d4da15e89f11c685139d5d947617ea6a6733460d0b2a2b331563`、`0x383d5c05a5812bd77457b08cb72c6e2257e43adc43b702ef286c07be30ab27a9` | Agent ID 替身 |
+| Bob 登记 ERC-8004 并出价 20 BNB | `0xb53e53059bfe035f16558a111b75ed42803a113fc7db009cef23fc1a4de174a6`、`0x8b3763073c3352e5ea30c7959b44c4969f8f86d4052160c73ec37b5bd9ac398b` | 身份编号 2930 |
+| Carol 出价 1 BNB，最高价低于清算价 | `0x03a61b6f4588cd6ece0008bf3fe4dc55772dfa7d025cd666996be461ba6b89b0`、`0xdbc94998dfdd859ef2c4e4eff28ef5d1fc60d3c4ce9c95899712111a40dcb3ad` | 最高价 0.00002 BNB/枚 |
+| 结算 | `0xc01654363438960f4dc9b36a78698d57ca35988d2920b5e9c19fa83184e593fc` | 清算价 0.00008 BNB/枚，入池 40 BNB |
+| 领取 | `0xe255a22136b4deacbda3dd6b0162124d9ac3fcd6bcde7ad6413337175bbe8607`、`0x314f0a26eeaff1be52db9387337fa0e4fef7c8ed77c972432df0e1f2899602fe`、`0x9627eded465feddea82d3ba3b8cf2ee9a46d9b4fc8ba74c15539b4ecd2e3e0f0` | Alice 250000 枚，Bob 250000 枚，Carol 0 枚 |
+| 买、卖、分税 | `0x707163a695d28d74107d27a3aa520dcce63df3b74eb0fcbc81c658fcefb00038`、`0xcd6e289e61faa79a3b0df421ecb26627d4a5cb1e5e8f63d91b05eaec002e47d6`、`0x76b3c337bbc37390b36469de719b61346c96bdd2c73d76fafbd4b2647ec62b9b`、`0xfe0efb120759131d9248ea0b774fea6892fe250a138f48fb7cf521527b2accd8` | 金库从 0 增到 27516256919450703 wei |
+| 提走 | `0x12823ce9dbb89bc7147d0f28bd33c89656673914077eab3a58ab36615c4cbc08` | owner 余额增加 27516256919450703 wei，和金库减少的数额相同 |
 
-代币 `0xe70018757F585d9F1C7bbe726F164a48D19f7777`。池子 `0x853fDB01b08bcB0A6Dc2ea21613DbB226018655E`。金库 `0xbadFB4C7c18003a509Ef2777c42dA410FA479c33`。
+代币 `0x1D9c9DA9ad42FeD14f4949a6ff23017bA3457777`。池子 `0x0f2644BA1350aaDE0B0a28eb87b2203dcEeac4D2`。金库 `0x5c9C4dE384D3c51d44765A07165d0a878D3080fe`。创建用的盐带上当时的区块，同一条链上可以再开一场，不会撞上一次的盐。
 
 Carol 的最高价低于清算价，所以代币是 0。领取交易把她的预算退回。
 
@@ -50,11 +50,12 @@ Error: script failed: remote-broadcast
 
 顺序：
 
-1. `forge script script/E2ETestnet.s.sol --sig "create()" --rpc-url "$BSC_TESTNET_RPC_URL"`。先看它是不是打印「Flap 还没开这个工厂的权限」。
-2. 权限打开、余额够了，再 `create()`。需要 0.005 tBNB 创建费加 gas。
-3. 三个地址分别 `bid()`。成交路径需要入池至少 4.3357 tBNB。
-4. 等到结束区块，`settle()`。燃料上限 8000000。
-5. `claim()`。
-6. `trade()`，确认金库余额增加。
-7. `withdraw()`，确认 owner 增加的数额和金库减少的数额相同。
-8. `show()`。
+1. `forge script script/E2ETestnet.s.sol --sig "create()" --rpc-url "$BSC_TESTNET_RPC_URL"`。不带 `--broadcast`。先看它是不是打印「Flap 还没开这个工厂的权限」。
+2. 权限打开、创建者余额够了，仍不带 `--broadcast` 再跑 `create()`。它应打印预计花费，不再停在权限。创建费 0.005 tBNB 加 gas。
+3. 这一轮脚本拒绝非本机广播。要真正发出去，先改这个限制，再给 `UNIFORM_RPC_URL` 和 `--broadcast`。没改之前不要加 `--broadcast`。
+4. 三个地址分别 `bid()`。成交路径需要入池至少 4.3357 tBNB。失败退款路径每人 0.01 tBNB 加 gas。
+5. 等到结束区块，`settle()`。燃料上限 8000000。
+6. `claim()`。
+7. `trade()`。先把链上时间推进两天再分税，确认金库余额增加。
+8. `withdraw()`。确认 owner 增加的数额和金库减少的数额相同。
+9. `show()`。

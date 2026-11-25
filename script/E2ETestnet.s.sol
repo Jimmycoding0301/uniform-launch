@@ -93,7 +93,7 @@ contract E2ETestnet is Script {
         c.name = "Tongjia";
         c.symbol = "E2E";
         c.meta = "bafkreig4y5nwb4izyilbbmiydumvkld446d4k7j4ohg3x3q2lfel3fo4yq";
-        c.salt = _mine(bytes32("e2e-script"));
+        c.salt = _mine(keccak256(abi.encode(bytes32("e2e-script"), block.number)));
         c.floorPrice = 1e13;
         c.durationBlocks = 200;
         c.identitySources = new address[](2);
