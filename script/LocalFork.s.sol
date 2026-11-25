@@ -24,22 +24,7 @@ contract LocalForkScript is Script {
     address internal bob = address(uint160(0xC0DE0003));
 
     function run() external {
-        IPortal portal = IPortal(LaunchVaultAddresses.hub());
-        address admin = IProxyAdminLike(PROXY_ADMIN).owner();
-        uint256 nonce = vm.getNonce(creator);
-        address predicted = vm.computeCreateAddress(creator, nonce + 1);
-
-        vm.startBroadcast(creator);
-        UniformVaultFactory vaultFactory = new UniformVaultFactory(predicted);
-        UniformLauncherFactory launcherFactory = new UniformLauncherFactory(address(vaultFactory));
-        vm.stopBroadcast();
-
-        vm.startBroadcast(admin);
-        portal.setLauncherFactoryMultiplier(address(launcherFactory), 10_000, true);
-        portal.setVaultFactoryMultiplier(address(vaultFactory), 10_000, true);
-        vm.stopBroadcast();
-
-        uint256 fee = portal.SALT_LOCK_FEE();
+        (IPortal portal, UniformLauncherFactory launcherFactory, uint256 fee) = _boot();
         UniformLauncher openL = _create(portal, launcherFactory, fee, 1e13, 20_000, "OPEN", bytes32("open"));
         UniformLauncher settleL = _create(portal, launcherFactory, fee, 1e13, 400, "SET", bytes32("settle"));
         UniformLauncher failL = _create(portal, launcherFactory, fee, 1 ether, 400, "FAIL", bytes32("fail"));
@@ -55,11 +40,64 @@ contract LocalForkScript is Script {
         failL.bid{value: 1 ether}(1 ether, 0, uint160(bob));
         vm.stopBroadcast();
 
-        console.log("FACTORY_L", address(launcherFactory));
-        console.log("FACTORY_V", address(vaultFactory));
         console.log("LAUNCH_OPEN", address(openL));
         console.log("LAUNCH_SETTLE", address(settleL));
         console.log("LAUNCH_FAIL", address(failL));
+    }
+
+    /// @notice 造演示六幕要用的三场：9 笔接单、一笔可发射、一笔会失败。结算由外壳脚本推进区块后完成。
+    function runScenes() external {
+        (IPortal portal, UniformLauncherFactory launcherFactory, uint256 fee) = _boot();
+        UniformLauncher openL = _create(portal, launcherFactory, fee, 1e13, 20_000, "OPEN9", bytes32("open9"));
+        uint256[9] memory budgets = [
+            uint256(3 ether),
+            2.5 ether,
+            2.5 ether,
+            2 ether,
+            1 ether,
+            1.5 ether,
+            1.2 ether,
+            1 ether,
+            1 ether
+        ];
+        uint256[9] memory prices = [uint256(8e13), 5e13, 3e13, 2e13, 2e13, 16e12, 14e12, 12e12, 11e12];
+        for (uint256 i; i < 9; ++i) {
+            address who = address(uint160(0xC0DE0010 + i));
+            vm.startBroadcast(who);
+            openL.bid{value: budgets[i]}(prices[i], 0, uint160(who));
+            vm.stopBroadcast();
+        }
+        UniformLauncher doneL = _create(portal, launcherFactory, fee, 1e13, 200, "DONE9", bytes32("done9"));
+        vm.startBroadcast(alice);
+        doneL.bid{value: 5 ether}(1e16, 0, uint160(alice));
+        vm.stopBroadcast();
+        UniformLauncher failL = _create(portal, launcherFactory, fee, 1 ether, 200, "FAIL9", bytes32("fail9"));
+        vm.startBroadcast(bob);
+        failL.bid{value: 0.01 ether}(1 ether, 0, uint160(bob));
+        vm.stopBroadcast();
+        console.log("LAUNCH_OPEN", address(openL));
+        console.log("LAUNCH_DONE", address(doneL));
+        console.log("LAUNCH_FAIL", address(failL));
+        console.log("DONE_END", uint256(doneL.endBlock()));
+        console.log("FAIL_END", uint256(failL.endBlock()));
+    }
+
+    function _boot() internal returns (IPortal portal, UniformLauncherFactory launcherFactory, uint256 fee) {
+        portal = IPortal(LaunchVaultAddresses.hub());
+        address admin = IProxyAdminLike(PROXY_ADMIN).owner();
+        uint256 nonce = vm.getNonce(creator);
+        address predicted = vm.computeCreateAddress(creator, nonce + 1);
+        vm.startBroadcast(creator);
+        UniformVaultFactory vaultFactory = new UniformVaultFactory(predicted);
+        launcherFactory = new UniformLauncherFactory(address(vaultFactory));
+        vm.stopBroadcast();
+        vm.startBroadcast(admin);
+        portal.setLauncherFactoryMultiplier(address(launcherFactory), 10_000, true);
+        portal.setVaultFactoryMultiplier(address(vaultFactory), 10_000, true);
+        vm.stopBroadcast();
+        fee = portal.SALT_LOCK_FEE();
+        console.log("FACTORY_L", address(launcherFactory));
+        console.log("FACTORY_V", address(vaultFactory));
     }
 
     function _create(

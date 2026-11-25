@@ -18,7 +18,7 @@ Agents submit a limit and a budget. One clearing at the end, one price for every
 | Flap：测试网完整发射 | [工厂](https://testnet.bscscan.com/address/0xE82642aC5c3B3B4b7D4cDeaf6a251Dc0BB7AcEfd)、[金库工厂](https://testnet.bscscan.com/address/0x2EF7a93b2fE4FBF520D5210b3ea39a72E5133dc6)。测试网还没开权限，本机分叉彩排在 [docs/e2e-evidence.md](docs/e2e-evidence.md) |
 | Flap：Vault 按设计工作 | 分叉上金库增加 27516256919450703 wei，owner 提走相同数额，见 [证据](docs/e2e-evidence.md) |
 | 机制为什么不同 | [docs/why-uniform.md](docs/why-uniform.md) |
-| Developer：建在 BNB Chain | 链编号 97，合约已在 BscScan 验证 |
+| Developer：建在 BNB Chain | 链编号 97。[发射工厂已验证](https://testnet.bscscan.com/address/0xE82642aC5c3B3B4b7D4cDeaf6a251Dc0BB7AcEfd) |
 | 设计与可用性 | [架构和路径](docs/architecture.md)、[演示稿](docs/demo-script.md) |
 | 技术实现 | [LICENSE](LICENSE)、[依赖](#依赖与致谢)、[.env.example](.env.example)、[docker-compose.yml](docker-compose.yml) |
 | 创新 | [代理接口](agent/README.md)，命令行和 MCP，只给未签名交易 |
@@ -63,9 +63,9 @@ Addresses are the verified BSC testnet deployments. The factories are not enable
 bash script/demo.sh
 ```
 
-跑完后终端打印页面地址和 `/?demo=1`。演示条有六幕，左右方向键切换，Esc 退出。检查用 `cd web && npm test`、`forge test`、`node agent/edge.test.mjs`、`node script/check-links.mjs`、`node script/check-why.mjs`、`node script/check-evidence.mjs`。
+跑完后终端打印页面地址和 `/?demo=1`。没有演示场时，这条命令会在本机分叉上造三场：9 笔接单、一场已发射、一场失败，并写 `web/public/demo.json`。已有能读到代码的场次就接着用，不重造。演示条有六幕，左右方向键切换，Esc 退出。检查用 `cd web && npm test`、`forge test`、`node agent/edge.test.mjs`、`node script/check-links.mjs`、`node script/check-why.mjs`、`node script/check-evidence.mjs`。
 
-One command starts the local fork and the page, then prints both URLs. `docker-compose.yml` describes the same two processes. Docker was not run in this environment. `script/demo.sh` does not need it. The check commands are in the paragraph above.
+One command starts the local fork and the page, then prints both URLs. If no demo file is present it creates an open book, a launched auction and a failed auction, and writes `web/public/demo.json`. `docker-compose.yml` describes the same two processes. Docker was not run in this environment. `script/demo.sh` does not need it. The check commands are in the paragraph above.
 
 ## 测试网
 
