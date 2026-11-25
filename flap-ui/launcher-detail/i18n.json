@@ -48,7 +48,7 @@
     "chain": "链编号 97",
     "bidAction": "出价。预算和最高价由代理填写。",
     "claimAction": "领取，金额 0。",
-    "refundAction": "退款，金额 0",
+    "refundAction": "退款，金额 0。",
     "claim": "领取走代理"
   },
   "ko": {
