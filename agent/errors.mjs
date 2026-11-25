@@ -27,6 +27,9 @@ export function explain(error) {
     if (text.includes(selector)) return { ok: false, ...item };
   }
   if (text.includes("地址不对")) return { ok: false, reason: "地址不对", next: "检查合约地址或身份地址。" };
+  if (/returned no data|ContractFunctionZeroDataError/i.test(text)) {
+    return { ok: false, reason: "这个地址上没有这场拍卖", next: "检查地址是不是这一场的合约。" };
+  }
   if (/fetch|network|ECONN|ENOTFOUND|ETIMEDOUT|timeout|HTTP request failed/i.test(text)) {
     return { ok: false, reason: "读不到链", next: "换一个 RPC 地址后重试" };
   }

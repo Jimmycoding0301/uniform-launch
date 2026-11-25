@@ -59,6 +59,11 @@ assert.match(badId.out, /身份编号要用整数/);
 const low = run(["simulate", "--budget", "0.001", "--max-price", "0.00003"]);
 assert.match(low.out, /0\.01 到 100/);
 
+const empty = spawnSync("node", ["cli.mjs", "status", "--launcher", "0x0000000000000000000000000000000000000000", "--rpc", rpc], {
+  cwd: new URL(".", import.meta.url).pathname,
+  encoding: "utf8",
+});
+assert.match(empty.stdout, /没有这场拍卖/);
 const early = run(["settle-tx"]);
 assert.match(early.out, /还没到结算/);
 const ready = spawnSync("node", ["cli.mjs", "settle-tx", "--json", "--launcher", "0xdA237694120AFC09f2005b0F00dAfA70974ABe82", "--rpc", rpc], {
