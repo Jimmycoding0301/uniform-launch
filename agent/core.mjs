@@ -210,6 +210,7 @@ function agentIdOf(agentId) {
 export async function identity(rpc, launcher, account, agentId) {
   try {
     const id = agentIdOf(agentId);
+    const who = addr(account);
     const snap = await read(rpc, launcher);
     const results = [];
     for (let i = 0; i < snap.sources.length; i++) {
@@ -219,7 +220,7 @@ export async function identity(rpc, launcher, account, agentId) {
           address: source,
           abi: launcherAbi,
           functionName: "verify",
-          args: [addr(account), id],
+          args: [who, id],
         });
         results.push({ index: i, ok: Boolean(got[0]), name: sourceName(got[1]) });
       } catch {
