@@ -13,7 +13,7 @@
 | 1:15–1:30 | 点下一幕 | 代理先模拟。这一笔的清算价、成交枚数、实付和退回都从链上读出来。 | 第 3 幕，终端回执 |
 | 1:30–1:45 | 点下一幕 | 窗口结束后一次结算。开盘价、入池和金库都在这里。 | 第 4 幕，已发射，入池 40 BNB |
 | 1:45–2:00 | 点下一幕 | 入池不够就没有代币。每个人拿回全部预算。 | 第 5 幕，没有成交 |
-| 2:00–2:15 | 点下一幕 | 同一组出价，同价的单价比是 1，曲线是 1.8。这是模拟。 | 第 6 幕，三行对照 |
+| 2:00–2:15 | 点下一幕 | 同一组出价，同价的单价比是 1，曲线是 1.8。这是模拟。 | 第 6 幕，同价单价比 1，曲线 1.7789 |
 | 2:15–2:30 | 停在第 6 幕 | 组件包过了 Flap 检查器。测试网合约已验证。代理可以用 MCP 调用。下一步是等 Flap 开权限。 | 对照数字还在 |
 
 ## English
@@ -24,10 +24,10 @@
 | 0:15–0:45 | Point at the ladder and the reserve. Do not click yet | An agent sends a limit and a budget. At the end there is one clearing, and every fill pays it. If the pool is too small, everyone is refunded. A success launches one Flap pool, and all tax goes to the vault. | Still scene 1 |
 | 0:45–1:00 | Stay on scene 1 | This is the live book. The line is the clearing price. The steps are demand. | Clearing price 0.00002 and the ladder |
 | 1:00–1:15 | Click 下一幕. Point at 预算 and 复制出价指令 | Enter a budget and a limit, then hand this text to the agent. The page does not sign. | Scene 2, copy instruction |
-| 1:15–1:30 | Click 下一幕 | The agent simulates first. Price, tokens, spend and refund are read from the chain. | Scene 3, the receipt |
-| 1:30–1:45 | Click 下一幕 | After the window, one settlement. Open price, pool and vault are here. | Scene 4, launched, 40 BNB in the pool |
-| 1:45–2:00 | Click 下一幕 | If the pool is short, there is no token. Everyone gets the full budget back. | Scene 5, no fill |
-| 2:00–2:15 | Click 下一幕 | On the same bids the uniform ratio is 1 and the curve is 1.8. This is a simulation. | Scene 6, three lines |
+| 1:15–1:30 | Click 下一幕 | The agent simulates first. Price, tokens, spend and refund are read from the chain. | Scene 3. The receipt shows 清算价, 成交, 实付, 退回, 入池 |
+| 1:30–1:45 | Click 下一幕 | After the window, one settlement. Open price, pool and vault are here. | Scene 4. 已发射, open price 0.00008, 40 BNB in the pool, 金库余额 |
+| 1:45–2:00 | Click 下一幕 | If the pool is short, there is no token. Everyone gets the full budget back. | Scene 5. 没有成交, full refund |
+| 2:00–2:15 | Click 下一幕 | On the same bids the uniform ratio is 1 and the curve is 1.8. This is a simulation. | Scene 6. 同价单价比 1, 曲线单价比 1.7789 |
 | 2:15–2:30 | Stay on scene 6 | The component passed Flap's checker. The testnet contracts are verified. An agent can call the MCP server. Next we wait for Flap to enable the factory. | The comparison stays on screen |
 
 ## 出事预案
