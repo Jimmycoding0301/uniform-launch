@@ -58,7 +58,7 @@ node /tmp/flap-template/scripts/launcher-check-source.mjs \
 
 ## 读数
 
-八个无参读数：`statusCode`、`bidCount`、`clearingPrice`、`floorPrice`、`endBlock`、`poolQuote`、`token`、`pool`。
+八个无参读数：`statusCode`、`bidCount`、`clearingPrice`、`floorPrice`、`endBlock`、`poolQuote`、`token`、`pool`。这 8 个把阶段、笔数、两个价格、结束区块、入池和两个地址都放进一张交割单。检查器最多 8 个，再加图表也画不出需求阶梯，所以不加。`statusCode` 为 0 时一律显示接单中，因为这 8 个读数里没有当前区块。结束区块写在卡片上。
 
 `statusCode` 在合约里返回 `uint8`，`endBlock` 返回 `uint64`。ABI 编码都是 32 字节。检查器只允许声明 `address`、`bool`、`uint256`，所以 manifest 写成 `uint256`。
 

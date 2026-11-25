@@ -16,5 +16,15 @@ if ! curl -sf -o /dev/null "$WEB"; then
     sleep 1
   done
 fi
-echo "页面 $WEB/?launcher=$(node -e 'const d=require("./web/public/demo.json"); process.stdout.write(d.open||"")')"
+if [ ! -f web/public/demo.json ]; then
+  echo "还没有演示场。先跑 bash script/local-fork.sh"
+  exit 1
+fi
+OPEN=$(node -e 'const d=require("./web/public/demo.json"); process.stdout.write(d.open||"")')
+CODE=$(cast code "$OPEN" --rpc-url "$ANVIL_RPC" 2>/dev/null || true)
+if [ -z "$OPEN" ] || [ -z "$CODE" ] || [ "$CODE" = "0x" ]; then
+  echo "这个地址在本机分叉上没有代码。先跑 bash script/local-fork.sh，再跑本命令。"
+  exit 1
+fi
+echo "页面 $WEB/?launcher=$OPEN"
 echo "演示 $WEB/?demo=1"
