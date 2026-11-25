@@ -38,9 +38,9 @@
 
 ## 30 秒
 
-只留三句。开场用痛点那句。然后说：窗口结束一次清算，所有成交者一个价，卖不够全额退款。最后指第 6 幕：同价单价比是 1，曲线是 1.8，这是模拟。
+只留三句。开场用痛点那句。然后说：窗口结束一次清算，所有成交者一个价，卖不够全额退款。点五次「下一幕」到第 6 幕：同价单价比是 1，曲线是 1.8，这是模拟。
 
-Thirty seconds: the pain sentence, one sentence on a single clearing with full refunds, then the ratio on scene 6.
+Thirty seconds: the pain sentence, one sentence on a single clearing with full refunds, then click 下一幕 five times and read the ratio on scene 6.
 
 ## 字数
 
