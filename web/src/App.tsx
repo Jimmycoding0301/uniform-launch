@@ -240,7 +240,10 @@ export function App() {
     seenLauncher.current = launcher;
     const client = createPublicClient({ transport: http(rpc, { timeout: 8_000 }) });
     let stop = false;
+    let inflight = false;
     const load = async () => {
+      if (inflight) return;
+      inflight = true;
       const slow = window.setTimeout(() => {
         if (!stop) setRpcError(true);
       }, 3000);
@@ -337,6 +340,7 @@ export function App() {
       } catch {
         if (!stop) setRpcError(true);
       } finally {
+        inflight = false;
         window.clearTimeout(slow);
       }
     };
