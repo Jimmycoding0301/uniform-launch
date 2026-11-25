@@ -95,7 +95,7 @@ export function buildStepPath(
   progress: number,
 ): Plot {
   const padL = 78;
-  const padR = 18;
+  const padR = 36;
   const padT = 18;
   const padB = 28;
   const innerW = width - padL - padR;
@@ -141,7 +141,7 @@ export function buildStepPath(
   const right = width - padR;
   const xTicks = [
     { x: left, text: "0" },
-    { x: right, text: total === 0n ? "0" : formatBnb(total) },
+    { x: right, text: total === 0n ? "0 BNB" : `${formatBnb(total)} BNB` },
   ];
   const frame = { ticks, xTicks, left, right, top: padT, bottom, lo, ceil, total };
 

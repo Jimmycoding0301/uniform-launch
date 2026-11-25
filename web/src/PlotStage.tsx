@@ -189,6 +189,7 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
         ref={svgRef}
         className="plot"
         viewBox={`0 0 ${VB_W} ${vbH}`}
+        preserveAspectRatio="xMidYMid meet"
         onPointerMove={onMove}
         onPointerLeave={onLeave}
         role="img"
@@ -229,7 +230,12 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
         {plot.clearingY != null && !failed && (
           <>
             <line className="volume" x1={plot.crossX ?? plot.left} x2={plot.crossX ?? plot.left} y1={plot.clearingY} y2={plot.bottom} />
-            <text className="tick vol" x={(plot.crossX ?? plot.left) + 8} y={plot.bottom - 8}>
+            <text
+              className="tick vol"
+              x={(plot.crossX ?? plot.left) > plot.right - 72 ? (plot.crossX ?? plot.left) - 8 : (plot.crossX ?? plot.left) + 8}
+              y={plot.bottom - 8}
+              textAnchor={(plot.crossX ?? plot.left) > plot.right - 72 ? "end" : "start"}
+            >
               成交量
             </text>
             <line className="clear-glow" x1={plot.left} x2={plot.right} y1={plot.clearingY} y2={plot.clearingY} />

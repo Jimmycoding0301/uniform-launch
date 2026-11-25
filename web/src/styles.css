@@ -36,6 +36,8 @@ body {
   opacity: 1;
 }
 .page.intro::before { animation: fade-in 280ms var(--ease) both; }
+.page.scroll { height: auto; min-height: 100%; }
+.page.scroll .screen { display: block; overflow: visible; }
 .page > * { position: relative; z-index: 1; }
 .skip {
   position: absolute;
@@ -59,6 +61,27 @@ body {
   color: #9A9AA2;
 }
 .top b { color: #F5F5F5; font-weight: 500; font-size: 14px; letter-spacing: -0.02em; }
+.script-link { margin-left: 12px; color: #F0B90B; font-weight: 400; font-size: 12px; text-decoration: none; }
+.script-link:hover { color: #FFC83D; }
+.script-link:focus-visible { outline: 2px solid #F0B90B; outline-offset: 3px; }
+.script {
+  width: min(720px, 100%);
+  margin: 0 auto;
+  padding: 8px 0 48px;
+}
+.script h1 { margin: 0; font-size: 40px; line-height: 44px; font-weight: 500; letter-spacing: -0.03em; }
+.script .lede { margin: 12px 0 0; max-width: 62ch; color: #9A9AA2; font-size: 14px; line-height: 22px; }
+.script ol { list-style: none; margin: 28px 0 0; padding: 0; display: grid; gap: 22px; }
+.script li { border-top: 1px solid rgba(255,255,255,0.08); padding-top: 14px; }
+.script .when { color: #F0B90B; font-family: "Geist Mono", ui-monospace, monospace; font-size: 12px; }
+.script h2 { margin: 4px 0 0; font-size: 18px; line-height: 24px; font-weight: 500; }
+.script p { margin: 8px 0 0; color: #C8C8CE; font-size: 14px; line-height: 22px; }
+.script a { color: #F0B90B; }
+.script code, .mono {
+  font-family: "Geist Mono", ui-monospace, monospace;
+  font-size: 12px;
+  color: #F5F5F5;
+}
 .screen {
   flex: 1;
   min-height: 0;
@@ -75,9 +98,9 @@ body {
   row-gap: 8px;
 }
 .brand-mobile { display: none; }
-.col-form { grid-column: 1; grid-row: 1 / span 2; }
-.col-chart { grid-column: 2; grid-row: 1; }
-.col-bids { grid-column: 2; grid-row: 2; }
+.col-form { grid-column: 1; grid-row: 1 / span 2; min-width: 0; }
+.col-chart { grid-column: 2; grid-row: 1; min-width: 0; }
+.col-bids { grid-column: 2; grid-row: 2; min-width: 0; }
 .col-form, .col-chart {
   min-height: 0;
   display: flex;
@@ -213,9 +236,24 @@ button.primary:disabled { opacity: 0.4; cursor: default; }
 .hash-toggle:focus-visible { outline: 2px solid #F0B90B; outline-offset: 3px; }
 .hash { margin-top: 8px; }
 .hash input { max-width: none; }
-.result-card { margin-top: 16px; display: grid; gap: 8px; }
+.result-card {
+  margin-top: 16px;
+  display: grid;
+  gap: 8px;
+  padding: 12px 12px 12px 14px;
+  border: 1px solid rgba(240, 185, 11, 0.28);
+  border-left: 2px solid #F0B90B;
+  background: rgba(240, 185, 11, 0.045);
+}
 .result-row { display: flex; justify-content: space-between; gap: 12px; font-size: 12px; line-height: 16px; color: #9A9AA2; }
 .result-row b { color: #F5F5F5; font-weight: 500; font-family: "Geist Mono", ui-monospace, monospace; }
+.group-title {
+  margin: 18px 0 6px;
+  font-size: 12px;
+  line-height: 16px;
+  font-weight: 500;
+  color: #9A9AA2;
+}
 .note { color: #F5F5F5; font-size: 13px; margin: 6px 0 0; }
 .chart-head { display: flex; justify-content: space-between; align-items: flex-end; gap: 16px; }
 .kicker, .axis-note { font-size: 12px; line-height: 16px; color: #9A9AA2; }
@@ -230,7 +268,7 @@ button.primary:disabled { opacity: 0.4; cursor: default; }
 }
 .chart-price.dim { color: #F5F5F5; font-size: 32px; line-height: 36px; }
 .fail-line { margin: 2px 0 0; font-size: 12px; line-height: 16px; color: #9A9AA2; }
-.facts { list-style: none; margin: 14px 0 0; padding: 0; }
+.facts { list-style: none; margin: 0; padding: 0; }
 .facts li {
   display: flex;
   justify-content: space-between;
@@ -242,11 +280,22 @@ button.primary:disabled { opacity: 0.4; cursor: default; }
   border-top: 1px solid rgba(255,255,255,0.06);
 }
 .facts span:last-child { color: #F5F5F5; font-family: "Geist Mono", ui-monospace, monospace; }
-.plot-wrap { position: relative; flex: 1; min-height: 240px; display: flex; }
+.plot-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 240px;
+  min-width: 0;
+  width: 100%;
+  max-width: 100%;
+  display: flex;
+  box-sizing: border-box;
+  padding: 0 16px;
+  overflow: hidden;
+}
 .empty-plot { min-height: 640px; }
 .empty-plot svg { width: 100%; height: 100%; }
-.stage { position: relative; flex: 1; min-height: 240px; margin-top: 4px; }
-svg.plot { width: 100%; height: 100%; display: block; overflow: visible; touch-action: none; }
+.stage { position: relative; flex: 1; min-height: 240px; min-width: 0; width: 100%; max-width: 100%; margin-top: 4px; overflow: hidden; }
+svg.plot { width: 100%; max-width: 100%; height: 100%; display: block; overflow: hidden; touch-action: none; }
 .fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .cross { stroke: rgba(240,185,11,0.85); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .crosshair { transition: opacity var(--hover) var(--ease); }
@@ -333,16 +382,25 @@ h1 .char { display: inline-block; }
 .tone-gold { color: #F0B90B; }
 .tone-text { color: #F5F5F5; }
 .tone-mute { color: #9A9AA2; }
+.agent-name { color: #F5F5F5; font-family: "Geist Sans", "WenQuanYi Micro Hei", sans-serif; }
+.agent-addr { color: #9A9AA2; font-family: "Geist Mono", ui-monospace, monospace; }
+.bid.fresh { animation: bid-in 1.2s linear both; }
+@keyframes bid-in {
+  0% { background-color: rgba(240, 185, 11, 0.4); }
+  25% { background-color: rgba(240, 185, 11, 0.32); }
+  100% { background-color: transparent; }
+}
 .addrs { display: flex; gap: 18px; min-height: 20px; margin-top: 6px; }
 .addr {
   opacity: 0;
   transform: translateY(8px);
-  font-family: "Geist Mono", ui-monospace, monospace;
   font-size: 12px;
   display: flex;
   gap: 10px;
   align-items: center;
 }
+.addr-label { color: #9A9AA2; }
+.addr-value { color: #F5F5F5; font-family: "Geist Mono", ui-monospace, monospace; }
 .addr.show { animation: rise 280ms var(--ease) both; }
 .addr a, .addr button {
   color: #F0B90B;

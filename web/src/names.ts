@@ -12,5 +12,11 @@ const NAMES: Record<string, string> = {
 };
 
 export function agentName(address: string): string {
-  return NAMES[address.toLowerCase()] ?? `${address.slice(0, 6)}…${address.slice(-4)}`;
+  return agentLabel(address).text;
+}
+
+export function agentLabel(address: string): { text: string; named: boolean } {
+  const name = NAMES[address.toLowerCase()];
+  if (name) return { text: name, named: true };
+  return { text: `${address.slice(0, 6)}…${address.slice(-4)}`, named: false };
 }

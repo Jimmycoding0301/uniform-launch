@@ -1,9 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPublicClient, http, type Address } from "viem";
 import { formatBnb, formatPrice, formatRemain, formatTokens, parseBnb, tokensFor } from "./curve";
-import { agentName } from "./names";
+import { agentLabel } from "./names";
 import { Roller, useReducedMotion, Zh } from "./motion";
 import { PlotStage } from "./PlotStage";
+import { ScriptPage } from "./ScriptPage";
 import { ADDR_STAGGER_MS, COLOR_BG, MIN_SETTLE_GAS, RISK_LINE, SETTLE_GAS_LIMIT, SETTLE_MS, SWEEP_MS, USER_LINE } from "./theme";
 
 const ABI = [
@@ -33,7 +34,7 @@ const ABI = [
   },
 ] as const;
 
-type DemoFile = { localFork?: boolean; rpc?: string; open?: string; settle?: string; failed?: string };
+type DemoFile = { localFork?: boolean; rpc?: string; open?: string; launched?: string; settle?: string; failed?: string };
 type Row = {
   agent: Address;
   budget: bigint;
@@ -271,12 +272,34 @@ export function App() {
   const budgetNote = noteBudget(budget);
   const priceNote = snap ? notePrice(maxPrice, snap.floor) : { error: false, text: "", wei: "" };
   const showIntro = intro && !reduced && !!snap;
+  const scriptView = params.get("view") === "script";
+
+  if (scriptView) {
+    return (
+      <div className="page scroll" style={{ backgroundColor: COLOR_BG }}>
+        <a className="skip" href="#script">跳到脚本</a>
+        <header className="top">
+          <b>
+            同价发射
+            <a className="script-link" href={demo?.open ? `/?launcher=${demo.open}` : "/"}>返回拍卖</a>
+          </b>
+          <span>{demo?.localFork ? <Zh text="本地分叉，不是测试网" /> : "BSC 测试网"}</span>
+        </header>
+        <section className="screen" id="script">
+          <ScriptPage demo={demo} />
+        </section>
+      </div>
+    );
+  }
 
   return (
     <div className={showIntro ? "page intro" : "page"} style={{ backgroundColor: COLOR_BG }}>
       <a className="skip" href="#desk">跳到拍卖</a>
       <header className="top">
-        <b>同价发射</b>
+        <b>
+          同价发射
+          <a className="script-link" href="/?view=script">演示脚本</a>
+        </b>
         <span>
           {demo?.localFork ? <Zh text="本地分叉，不是测试网" /> : "BSC 测试网"} · {block.toString()}
           {rpcError && snap ? <Zh text=" · 刚刚没刷新成功。" /> : ""}
@@ -378,14 +401,15 @@ export function App() {
                 {phase === "done" && (
                   <div className="result-card">
                     <div className="result-row"><span>开盘价</span><b>{formatPrice(snap.clearing)} BNB/枚</b></div>
-                    <div className="result-row"><span>入池</span><b>{formatBnb(snap.poolQuote)} BNB</b></div>
+                    <div className="result-row"><span>入池 BNB</span><b>{formatBnb(snap.poolQuote)} BNB</b></div>
                     {showToken && snap.token !== ZERO && <Addr label="代币" value={snap.token} />}
                     {showPool && snap.pool !== ZERO && <Addr label="池子" value={snap.pool} />}
                   </div>
                 )}
+                <h2 className="group-title">本场参数</h2>
                 <ul className="facts">
                   <li><span>出售</span><span>500,000 枚</span></li>
-                  <li><span>入池</span><span>500,000 枚</span></li>
+                  <li><span>入池代币</span><span>500,000 枚</span></li>
                   <li><span>买入税 / 卖出税</span><span>3% / 3%</span></li>
                   <li><span>本场出价</span><span>{snap.bids.length} / 32</span></li>
                 </ul>
@@ -394,7 +418,7 @@ export function App() {
             <div className="col-chart">
               <div className="chart-head">
                 <div>
-                  <div className="kicker">{failed ? "结果" : "当前清算价 BNB/枚"}</div>
+                  <div className="kicker">{failed ? "结果" : phase === "done" ? "开盘价 BNB/枚" : "当前清算价 BNB/枚"}</div>
                   <div className={clearingNow > 0n && !failed ? "chart-price" : "chart-price dim"}>
                     {failed ? "没有成交" : clearingNow > 0n ? <Roller text={formatPrice(clearingNow)} /> : "未形成"}
                   </div>
@@ -446,6 +470,21 @@ function Empty() {
 }
 
 function BidTable({ rows, phase, clearing }: { rows: Row[]; phase: string; clearing: bigint }) {
+  const seen = useRef<Set<string> | null>(null);
+  const [fresh, setFresh] = useState<Set<string>>(new Set());
+  useEffect(() => {
+    const ids = rows.map((row) => row.agent.toLowerCase());
+    if (seen.current === null) {
+      seen.current = new Set(ids);
+      return;
+    }
+    const arrived = ids.filter((id) => !seen.current?.has(id));
+    for (const id of ids) seen.current.add(id);
+    if (arrived.length === 0) return;
+    setFresh(new Set(arrived));
+    const timer = window.setTimeout(() => setFresh(new Set()), 1200);
+    return () => window.clearTimeout(timer);
+  }, [rows]);
   return (
     <div className="bids">
       <div className="bid head">
@@ -457,10 +496,12 @@ function BidTable({ rows, phase, clearing }: { rows: Row[]; phase: string; clear
       </div>
       {rows.map((row) => {
         const mark = rowMark(row, phase, clearing);
+        const label = agentLabel(row.agent);
+        const id = row.agent.toLowerCase();
         return (
-          <div className="bid" key={row.agent}>
+          <div className={fresh.has(id) ? "bid fresh" : "bid"} key={row.agent}>
             <i className={mark.dot} />
-            <span>{agentName(row.agent)}</span>
+            <span className={label.named ? "agent-name" : "agent-addr"}>{label.text}</span>
             <span>{formatBnb(row.budget)} BNB</span>
             <span>{formatPrice(row.maxPrice)}</span>
             <span className={mark.tone}>{mark.label}</span>
@@ -559,9 +600,8 @@ function quoteLine(snap: Snap | null, budgetWei: bigint | null, priceWei: bigint
 function Addr({ label, value }: { label: string; value: string }) {
   return (
     <div className="addr show">
-      <span>
-        {label} {value.slice(0, 6)}…{value.slice(-4)}
-      </span>
+      <span className="addr-label">{label}</span>
+      <span className="addr-value">{value.slice(0, 6)}…{value.slice(-4)}</span>
       <button type="button" aria-label={`复制${label}地址`} onClick={() => navigator.clipboard.writeText(value)}>复制</button>
       <a href={`https://testnet.bscscan.com/address/${value}`} target="_blank" rel="noreferrer">
         浏览器
