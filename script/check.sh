@@ -4,6 +4,7 @@ set -euo pipefail
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 node script/check-links.mjs
+node script/check-readme-screen.mjs
 node script/check-why.mjs
 node script/check-evidence.mjs
 node script/agent-scan.mjs
