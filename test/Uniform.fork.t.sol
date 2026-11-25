@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {Test} from "forge-std/Test.sol";
+import {Test, console2} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {IPortal} from "src/flap/IPortal.sol";
@@ -106,7 +106,7 @@ contract UniformForkTest is Test {
         vm.roll(launcher.endBlock());
         launcher.settle();
         assertEq(uint8(launcher.status()), uint8(UniformLauncher.Status.Succeeded));
-        assertEq(uint16(uint160(launcher.token())) , 0x7777);
+        assertEq(uint16(uint160(launcher.token())), 0x7777);
         assertEq(launcher.poolQuote(), 40 ether);
         assertTrue(launcher.pool() != address(0));
         (address vault,) = portal.getLaunchVault(launcher.token());
@@ -160,6 +160,24 @@ contract UniformForkTest is Test {
         assertEq(address(launcher).balance, 0);
     }
 
+    function test_maxBidsSettleGas() public {
+        UniformLauncher launcher = _create(1e13, 200, "GAS", bytes32(uint256(88001)));
+        for (uint256 i; i < 32; ++i) {
+            address who = address(uint160(0x2000 + i));
+            vm.deal(who, 1 ether);
+            vm.prank(who);
+            launcher.bid{value: 0.2 ether}(1e16);
+        }
+        vm.roll(launcher.endBlock());
+        uint256 before = gasleft();
+        launcher.settle();
+        uint256 used = before - gasleft();
+        console2.log("FORK_MAX_BIDS_SETTLE_GAS", used);
+        assertEq(uint8(launcher.status()), uint8(UniformLauncher.Status.Succeeded));
+        assertLt(used, 8_000_000, "8_000_000 gas limit cannot cover settle");
+        assertLt(used, launcher.MIN_SETTLE_GAS(), "MIN_SETTLE_GAS is below the measured settle");
+    }
+
     function test_disabledFactoryFlag() public {
         UniformLauncher launcher = _create(1e13, 200, "OFF", bytes32(uint256(33)));
         vm.prank(admin);
@@ -201,7 +219,8 @@ contract UniformForkTest is Test {
             if (sellAmt == 0) break;
             IERC20(token).approve(ROUTER, sellAmt);
             uint256 beforeBal = trader.balance;
-            IRouterSell(ROUTER).swapExactTokensForETHSupportingFeeOnTransferTokens(sellAmt, 0, sellPath, trader, block.timestamp + 600);
+            IRouterSell(ROUTER)
+                .swapExactTokensForETHSupportingFeeOnTransferTokens(sellAmt, 0, sellPath, trader, block.timestamp + 600);
             uint256 proceeds = trader.balance - beforeBal;
             if (proceeds > 0) {
                 IRouterLike(ROUTER).swapExactETHForTokensSupportingFeeOnTransferTokens{value: proceeds * 90 / 100}(

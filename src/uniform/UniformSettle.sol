@@ -1,8 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-/// @notice 单次统一价格清算。价格单位是每 1e18 代币 wei 需要多少报价 wei。整除向下。
+/// @notice 单次统一价格清算。价格单位是每 1e18 代币 wei 需要多少报价 wei。
 ///         全额前缀与边际卡价取较高清算价；价格相同保留全额前缀。
+///         代币数量向下取整，实付向上取整，退款是预算减去实付。除不尽的代币留在调用方，不送给某一笔出价。
 library UniformSettle {
     struct Bid {
         uint256 index;
@@ -28,7 +29,11 @@ library UniformSettle {
 
     error ZeroSupply();
 
-    function settle(uint256 sellAmount, uint256 floorPrice, Bid[] memory bids) internal pure returns (Outcome memory o) {
+    function settle(uint256 sellAmount, uint256 floorPrice, Bid[] memory bids)
+        internal
+        pure
+        returns (Outcome memory o)
+    {
         if (sellAmount == 0) revert ZeroSupply();
         uint256 n = bids.length;
         o.fills = new Fill[](n);
@@ -113,18 +118,12 @@ library UniformSettle {
         for (uint256 i; i < k; ++i) {
             budgetSum += bids[order[i]].budget;
         }
-        uint256 distributed;
-        uint256 dustAt = order[0];
         for (uint256 i; i < k; ++i) {
             uint256 pos = order[i];
-            uint256 tokens = bids[pos].budget * sellAmount / budgetSum;
-            o.fills[pos].tokens = tokens;
+            o.fills[pos].tokens = bids[pos].budget * sellAmount / budgetSum;
             o.fills[pos].spend = bids[pos].budget;
             o.fills[pos].refundQuote = 0;
-            distributed += tokens;
-            if (bids[pos].index < bids[dustAt].index) dustAt = pos;
         }
-        o.fills[dustAt].tokens += sellAmount - distributed;
         o.poolQuote = budgetSum;
     }
 
@@ -144,8 +143,6 @@ library UniformSettle {
             else if (b.maxPrice == price) marginalBudget += b.budget;
         }
         uint256 remaining = sellAmount - infraTokens;
-        uint256 distributed;
-        uint256 dustAt = type(uint256).max;
         uint256 spent;
         for (uint256 i; i < m; ++i) {
             uint256 pos = order[i];
@@ -155,28 +152,29 @@ library UniformSettle {
                 tokens = b.budget * WAD / price;
             } else if (b.maxPrice == price) {
                 tokens = remaining * b.budget / marginalBudget;
-                if (dustAt == type(uint256).max || b.index < bids[dustAt].index) dustAt = pos;
             } else {
                 continue;
             }
-            uint256 spend = tokens * price / WAD;
+            uint256 spend = _charge(tokens, price, b.budget);
+            if (spend == b.budget && tokens > b.budget * WAD / price) {
+                tokens = b.budget * WAD / price;
+                spend = _charge(tokens, price, b.budget);
+            }
             o.fills[pos].tokens = tokens;
             o.fills[pos].spend = spend;
             o.fills[pos].refundQuote = b.budget - spend;
-            distributed += tokens;
             spent += spend;
         }
-        uint256 dust = sellAmount - distributed;
-        if (dust > 0) {
-            o.fills[dustAt].tokens += dust;
-            uint256 extra = dust * price / WAD;
-            uint256 room = o.fills[dustAt].refundQuote;
-            if (extra > room) extra = room;
-            o.fills[dustAt].spend += extra;
-            o.fills[dustAt].refundQuote -= extra;
-            spent += extra;
-        }
         o.poolQuote = spent;
+    }
+
+    /// @dev 向上取整，但不超过这笔预算。代币已经按向下取整算过。
+    function _charge(uint256 tokens, uint256 price, uint256 budget) private pure returns (uint256) {
+        if (tokens == 0 || price == 0) return 0;
+        uint256 raw = tokens * price;
+        uint256 spend = (raw + WAD - 1) / WAD;
+        if (spend > budget) return budget;
+        return spend;
     }
 
     function _sort(Bid[] memory bids, uint256[] memory order, uint256 m) private pure {

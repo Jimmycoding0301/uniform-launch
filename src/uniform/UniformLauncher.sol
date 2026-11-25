@@ -39,7 +39,7 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
     uint64 public constant CLOSE_BUFFER = 20;
     /// @notice 进入 settle 后若剩余 gas 低于此值，直接回滚且不改状态。
     ///         指令里的 gas limit 是 8000000。扣掉基础 gas 后仍高于这条线，
-    ///         也盖得住一次成功发射（实测约 460 万）。估算值往往更低，低了就不能把拍卖打成失败。
+    ///         也盖得住一次成功发射。32 笔出价在 BSC 测试网分叉上实测 5772154 gas，低于这条线，也低于指令里的 8000000。估算值往往更低，低了就不能把拍卖打成失败。
     uint256 public constant MIN_SETTLE_GAS = 7_000_000;
     uint64 public constant MIN_DURATION = 200;
     uint64 public constant MAX_DURATION = 20_000;
@@ -123,6 +123,7 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         external
         payable
         initializer
+        nonReentrant
     {
         if (hub_ == address(0) || creator_ == address(0) || vaultFactory_ == address(0)) revert InvalidConfig();
         if (bytes(c.name).length == 0 || bytes(c.name).length > 32) revert InvalidConfig();
@@ -179,16 +180,43 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         return uint8(status);
     }
 
-    function demand0() external view returns (uint256) { return demandBins[0]; }
-    function demand1() external view returns (uint256) { return demandBins[1]; }
-    function demand2() external view returns (uint256) { return demandBins[2]; }
-    function demand3() external view returns (uint256) { return demandBins[3]; }
-    function demand4() external view returns (uint256) { return demandBins[4]; }
-    function demand5() external view returns (uint256) { return demandBins[5]; }
-    function demand6() external view returns (uint256) { return demandBins[6]; }
-    function demand7() external view returns (uint256) { return demandBins[7]; }
+    function demand0() external view returns (uint256) {
+        return demandBins[0];
+    }
 
-    function getFills() external view returns (uint256[] memory tokensOwed, uint256[] memory quoteOwed, bool[] memory pulled) {
+    function demand1() external view returns (uint256) {
+        return demandBins[1];
+    }
+
+    function demand2() external view returns (uint256) {
+        return demandBins[2];
+    }
+
+    function demand3() external view returns (uint256) {
+        return demandBins[3];
+    }
+
+    function demand4() external view returns (uint256) {
+        return demandBins[4];
+    }
+
+    function demand5() external view returns (uint256) {
+        return demandBins[5];
+    }
+
+    function demand6() external view returns (uint256) {
+        return demandBins[6];
+    }
+
+    function demand7() external view returns (uint256) {
+        return demandBins[7];
+    }
+
+    function getFills()
+        external
+        view
+        returns (uint256[] memory tokensOwed, uint256[] memory quoteOwed, bool[] memory pulled)
+    {
         uint256 n = _bids.length;
         tokensOwed = new uint256[](n);
         quoteOwed = new uint256[](n);
@@ -200,7 +228,11 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         }
     }
 
-    function getBids() external view returns (address[] memory agents, uint256[] memory budgets, uint256[] memory maxPrices) {
+    function getBids()
+        external
+        view
+        returns (address[] memory agents, uint256[] memory budgets, uint256[] memory maxPrices)
+    {
         uint256 n = _bids.length;
         agents = new address[](n);
         budgets = new uint256[](n);
@@ -225,7 +257,9 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         if (maxPrice < floorPrice) revert BelowFloor();
         if (_bids.length >= MAX_BIDS) revert Full();
 
-        _bids.push(Bid({agent: msg.sender, budget: msg.value, maxPrice: maxPrice, tokensOwed: 0, quoteOwed: 0, pulled: false}));
+        _bids.push(
+            Bid({agent: msg.sender, budget: msg.value, maxPrice: maxPrice, tokensOwed: 0, quoteOwed: 0, pulled: false})
+        );
         bidOf[msg.sender] = _bids.length;
         for (uint256 i; i < 8; ++i) {
             if (maxPrice >= (floorPrice << i)) demandBins[i] += msg.value;
@@ -247,10 +281,7 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
 
         IPortalTypes.CreateTaxTokenParams memory p = _params(o.poolQuote);
         Distribution memory dist = Distribution({
-            target: DistributionTarget.EXPLICIT,
-            strategy: address(this),
-            amount: uint128(SELL_AMOUNT),
-            configData: ""
+            target: DistributionTarget.EXPLICIT, strategy: address(this), amount: uint128(SELL_AMOUNT), configData: ""
         });
         IPortalTypes.CreatorBuyParams memory buy;
 
@@ -293,7 +324,7 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         emit Refunded(msg.sender, amount);
     }
 
-    function guardianFail() external onlyGuardian {
+    function guardianFail() external onlyGuardian nonReentrant {
         if (status != Status.Open) revert Closed();
         status = Status.Failed;
         emit AuctionFailed(1);

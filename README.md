@@ -12,7 +12,20 @@ forge test --fuzz-runs 128
 BSC_TESTNET_RPC_URL=https://bsc-testnet-rpc.publicnode.com forge test --match-contract UniformForkTest
 ```
 
-Fork 测试只读 BSC 测试网，在本地模拟，不向活网发交易。
+Fork 测试只读 BSC 测试网，在本地模拟，不向活网发交易。本地 fuzz 次数是 1024。
+
+## 结算 gas
+
+32 笔出价、拍卖成功并完成 `launchTaxTokenV2` 时，`settle` 的实测消耗：
+
+| 环境 | gas |
+| --- | --- |
+| 本地假 Portal | 1,576,830 |
+| BSC 测试网分叉，真实 Portal | 5,772,154 |
+
+合约在进入 `settle` 时要求 `gasleft() >= 7,000,000`。页面复制的指令把 gas limit 写成 8,000,000。5,772,154 低于 7,000,000，也低于 8,000,000。gas limit 用估算值时往往到不了 7,000,000，调用会在改状态之前revert，拍卖保持开放。
+
+安全说明在 [docs/security.md](docs/security.md)。
 
 ## 本地页面
 

@@ -50,8 +50,9 @@ contract UniformSettlePropertiesTest is Test {
             sum += o.fills[i].tokens;
             assertEq(o.fills[i].spend + o.fills[i].refundQuote, 1 ether);
         }
-        assertEq(sum, 100 ether);
-        assertGt(o.fills[1].tokens, o.fills[0].tokens);
+        assertLe(sum, 100 ether);
+        assertEq(o.fills[0].tokens, o.fills[1].tokens);
+        assertEq(o.fills[1].tokens, o.fills[2].tokens);
     }
 
     function test_thirtyTwoBidsConserve() public pure {
@@ -120,12 +121,10 @@ contract UniformSettlePropertiesTest is Test {
         _check(o, bids, sell, floor);
     }
 
-    function _check(
-        UniformSettle.Outcome memory o,
-        UniformSettle.Bid[] memory bids,
-        uint256 sell,
-        uint256 floor
-    ) internal pure {
+    function _check(UniformSettle.Outcome memory o, UniformSettle.Bid[] memory bids, uint256 sell, uint256 floor)
+        internal
+        pure
+    {
         uint256 budgetSum;
         uint256 spendSum;
         uint256 refundSum;
@@ -143,8 +142,12 @@ contract UniformSettlePropertiesTest is Test {
             if (o.fills[i].tokens > 0 && o.fills[i].spend > 0) {
                 assertLe(o.fills[i].spend * WAD / o.fills[i].tokens, bids[i].maxPrice);
             }
+            if (o.ok && o.fills[i].tokens > 0) {
+                assertLe(o.fills[i].tokens * o.clearingPrice, o.fills[i].spend * WAD);
+            }
         }
         assertEq(spendSum + refundSum, budgetSum);
+        assertLe(o.poolQuote + refundSum, budgetSum);
         if (!o.ok) {
             assertEq(o.clearingPrice, 0);
             assertEq(o.poolQuote, 0);
@@ -152,8 +155,11 @@ contract UniformSettlePropertiesTest is Test {
             return;
         }
         assertGe(o.clearingPrice, floor);
-        assertEq(tokenSum, sell);
+        assertLe(tokenSum, sell);
         assertEq(o.poolQuote, spendSum);
         assertGt(o.poolQuote, 0);
+        if (tokenSum > 0) {
+            assertGe(spendSum * WAD, o.clearingPrice * tokenSum);
+        }
     }
 }

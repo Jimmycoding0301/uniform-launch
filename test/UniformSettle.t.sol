@@ -64,7 +64,7 @@ contract UniformSettleTest is Test {
         assertEq(o.fills[0].refundQuote, 100 * WAD);
     }
 
-    function test_dustGoesToLowestIndex() public pure {
+    function test_roundingDustStaysUnallocated() public pure {
         UniformSettle.Bid[] memory bids = new UniformSettle.Bid[](3);
         bids[0] = _bid(2, 1 * WAD, 1 * WAD);
         bids[1] = _bid(0, 1 * WAD, 1 * WAD);
@@ -72,17 +72,18 @@ contract UniformSettleTest is Test {
         UniformSettle.Outcome memory o = UniformSettle.settle(100 * WAD, WAD / 100, bids);
         assertTrue(o.ok);
         assertEq(o.clearingPrice, 3 * WAD * WAD / (100 * WAD));
-        assertEq(o.poolQuote * WAD / (100 * WAD), o.clearingPrice);
         uint256 sum;
         for (uint256 i; i < 3; ++i) {
             sum += o.fills[i].tokens;
             assertEq(o.fills[i].spend, 1 * WAD);
             assertEq(o.fills[i].refundQuote, 0);
+            assertLe(o.fills[i].tokens * o.clearingPrice, o.fills[i].spend * WAD);
         }
-        assertEq(sum, 100 * WAD);
-        // index 0 在输入下标 1。每笔基数 100e18/3，余 1 wei 给 index 最小的一笔。
-        assertEq(o.fills[1].tokens, o.fills[0].tokens + 1);
-        assertEq(o.fills[0].tokens, o.fills[2].tokens);
+        assertEq(o.fills[0].tokens, o.fills[1].tokens);
+        assertEq(o.fills[1].tokens, o.fills[2].tokens);
+        // 100e18 不能被 3 整除，余下的 1 wei 代币不分配。
+        assertEq(sum, 100 * WAD - 1);
+        assertEq(o.poolQuote + 0, 3 * WAD);
     }
 
     function test_emptyFails() public pure {

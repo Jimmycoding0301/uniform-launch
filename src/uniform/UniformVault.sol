@@ -14,6 +14,7 @@ contract UniformVault is DirectLaunchVaultBase, Initializable {
     address public taxToken;
     address public launcher;
     address public owner;
+    bool private locked;
 
     event TaxWithdrawn(address indexed to, uint256 amount);
 
@@ -21,6 +22,14 @@ contract UniformVault is DirectLaunchVaultBase, Initializable {
     error ZeroAddress();
     error NothingToWithdraw();
     error AmountTooHigh();
+    error Busy();
+
+    modifier nonReentrant() {
+        if (locked) revert Busy();
+        locked = true;
+        _;
+        locked = false;
+    }
 
     constructor() {
         _disableInitializers();
@@ -39,7 +48,7 @@ contract UniformVault is DirectLaunchVaultBase, Initializable {
         return address(this).balance;
     }
 
-    function withdraw(address to, uint256 amount) external {
+    function withdraw(address to, uint256 amount) external nonReentrant {
         if (msg.sender != owner) revert NotOwner();
         if (to == address(0)) revert ZeroAddress();
         if (amount == 0 || amount > address(this).balance) revert AmountTooHigh();
@@ -47,7 +56,7 @@ contract UniformVault is DirectLaunchVaultBase, Initializable {
         emit TaxWithdrawn(to, amount);
     }
 
-    function withdrawAll() external {
+    function withdrawAll() external nonReentrant {
         if (msg.sender != owner && msg.sender != _getGuardian()) revert NotOwner();
         uint256 amount = address(this).balance;
         if (amount == 0) revert NothingToWithdraw();
