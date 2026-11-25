@@ -916,7 +916,7 @@ export function App() {
           <pre className="slip">
             {why?.sameRaise
               ? `同价单价比 1\n曲线单价比 ${why.sameRaise.ratio}\n价差 ${why.sameRaise.gap} BNB/枚\n模拟，参数见脚本`
-              : "对照数字还没生成。先跑 node script/compare.mjs。"}
+              : "对照数字还没生成。先跑对照脚本，再刷新这个页面。"}
           </pre>
         )}
       </main>
