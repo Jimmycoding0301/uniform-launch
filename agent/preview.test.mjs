@@ -3,7 +3,13 @@ import { createPublicClient, getAddress, http } from "viem";
 import { launcherAbi } from "./abi.mjs";
 import { SELL_AMOUNT, settle } from "../shared/settle.mjs";
 
-const demo = JSON.parse(readFileSync(new URL("../web/public/demo.json", import.meta.url), "utf8"));
+let demo;
+try {
+  demo = JSON.parse(readFileSync(new URL("../web/public/demo.json", import.meta.url), "utf8"));
+} catch {
+  console.log("跳过：没有 demo.json");
+  process.exit(0);
+}
 const rpc = demo.rpc || "http://127.0.0.1:18545";
 const address = getAddress(demo.open);
 let floor;

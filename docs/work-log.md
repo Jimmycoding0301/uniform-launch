@@ -155,3 +155,5 @@ Wed Nov 25 08:51:39 PM UTC 2026
 评审表补上 BNB Chain 集成一行，链到已验证工厂和 llms.txt。
 Wed Nov 25 08:52:08 PM UTC 2026
 空地址不再说没有完成，改成这个地址上没有这场拍卖。
+Wed Nov 25 08:52:25 PM UTC 2026
+没有 demo.json 时，预览对照测试跳过，不再抛出找不到文件。
