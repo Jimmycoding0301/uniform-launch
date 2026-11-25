@@ -11,6 +11,7 @@ const pages = [
   "/?launcher=0x6f10Eb8eD5c3B033a9EAB172544A4a86420eb128",
   "/?launcher=0xE20f0043F32E2E38d3F3d76Ec48Cfcdb0FdC4806",
   "/?network=testnet",
+  "/?launcher=0x0000000000000000000000000000000000000000",
   "/?view=script",
 ];
 
