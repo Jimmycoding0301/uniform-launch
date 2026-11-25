@@ -25,3 +25,5 @@ Wed Nov 25 07:50:40 PM UTC 2026
 把分叉测试的公共准备抽到 ForkBase。UniformForkTest 和端到端测试各跑各的，不再把同一批分叉测试跑两遍。端到端成功和失败退款仍通过。
 Wed Nov 25 07:52:16 PM UTC 2026
 切幕时先清掉上一场的读数，避免演示里短暂看到错的清算价。命令行不带 --json 时打中文短句。演示六幕检查加进 npm test，通过。
+Wed Nov 25 07:52:36 PM UTC 2026
+命令行默认打中文短句。docker-compose 改成显式入口，避免镜像把 anvil 当成参数。还没在本机跑过 docker。

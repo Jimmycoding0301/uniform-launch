@@ -1,7 +1,16 @@
 services:
   anvil:
     image: ghcr.io/foundry-rs/foundry:latest
-    command: "anvil --fork-url ${BSC_TESTNET_RPC_URL:-https://bsc-testnet-rpc.publicnode.com} --host 0.0.0.0 --port 18545 --chain-id 97"
+    entrypoint: ["anvil"]
+    command:
+      - --fork-url
+      - ${BSC_TESTNET_RPC_URL:-https://bsc-testnet-rpc.publicnode.com}
+      - --host
+      - 0.0.0.0
+      - --port
+      - "18545"
+      - --chain-id
+      - "97"
     ports:
       - "18545:18545"
   web:
@@ -9,7 +18,8 @@ services:
     working_dir: /app
     volumes:
       - ./web:/app
-    command: "sh -c 'npm ci && npm run dev -- --host 0.0.0.0 --port 4317'"
+    entrypoint: ["sh", "-c"]
+    command: "npm ci && npm run dev -- --host 0.0.0.0 --port 4317"
     ports:
       - "4317:4317"
     depends_on:
