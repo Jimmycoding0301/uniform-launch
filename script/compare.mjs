@@ -24,7 +24,16 @@ const abi = [
   },
 ];
 const floor = await client.readContract({ address: demo.open, abi, functionName: "floorPrice" });
-const book = await client.readContract({ address: demo.open, abi, functionName: "getBids" });
+let book;
+try {
+  book = await client.readContract({ address: demo.open, abi, functionName: "getBids" });
+} catch {
+  const legacy = [
+    { type: "function", name: "getBids", stateMutability: "view", inputs: [], outputs: [{ type: "address[]" }, { type: "uint256[]" }, { type: "uint256[]" }] },
+  ];
+  const old = await client.readContract({ address: demo.open, abi: legacy, functionName: "getBids" });
+  book = [old[0], old[1], old[2]];
+}
 const bids = book[1].map((budget, index) => ({
   index: BigInt(index),
   who: `第 ${index + 1} 笔`,
