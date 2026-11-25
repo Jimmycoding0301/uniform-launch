@@ -40,6 +40,8 @@ assert.equal(decoded.args[1], 0);
 assert.equal(decoded.args[2], 1n);
 assert.equal(tx.value, "1000000000000000000");
 
+const simHuman = run(["simulate", "--budget", "1", "--max-price", "0.00003"]);
+assert.match(simHuman.out, /50,000 枚/);
 const sim = run(["simulate", "--json", "--budget", "1", "--max-price", "0.00003"]);
 const simJson = JSON.parse(sim.out);
 assert.equal(simJson.ok, true);

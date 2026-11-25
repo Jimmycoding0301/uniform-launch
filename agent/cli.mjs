@@ -37,13 +37,17 @@ if (json) console.log(JSON.stringify(result, null, 2));
 else console.log(result.ok ? sentence(command, result) : `${result.reason}。${result.next}`);
 if (!result.ok) process.exit(2);
 
+function group(text) {
+  return String(text).replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
 function sentence(command, result) {
   if (command === "status") {
     return `${result.phase}。清算价 ${result.clearingPrice} BNB/枚。出价 ${result.bidCount} 笔，还差 ${result.seatsLeft} 笔。剩余 ${result.remainingBlocks} 个区块。保留价 ${result.floorPrice}。身份来源 ${result.sources.length} 个。`;
   }
   if (command === "simulate") {
     const gate = result.meetsMinPool ? "过了最小入池" : "还没到最小入池";
-    return `如果现在加上这一笔，清算价 ${result.clearingPrice}，成交 ${result.tokens} 枚，实付 ${result.spend} BNB，退回 ${result.refund} BNB。入池 ${result.poolQuote} BNB，${gate}。`;
+    return `如果现在加上这一笔，清算价 ${result.clearingPrice}，成交 ${group(result.tokens)} 枚，实付 ${result.spend} BNB，退回 ${result.refund} BNB。入池 ${result.poolQuote} BNB，${gate}。`;
   }
   if (command === "identity") {
     const passed = result.results.filter((item) => item.ok).map((item) => item.name);
