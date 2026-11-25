@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 只操作本机 anvil。不读取私钥，不向活网广播。
 set -euo pipefail
-export PATH="$PATH:/home/ubuntu/.foundry/bin"
+export PATH="$HOME/.foundry/bin:$PATH"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 RPC="${BSC_TESTNET_RPC_URL:-https://bsc-testnet-rpc.publicnode.com}"
@@ -51,9 +51,7 @@ healthy() {
 }
 if healthy; then
   echo "演示场还在 $ANVIL_RPC"
-  exit 0
-fi
-
+else
 LOG=$(mktemp)
 forge script script/LocalFork.s.sol --sig "runScenes()" \
   --rpc-url "$ANVIL_RPC" --broadcast --unlocked \
@@ -114,6 +112,53 @@ const data = {
 writeFileSync("$DEMO_JSON", JSON.stringify(data, null, 2) + "\n");
 EOF
 echo "已写演示场 $DEMO_JSON"
+fi
+
+OPEN=$(node -e 'const d=require(process.argv[1]); process.stdout.write(d.open||"")' "$DEMO_JSON")
+DONE=$(node -e 'const d=require(process.argv[1]); process.stdout.write(d.launched||"")' "$DEMO_JSON")
+FAIL=$(node -e 'const d=require(process.argv[1]); process.stdout.write(d.failed||"")' "$DEMO_JSON")
+test -n "$OPEN" && test -n "$DONE" && test -n "$FAIL"
+
+seed_if_empty() {
+  local launcher="$1"
+  local token vault accrued shown
+  token=$(cast call "$launcher" "token()(address)" --rpc-url "$ANVIL_RPC")
+  token=${token%% *}
+  if [ -z "$token" ] || [ "$token" = "0x0000000000000000000000000000000000000000" ]; then
+    echo "已发射场还没有代币" >&2
+    exit 1
+  fi
+  vault=$(cast call 0x000042108465206185A077Edc3F3fd2b49060000 "getLaunchVault(address)(address,address)" "$token" --rpc-url "$ANVIL_RPC" | awk 'NR==1{print $1}')
+  accrued=$(cast call "$vault" "accrued()(uint256)" --rpc-url "$ANVIL_RPC")
+  accrued=${accrued%% *}
+  if [ "$accrued" = "0" ]; then
+    forge script script/LocalFork.s.sol --sig "seedVault(address)" "$launcher" \
+      --rpc-url "$ANVIL_RPC" --broadcast --unlocked \
+      --sender 0x00000000000000000000000000000000C0DE0004
+    accrued=$(cast call "$vault" "accrued()(uint256)" --rpc-url "$ANVIL_RPC")
+    accrued=${accrued%% *}
+  else
+    echo "金库已有余额 $accrued"
+  fi
+  if [ -z "$accrued" ] || [ "$accrued" = "0" ]; then
+    echo "买卖之后金库仍是 0" >&2
+    exit 1
+  fi
+  shown=$(python3 - "$accrued" << 'PY'
+import sys
+w = int(sys.argv[1])
+frac = f"{w % 10**18:018d}"[:4]
+print(f"{w // 10**18}.{frac}")
+PY
+)
+  if [ "$shown" = "0.0000" ]; then
+    echo "金库四位小数仍是 0（$accrued wei）" >&2
+    exit 1
+  fi
+  echo "金库余额 $shown BNB"
+}
+
+seed_if_empty "$DONE"
 echo "接单 $OPEN"
 echo "已发射 $DONE"
 echo "失败 $FAIL"

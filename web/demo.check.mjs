@@ -21,6 +21,29 @@ await page.locator("#budget").fill("1");
 await page.getByText("入池").first().waitFor();
 await page.getByRole("button", { name: "下一幕" }).click();
 await expectScene(4, "金库余额");
+await page.locator(".slip.metric").waitFor({ timeout: 8000 });
+const vaultMetrics = await page.evaluate(() => {
+  const rows = [...document.querySelectorAll(".result-card .result-row")];
+  const pick = (label) => rows.find((row) => row.innerText.includes(label));
+  const pool = pick("入池");
+  const vault = pick("金库余额");
+  const poolValue = getComputedStyle(pool.querySelector("b"));
+  const vaultValue = getComputedStyle(vault.querySelector("b"));
+  const slipValue = getComputedStyle(document.querySelector(".slip.metric .result-row b"));
+  return {
+    poolSize: poolValue.fontSize,
+    vaultSize: vaultValue.fontSize,
+    slipSize: slipValue.fontSize,
+    poolAlign: getComputedStyle(pool).justifyContent,
+    vaultAlign: getComputedStyle(vault).justifyContent,
+    text: vault.innerText.replace(/\s+/g, " "),
+  };
+});
+assert.equal(vaultMetrics.vaultSize, vaultMetrics.poolSize, `金库字号 ${vaultMetrics.vaultSize} 入池 ${vaultMetrics.poolSize}`);
+assert.equal(vaultMetrics.slipSize, vaultMetrics.poolSize, `金库条字号 ${vaultMetrics.slipSize}`);
+assert.equal(vaultMetrics.vaultAlign, vaultMetrics.poolAlign);
+assert.match(vaultMetrics.text, /金库余额 \d+\.\d{4} BNB/);
+assert.equal(vaultMetrics.text.includes("0.0000"), false, vaultMetrics.text);
 await page.getByText("池子", { exact: true }).waitFor({ timeout: 8000 });
 assert.equal(await page.getByText("PancakeSwap").count(), 0);
 assert.equal(await page.getByText("BscScan").count(), 0);

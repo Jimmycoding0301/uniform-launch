@@ -1,3 +1,4 @@
+# compose 只起分叉和页面，不造场。演示请用 bash script/demo.sh。本环境没有 Docker，未实测。
 services:
   anvil:
     image: ghcr.io/foundry-rs/foundry:latest

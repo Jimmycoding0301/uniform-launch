@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 本机一条命令。不依赖 docker。已经在跑的分叉和页面会接着用。
 set -euo pipefail
-export PATH="$PATH:/home/ubuntu/.foundry/bin"
+export PATH="$HOME/.foundry/bin:$PATH"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 ANVIL_RPC="http://127.0.0.1:18545"

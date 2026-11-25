@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 在本机 anvil 分叉上把七个阶段跑完。不是本机地址就退出。
 set -euo pipefail
-export PATH="$PATH:/home/ubuntu/.foundry/bin:/usr/bin"
+export PATH="$HOME/.foundry/bin:$PATH"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 RPC="${BSC_TESTNET_RPC_URL:-https://bsc-testnet-rpc.publicnode.com}"

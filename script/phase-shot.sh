@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 # 只操作本机 anvil。不读取私钥，不向活网广播。
 set -euo pipefail
-export PATH="$PATH:/home/ubuntu/.foundry/bin"
+export PATH="$HOME/.foundry/bin:$PATH"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 ANVIL_RPC="http://127.0.0.1:18545"

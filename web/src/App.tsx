@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { createPublicClient, http, keccak256, toBytes, type Address } from "viem";
-import { formatBnb, formatPrice, formatRemain, formatTokens, parseBnb, tokensFor } from "./curve";
+import { formatBnb, formatBnb4, formatPrice, formatRemain, formatTokens, parseBnb, tokensFor } from "./curve";
 import { agentLabel } from "./names";
 import { Roller, useReducedMotion, Zh } from "./motion";
 import { PlotStage } from "./PlotStage";
@@ -785,7 +785,7 @@ export function App() {
                         {showToken && snap.token !== ZERO && <Addr label="代币" value={snap.token} local={!!demo?.localFork} />}
                         {showPool && snap.pool !== ZERO && <Addr label="池子" value={snap.pool} local={!!demo?.localFork} swap={snap.token !== ZERO && !demo?.localFork ? pancakeSwapLink(snap.token) : ""} />}
                         {vault && vault !== ZERO && <Addr label="金库" value={vault} local={!!demo?.localFork} />}
-                        {vaultBal !== null && <div className="result-row"><span>金库余额</span><b>{formatBnb(vaultBal)} BNB</b></div>}
+                        {vaultBal !== null && <div className="result-row"><span>金库余额</span><b>{formatBnb4(vaultBal)} BNB</b></div>}
                       </div>
                     ) : (
                       <>
@@ -938,7 +938,13 @@ export function App() {
           </div>
         )}
         {demoOn && scene === 3 && (
-          <pre className="slip">{vaultBal !== null ? `金库余额 ${formatBnb(vaultBal)} BNB` : "金库余额还没读到。换一个能读到链的地址再看。"}</pre>
+          vaultBal !== null ? (
+            <div className="slip metric" role="status">
+              <div className="result-row"><span>金库余额</span><b>{formatBnb4(vaultBal)} BNB</b></div>
+            </div>
+          ) : (
+            <pre className="slip">金库余额还没读到。换一个能读到链的地址再看。</pre>
+          )
         )}
         {demoOn && scene === 2 && (
           <pre className="slip">

@@ -35,6 +35,8 @@ const stack = await desk.evaluate(() => {
   return Math.round(facts.top - plot.bottom);
 });
 assert.ok(stack >= 0, `参数表盖住曲线 ${stack}`);
+assert.ok(Math.abs(before.top - 796) <= 8, `按钮上沿 ${before.top}`);
+assert.ok(Math.abs(before.bottom - 844) <= 8, `按钮下沿 ${before.bottom}`);
 assert.ok(before.bottom <= 860, `桌面按钮下沿 ${before.bottom}`);
 assert.ok(before.formBottom <= 900, `左栏下沿 ${before.formBottom}`);
 assert.ok(Math.abs(before.form - after.form) <= 2, `表单高度差 ${Math.abs(before.form - after.form)}`);

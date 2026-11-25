@@ -1,5 +1,7 @@
 # 端到端证据
 
+`deployments/bsc-testnet-e2e.json` 里的哈希只在本机分叉上，BscScan 查不到。文件里的 `network` 是 `anvil-fork-of-97`。文件名不改，避免把已经写出去的链接打断。
+
 测试网成功发射至少要入池 4.3357 tBNB，加上 0.005 tBNB 创建费和 gas，建议准备 4.6 tBNB。失败退款路径每人 0.01 tBNB 加 gas 就够。
 
 这些数字来自本机分叉。测试网还没跑，下面第二节不填哈希。

@@ -54,6 +54,15 @@ export function formatBnb(wei: bigint): string {
   return neg ? `-${body}` : body;
 }
 
+export function formatBnb4(wei: bigint): string {
+  const neg = wei < 0n;
+  const v = neg ? -wei : wei;
+  const whole = v / 10n ** 18n;
+  const frac = (v % 10n ** 18n).toString().padStart(18, "0").slice(0, 4);
+  const body = `${whole}.${frac}`;
+  return neg ? `-${body}` : body;
+}
+
 const PRICE_SIG = 3;
 
 export function formatPrice(wei: bigint): string {

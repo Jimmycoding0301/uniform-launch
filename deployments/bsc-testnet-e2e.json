@@ -1,4 +1,5 @@
 {
+  "network": "anvil-fork-of-97",
   "launcher": "0x98a26CE56ccaA76C216d99529281a591b6dA1933",
   "createFee": "5000000000000000",
   "txs": {

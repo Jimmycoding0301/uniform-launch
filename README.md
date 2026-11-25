@@ -58,15 +58,56 @@ The page never signs. Settlement creates the pool through Flap. Tax sits in the 
 
 Addresses are the verified BSC testnet deployments. The factories are not enabled by Flap yet.
 
+## 前置
+
+需要 Foundry、Node 22 或更高、python3、curl。Windows 先打开 WSL2，再跑下面的命令。分叉要能访问 `https://bsc-testnet-rpc.publicnode.com`。
+
+装 Foundry：
+
+```sh
+curl -L https://foundry.paradigm.xyz | bash && foundryup
+```
+
+```sh
+export PATH="$HOME/.foundry/bin:$PATH"
+```
+
+看 Node 版本（需要 22 或更高）：
+
+```sh
+node --version
+```
+
+看 python3 和 curl：
+
+```sh
+python3 --version
+curl --version
+```
+
+第一次克隆带上子模块。把 `<仓库地址>` 换成这个仓库的地址：
+
+```sh
+git clone --recurse-submodules --branch cursor/r15-win <仓库地址>
+```
+
+已经克隆过：
+
+```sh
+git submodule update --init --recursive
+```
+
+Foundry, Node 22 or newer, python3 and curl. On Windows, use WSL2. The fork reads `https://bsc-testnet-rpc.publicnode.com`.
+
 ## 本机一条命令
 
 ```sh
 bash script/demo.sh
 ```
 
-跑完后终端打印页面地址和 `/?demo=1`。没有演示场时，这条命令会在本机分叉上造三场：9 笔接单、一场已发射、一场失败，并写 `web/public/demo.json`。接单场清算价 0.00002、入池 10 BNB。已发射场开盘价 0.00008、入池 40 BNB。新造的金库还没有成交税，余额是 0。已有能读到代码的场次就接着用，不重造。演示条有六幕，左右方向键切换，Esc 退出。`docker-compose.yml` 里的 anvil 打开了自动模拟账户，这台机器没有装 Docker，所以那份文件没实测。检查用 `cd web && npm test`、`forge test`、`node agent/edge.test.mjs`、`node script/check-links.mjs`、`node script/check-why.mjs`、`node script/check-evidence.mjs`。
+跑完后终端打印页面地址和 `/?demo=1`。没有演示场时，这条命令会在本机分叉上造三场：9 笔接单、一场已发射、一场失败，并写 `web/public/demo.json`。接单场清算价 0.00002、入池 10 BNB。已发射场开盘价 0.00008、入池 40 BNB。造完后买 1 BNB 再卖出一半，税进金库。金库余额从链上读，保留 4 位小数，这一步是 0.0275 BNB。已有能读到代码的场次就接着用，不重造；金库还是 0 时补这笔买卖。演示条有六幕，左右方向键切换，Esc 退出。`docker-compose.yml` 只起分叉和页面，不造场。演示请用 `bash script/demo.sh`。本环境没有 Docker，未实测。检查用 `cd web && npm test`、`forge test`、`node agent/edge.test.mjs`、`node script/check-links.mjs`、`node script/check-why.mjs`、`node script/check-evidence.mjs`。
 
-One command starts the local fork and the page, then prints both URLs. If no demo file is present it creates an open book (clearing price 0.00002, 10 BNB), a launched auction (open price 0.00008, 40 BNB) and a failed auction, then writes `web/public/demo.json`. A freshly launched vault is 0 until someone trades. `docker-compose.yml` describes the same two processes and turns on anvil auto-impersonation. Docker was not run in this environment. `script/demo.sh` does not need it. The check commands are in the paragraph above.
+One command starts the local fork and the page, then prints both URLs. If no demo file is present it creates an open book (clearing price 0.00002, 10 BNB), a launched auction (open price 0.00008, 40 BNB) and a failed auction, buys 1 BNB and sells half, then writes `web/public/demo.json`. The vault is read from the chain and shows 0.0275 BNB. An existing book is reused; a zero vault gets the same trade. `docker-compose.yml` only starts the fork and the page. It does not create auctions. Use `bash script/demo.sh` for the demo. Docker was not run here. The check commands are in the paragraph above.
 
 ## 测试网
 
@@ -89,6 +130,12 @@ Run `npm ci` in `agent/` first. The tools return unsigned transactions. The user
 不在网页、命令行或 MCP 里签名，也不广播。Foundry 脚本只在 RPC 主机名是本机时才允许广播。结算进入时剩余燃料低于 7000000 会在改状态前回滚，所以燃料上限用 8000000。身份在测试网是替身。
 
 No signing and no broadcasting in the app, the CLI, or the MCP server. Forge scripts broadcast only when the RPC host is loopback.
+
+## 已知限制
+
+每个身份只能出一笔：Binance Agent ID 或 ERC-8004 编号，一场固定一种来源。测试网 Agent ID 是演示替身，防女巫要在主网上才成立。Flap 还没给工厂开 multiplier。测试网成功发射大约要 4.6 tBNB，还没做。
+
+Each identity bids once: a Binance Agent ID or an ERC-8004 number, one source for the auction. The testnet Agent ID is a stand-in. Sybil checks hold on mainnet. Flap has not enabled the factory. A successful testnet launch needs about 4.6 tBNB and has not been run.
 
 ## 商业模式
 

@@ -624,6 +624,11 @@ svg.plot { display: block; touch-action: none; background: var(--bg); }
   text-align: left;
   white-space: pre-wrap;
 }
+.slip.metric {
+  font-family: var(--font-sans);
+  font-size: var(--fs-12);
+  line-height: var(--lh-16);
+}
 @media (max-width: 900px) {
   .slip {
     top: auto;
