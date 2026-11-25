@@ -239,6 +239,8 @@ export function App() {
       setSourceIndex(0);
     }
     seenLauncher.current = launcher;
+    setRpcNote("");
+    setRpcError(false);
     const client = createPublicClient({ transport: http(rpc, { timeout: 8_000 }) });
     let stop = false;
     let inflight = false;
