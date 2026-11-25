@@ -225,6 +225,8 @@ export function App() {
     setHashNote("");
     setHashReceipt(null);
     setHashInput("");
+    setCopied(false);
+    setCopyFail("");
   }, [scene]);
 
   const seenLauncher = useRef("");
