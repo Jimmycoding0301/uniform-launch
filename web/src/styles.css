@@ -565,15 +565,19 @@ svg.plot { display: block; touch-action: none; background: var(--bg); }
   color: var(--text);
   font-size: var(--fs-14);
 }
-.demo-bar p { margin: 0; }
+.demo-bar p { margin: 0; min-width: 0; }
 .demo-bar button {
   height: 40px;
+  flex: none;
   padding: 0 14px;
   background: transparent;
   color: var(--text);
   border: 1px solid var(--rule-strong);
   font: inherit;
   font-size: var(--fs-14);
+}
+@media (max-width: 900px) {
+  .demo-bar { left: 0; right: 0; height: 64px; }
 }
 .demo-bar button.next { border-color: var(--accent); color: var(--accent); }
 .demo-bar button:disabled { opacity: 0.4; }

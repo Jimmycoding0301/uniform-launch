@@ -33,4 +33,34 @@ contract UniformSimulatorTest is Test {
             }
         }
     }
+
+    function test_edgesMatchTheSameRules() public pure {
+        uint256 sell = 500_000 ether;
+        UniformSettle.Bid[] memory full = new UniformSettle.Bid[](32);
+        for (uint256 i; i < 32; ++i) {
+            full[i] = UniformSettle.Bid(i, 0.2 ether, 1e16);
+        }
+        UniformSettle.Outcome memory a = UniformSettle.settle(sell, 1e13, full);
+        assertTrue(a.ok);
+        assertEq(a.poolQuote, 6.4 ether);
+        uint256 tokens;
+        for (uint256 i; i < 32; ++i) {
+            tokens += a.fills[i].tokens;
+            assertEq(a.fills[i].spend + a.fills[i].refundQuote, 0.2 ether);
+        }
+        assertLe(tokens, sell);
+
+        UniformSettle.Bid[] memory one = new UniformSettle.Bid[](1);
+        one[0] = UniformSettle.Bid(0, 20 ether, 1e16);
+        UniformSettle.Outcome memory b = UniformSettle.settle(sell, 1e13, one);
+        assertEq(b.fills[0].tokens, sell);
+        assertEq(b.poolQuote, 20 ether);
+
+        UniformSettle.Bid[] memory exact = new UniformSettle.Bid[](1);
+        exact[0] = UniformSettle.Bid(0, 4335714285714285715, 1 ether);
+        UniformSettle.Outcome memory c = UniformSettle.settle(sell, 1, exact);
+        assertTrue(c.ok);
+        assertEq(c.poolQuote, 4335714285714285715);
+        assertEq(c.fills[0].refundQuote, 0);
+    }
 }

@@ -1,13 +1,36 @@
-import { writeFileSync } from "node:fs";
+import { readFileSync, writeFileSync } from "node:fs";
+import { createRequire } from "node:module";
 import { settle } from "../shared/settle.mjs";
 
+const require = createRequire(new URL("../agent/package.json", import.meta.url));
+const { createPublicClient, http } = require("viem");
 const W = 10n ** 18n;
-const floor = 10n ** 13n;
-const bids = [
-  { index: 0n, who: "第一笔", budget: 20n * W, maxPrice: 10n ** 16n },
-  { index: 1n, who: "第二笔", budget: 20n * W, maxPrice: 10n ** 16n },
-  { index: 2n, who: "第三笔", budget: 1n * W, maxPrice: 2n * 10n ** 13n },
+const demo = JSON.parse(readFileSync(new URL("../web/public/demo.json", import.meta.url), "utf8"));
+const client = createPublicClient({ transport: http(demo.rpc) });
+const abi = [
+  { type: "function", name: "floorPrice", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  {
+    type: "function",
+    name: "getBids",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [
+      { type: "address[]" },
+      { type: "uint256[]" },
+      { type: "uint256[]" },
+      { type: "bytes32[]" },
+      { type: "uint256[]" },
+    ],
+  },
 ];
+const floor = await client.readContract({ address: demo.open, abi, functionName: "floorPrice" });
+const book = await client.readContract({ address: demo.open, abi, functionName: "getBids" });
+const bids = book[1].map((budget, index) => ({
+  index: BigInt(index),
+  who: `第 ${index + 1} 笔`,
+  budget,
+  maxPrice: book[2][index],
+}));
 
 function isqrt(n) {
   if (n < 2n) return n;
@@ -79,15 +102,18 @@ function curve(quoteTarget) {
   };
 }
 
-const sameRaise = curve(40n * W);
-const allBudgets = curve(41n * W);
+const raised = bids.reduce((sum, bid) => sum + bid.budget, 0n);
+const sameRaise = curve(uniform.poolQuote);
+const allBudgets = curve(raised);
 const out = {
   label: "模拟，参数见脚本",
+  source: demo.open,
   floor: format(floor),
   clearing: format(uniform.clearingPrice),
   poolQuote: format(uniform.poolQuote),
   uniformRatio: 1,
   recommended: "sameRaise",
+  bids: bids.map((bid) => ({ budget: format(bid.budget), maxPrice: format(bid.maxPrice) })),
   sameRaise,
   allBudgets,
 };

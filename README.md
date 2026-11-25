@@ -1,127 +1,117 @@
 # 同价发射
 
-公开限价的单次统一价格批量拍卖。代理提交预算和最高价，窗口结束后按一个清算价成交。卖完固定的一半供应后，Launcher 调用一次 Flap `launchTaxTokenV2`。卖不完则全额退款。税进入 Vault，创建者直接提取。
+代理用限价和预算参加新币开盘。窗口结束只清算一次，成交的人付同一个价。
 
-说明在 [docs/brief.md](docs/brief.md)。
+## 问题
 
-## 测试
+先到先得的曲线让第一笔和最后一笔差很多。用本机分叉演示场的 9 笔真实出价做模拟：同价的单价比是 1，常数乘积曲线是 1.7789，价差 0.00000875 BNB/枚。参数和算法在 [docs/why-uniform.md](docs/why-uniform.md)。这是模拟，不是行情。
 
-```sh
-forge install
-forge test --fuzz-runs 128
-BSC_TESTNET_RPC_URL=https://bsc-testnet-rpc.publicnode.com forge test --match-contract UniformForkTest
-```
+同一区块里的顺序不影响清算价。一个身份只能出一笔。测试网的身份是替身，防女巫要等主网接上币安 Agent ID 真合约。
 
-Fork 测试只读 BSC 测试网，在本地模拟，不向活网发交易。本地 fuzz 次数是 1024。
+Agents submit a limit and a budget. One clearing at the end, one price for every fill. On the live demo bids, the uniform price ratio is 1 and a constant-product curve is 1.7789. Simulated, not market data.
 
-## 结算 gas
+## 评审直达
 
-32 笔出价、拍卖成功并完成 `launchTaxTokenV2` 时，`settle` 的实测消耗：
-
-| 环境 | gas |
+| 要求 | 证据 |
 | --- | --- |
-| 本地假 Portal | 1,576,830 |
-| BSC 测试网分叉，真实 Portal | 5,772,154 |
+| Flap：用模板做发射界面 | [flap-ui/launcher-detail](flap-ui/launcher-detail) 和 [检查器输出](docs/flap-integration.md) |
+| Flap：测试网完整发射 | [工厂](https://testnet.bscscan.com/address/0xE82642aC5c3B3B4b7D4cDeaf6a251Dc0BB7AcEfd)、[金库工厂](https://testnet.bscscan.com/address/0x2EF7a93b2fE4FBF520D5210b3ea39a72E5133dc6)。测试网还没开权限，本机分叉彩排在 [docs/e2e-evidence.md](docs/e2e-evidence.md) |
+| Flap：Vault 按设计工作 | 分叉上金库增加 27516256919450703 wei，owner 提走相同数额，见 [证据](docs/e2e-evidence.md) |
+| 机制为什么不同 | [docs/why-uniform.md](docs/why-uniform.md) |
+| Developer：建在 BNB Chain | 链编号 97，合约已在 BscScan 验证 |
+| 设计与可用性 | [架构和路径](docs/architecture.md)、[演示稿](docs/demo-script.md) |
+| 技术实现 | [LICENSE](LICENSE)、[依赖](#依赖与致谢)、[.env.example](.env.example)、[docker-compose.yml](docker-compose.yml) |
+| 创新 | [代理接口](agent/README.md)，命令行和 MCP，只给未签名交易 |
+| 可持续 | [路线图](docs/roadmap.md)。协议现在不收费 |
 
-合约在进入 `settle` 时要求 `gasleft() >= 7,000,000`。页面复制的指令把 gas limit 写成 8,000,000。5,772,154 低于 7,000,000，也低于 8,000,000。gas limit 用估算值时往往到不了 7,000,000，调用会在改状态之前revert，拍卖保持开放。
+Evidence links: Flap component, verified testnet contracts, local-fork rehearsal, agent interface, roadmap.
 
-安全说明在 [docs/security.md](docs/security.md)。
+## 架构
 
-## 发射下限
-
-Portal 按 `poolQuote × 700 × poolToken / totalSupply` 把入池 BNB 折成美元。本项目一半供应进池，所以乘数是 350。
-
-| 条件 | 美元 | 入池 BNB |
-| --- | --- | --- |
-| 能发射，未毕业 | 750 | 2.142857142857142857 |
-| 毕业，只在发射时判断 | 1500 | 4.285714285714285714 |
-| 本合约最低入池 `minPoolQuote()` | 毕业线再加 0.05 | 4.335714285714285715 |
-
-软顶 `softCap = floorPrice × 500000` 是保留价下卖完这一半时最少募到的 BNB。成功结算时入池的 BNB 大约就是实际花掉的报价。`softCap` 低于 `minPoolQuote()` 时，账面即使成交，`settle` 也会预检失败并全额退款，不会把 BNB 打进会 revert 的 `launchTaxTokenV2`。保留价建议至少 `minPoolQuote() / 500000`，约 `0.000008671428571428` BNB/枚。
-
-`dexId = 0` 是 PancakeSwap V2 测试网：Router `0xD99D1c33F9fC3444f8101754aBC46c52416550D1`，Factory `0x6725F303b657a9451d8BA641348b6761A6CC7a17`，WBNB `0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd`。
-
-创建费 `SALT_LOCK_FEE` 是 0.005 BNB，测试网和主网一样。
-
-## 测试网部署
-
-工厂要 Flap 来开权限。先部署两个工厂，把 `launcherFactory` 交给他们。脚本不会自己广播。
-
-```sh
-export DEPLOYER_PRIVATE_KEY=0x...
-forge script script/DeployTestnet.s.sol \
-  --rpc-url https://bsc-testnet-rpc.publicnode.com \
-  --broadcast \
-  --verify
+```mermaid
+flowchart LR
+  agent[代理] --> baw[baw]
+  baw --> app[币安 App]
+  page[页面] --> cli[命令行 / MCP]
+  cli --> launcher[Launcher]
+  launcher --> id[身份来源]
+  launcher --> portal[Flap Portal]
+  portal --> pool[PancakeSwap]
+  portal --> vault[Vault]
+  creator[创建者] --> vault
 ```
 
-私钥只从 `DEPLOYER_PRIVATE_KEY` 读取，日志不打印它。地址写到 `deployments/bsc-testnet.json`。
+页面只复制指令。签名在币安 App 里完成。结算成功后 Portal 建池，税进 Vault。
 
-验证：
+The page never signs. Settlement creates the pool through Flap. Tax sits in the vault.
 
-```sh
-forge verify-contract --chain 97 --watch \
-  <vaultFactory> src/uniform/UniformVaultFactory.sol:UniformVaultFactory \
-  --constructor-args $(cast abi-encode "constructor(address)" <launcherFactory>)
+## 合约
 
-forge verify-contract --chain 97 --watch \
-  <launcherFactory> src/uniform/UniformLauncherFactory.sol:UniformLauncherFactory \
-  --constructor-args $(cast abi-encode "constructor(address)" <vaultFactory>)
-```
-
-需要 `ETHERSCAN_API_KEY`。BscScan 的测试网验证走 chain 97。
-
-脚本按 `block.chainid` 选择身份合约。56 上 Agent ID 和 ERC-8004 都指向官方地址。97 上 ERC-8004 指向官方 Identity Registry；主网 Agent ID 合约在测试网没有代码，所以另部署只含 `balanceOf` 的 `AgentIdStandIn`，页面右上写「测试网 Agent ID 为替身」。创建某一场时，把 `identitySources` 设成当时要接受的来源，创建后不能改。出价是 `bid(uint256 maxPrice, uint8 sourceIndex, uint256 agentId)`，代理自己申报编号。
-
-## ERC-8004 注册表
-
-官方规范：[ERC-8004: Trustless Agents](https://eips.ethereum.org/EIPS/eip-8004)。合约：[IdentityRegistryUpgradeable.sol](https://github.com/erc-8004/erc-8004-contracts/blob/master/contracts/IdentityRegistryUpgradeable.sol)。地址表：[Contract addresses](https://erc-8004.quicknode.com/docs/contracts)，和 [bnb-chain/erc-8004-contracts](https://github.com/bnb-chain/erc-8004-contracts) 一致。
-
-| 网络 | Identity Registry |
+| 合约 | 地址 |
 | --- | --- |
-| BNB Chain 主网 | `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` |
-| BNB Chain 测试网 | `0x8004A818BFB912233c491871b3d84c89A494BD9e` |
+| 发射工厂 | [0xE82642aC5c3B3B4b7D4cDeaf6a251Dc0BB7AcEfd](https://testnet.bscscan.com/address/0xE82642aC5c3B3B4b7D4cDeaf6a251Dc0BB7AcEfd) |
+| 金库工厂 | [0x2EF7a93b2fE4FBF520D5210b3ea39a72E5133dc6](https://testnet.bscscan.com/address/0x2EF7a93b2fE4FBF520D5210b3ea39a72E5133dc6) |
+| Agent ID 来源 | [0xe4f7B9aBA67FEDAbF9B9a151C604466D448DAb09](https://testnet.bscscan.com/address/0xe4f7B9aBA67FEDAbF9B9a151C604466D448DAb09) |
+| ERC-8004 来源 | [0x0526f00B99e952cE55F1B7BDaf9E6Ae42b42cf22](https://testnet.bscscan.com/address/0x0526f00B99e952cE55F1B7BDaf9E6Ae42b42cf22) |
+| Portal | [0x000042108465206185A077Edc3F3fd2b49060000](https://testnet.bscscan.com/address/0x000042108465206185A077Edc3F3fd2b49060000) |
 
-2026-11-25 在测试网读过这份代理：`getVersion()` 返回 `2.0.0`，名字 `AgentIdentity`，符号 `AGENT`。`ownerOf(uint256)` 和 `getAgentWallet(uint256)` 都返回 address。`register()` 的 eth_call 能铸出下一个编号。`tokenOfOwnerByIndex` 会 revert，合约不从地址反查。NFT 转走时 `agentWallet` 被清空。拍卖不部署自己的注册表。代理在 `bid` 里传入 `agentId`，合约核对 `ownerOf(agentId) == msg.sender` 或 `getAgentWallet(agentId) == msg.sender`。同一 `(sourceId, agentId)` 只能有一笔出价。
+Addresses are the verified BSC testnet deployments. The factories are not enabled by Flap yet.
 
-## 币安 Agent ID
-
-SPACE ID 文档：[Agent ID](https://docs.space.id/agent-id)。BNB 主网合约 `0x60b9262456de011f7d15a54cdd8c48baaa8b022f`，名字 `SPACE ID Agent ID`，符号 `AI`，soulbound ERC-721。2026-11-25 用主网 RPC 只读核对：`balanceOf` 对持有者返回 1，`ownerOf(tokenId)` 返回该钱包，`supportsInterface(0x780e9d63)` 为 false，`tokenOfOwnerByIndex` 会 revert。适配器用 `balanceOf(msg.sender) > 0` 判断资格；枚举可用时取 `tokenOfOwnerByIndex(account, 0)` 作 agentId，否则用 `uint160(msg.sender)`。测试网这条地址上没有代码。部署脚本在 chain 97 部署替身，主网配置指向真合约。没有管理员可以事后往一场拍卖里加来源。
-
-## 界面技能
-
-装在仓库 `.agents/skills/`。
-
-- `ui-ux-pro-max` 在 `.agents/skills/ui-ux-pro-max`。
-- `frontend-design` 在 `.agents/skills/frontend-design`。
-
-锁定文件是 `skills-lock.json`。仓库里只留这两个技能。
-
-## 本地页面
+## 本机一条命令
 
 ```sh
-bash script/local-fork.sh
-cd web && npm install && npm run dev
+bash script/demo.sh
 ```
 
-页面在 `http://127.0.0.1:4317`。anvil 分叉在 `127.0.0.1:18545`。页面角标写明这是本地分叉。
+跑完后终端打印页面地址和 `/?demo=1`。演示条有六幕，左右方向键切换，Esc 退出。
 
-`bash script/phase-shot.sh` 在已经跑着的分叉上再造四场：截单、待结算、已经开始但还没有出价、32 笔满额。合约把开始区块写成部署当时的区块，所以没有链上的「未开始」，那个画面用 `preview=wait`。脚本打印地址。再跑一次会把上一轮截单推进去，以新打印的地址为准。
+One command starts the local fork and the page, then prints both URLs. `docker-compose.yml` describes the same two processes. Docker was not run in this environment. `script/demo.sh` does not need it.
 
-这一次分叉上的地址：
+## 测试网
 
-- 截单 `http://127.0.0.1:4317/?launcher=0xCE52DDbf8485aCC3A51D342531833af43d1c8134`
-- 待结算 `http://127.0.0.1:4317/?launcher=0xdA237694120AFC09f2005b0F00dAfA70974ABe82`
-- 已开始的核对场 `http://127.0.0.1:4317/?launcher=0x9Af89e8eDcD37aAe6a78c4e7593afd10eb4dE820`。造出来时没有出价，后来在本机分叉上补了一笔成功的出价和一笔失败的出价，用来拍核对回执。
-- 满 32 笔 `http://127.0.0.1:4317/?launcher=0x13292eC04bC51AB97f592E796D4a6BCc7e371d2E`
+还没在测试网执行。Flap 没给工厂开权限，`create()` 会停下并打印原因。对着非本机 RPC 加 `--broadcast`，脚本拒绝。步骤和余额见 [docs/e2e-evidence.md](docs/e2e-evidence.md)。
 
-## 三分钟演示
+Not executed on testnet. The script refuses a remote broadcast.
 
-台上只打开本机页面，只复制指令。不向活网发交易，不导出、不粘贴私钥。地址写在 `web/public/demo.json`，页面里也可以从右上角「演示脚本」打开同一份顺序。
+## 代理接口
 
-1. 0:00 打开接单场 `http://127.0.0.1:4317/?launcher=0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a1`。看到台阶、当前清算价。
-2. 0:45 预算填 `1`，最高价填 `0.00009`，点「复制出价指令」。按钮变成「已复制」。不执行。
-3. 1:20 本机分叉若再进一笔，新行会有 1.2 秒金色底色淡出。不要为了这一下更换节点。
-4. 1:40 打开已发射 `http://127.0.0.1:4317/?launcher=0xE20f0043F32E2E38d3F3d76Ec48Cfcdb0FdC4806`。看到「开盘价 BNB/枚」、淡台阶、结果卡里的「入池 BNB」，以及「本场参数」里的「入池代币」。点「复制领取指令」。不执行。
-5. 2:20 打开失败场 `http://127.0.0.1:4317/?launcher=0x6f10Eb8eD5c3B033a9EAB172544A4a86420eb128`。看到「结果 / 没有成交」。点「复制退款指令」。不执行。
-6. 2:45 回到接单场，停在三份指令都只在剪贴板里。
+```sh
+node agent/cli.mjs status --launcher 0x… --rpc http://127.0.0.1:18545 --json
+```
+
+MCP 配置和一次真实调用在 [agent/README.md](agent/README.md)。给代理读的说明是 [web/public/llms.txt](web/public/llms.txt)。
+
+The tools return unsigned transactions. The user confirms in the Binance app.
+
+## 安全
+
+不在网页、命令行或 MCP 里签名，也不广播。结算进入时剩余燃料低于 7000000 会在改状态前回滚，所以燃料上限用 8000000。身份在测试网是替身。
+
+No signing and no broadcasting in the app, the CLI, or the MCP server.
+
+## 商业模式
+
+创建者拿走 100% 的税。协议现在不收费。以后可以选的收费点：创建费、结算费、或从税里分成。这些都还没做。
+
+Creators keep 100% of the tax. The protocol charges nothing today. Future fees are options, not features.
+
+## 路线图
+
+黑客松后两周、主网前、主网后。见 [docs/roadmap.md](docs/roadmap.md)。没有日期承诺，也没有收入数字。
+
+No dates and no revenue figures. See the roadmap.
+
+## 依赖与致谢
+
+- forge-std、OpenZeppelin、solady：合约测试和基础库，MIT
+- Flap 接口和基类：来自 https://github.com/flap-sh/FlapPoolLaunchVaultExample ，按该仓库的许可证使用
+- viem、React、Vite：页面和代理，MIT
+- Geist 字体：SIL Open Font License
+
+Dependencies are listed with the licenses we rely on.
+
+## 许可证
+
+[MIT](LICENSE)。版权人 Uniform Launch contributors。
+
+MIT. Copyright Uniform Launch contributors.
