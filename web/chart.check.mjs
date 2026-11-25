@@ -111,7 +111,7 @@ assert.ok(extra.ys >= 4 && extra.ys <= 6, `纵轴刻度 ${extra.ys}`);
 assert.ok(extra.xs >= 3, `横轴刻度 ${extra.xs}`);
 assert.equal(extra.filters, 0);
 assert.ok(extra.blur === "none" || extra.blur === "", `模糊 ${extra.blur}`);
-assert.ok(extra.cornerX <= 2 && extra.cornerY <= 2, `同价矩形角点 ${extra.cornerX}, ${extra.cornerY}`);
+assert.ok(extra.cornerX <= 1 && extra.cornerY <= 1, `同价矩形角点 ${extra.cornerX}, ${extra.cornerY}`);
 const shotBrowser = await chromium.launch();
 const shotPage = await shotBrowser.newPage({ viewport: { width: 390, height: 844 } });
 await shotPage.goto(url, { waitUntil: "domcontentloaded" });
