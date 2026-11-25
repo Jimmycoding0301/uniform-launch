@@ -1026,7 +1026,7 @@ function Empty() {
         </svg>
         <div className="empty">
           <p><Zh text="还没有这场拍卖。" /></p>
-          <a href="/?demo=1">打开演示脚本</a>
+          <a className="back-link" href="/?demo=1">打开演示脚本</a>
         </div>
       </div>
     </div>
