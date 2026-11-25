@@ -40,7 +40,7 @@ Error: script failed: flap-not-enabled
 Error: script failed: remote-broadcast
 ```
 
-没有发出交易。
+没有发出交易。主机名必须正好是 `127.0.0.1` 或 `localhost`。别的主机、路径或参数里夹着这两个词不算本机。
 
 ## BSC 测试网
 
