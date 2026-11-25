@@ -112,7 +112,7 @@ cd web && npm install && npm run dev
 
 - 截单 `http://127.0.0.1:4317/?launcher=0xCE52DDbf8485aCC3A51D342531833af43d1c8134`
 - 待结算 `http://127.0.0.1:4317/?launcher=0xdA237694120AFC09f2005b0F00dAfA70974ABe82`
-- 已开始、还没有出价 `http://127.0.0.1:4317/?launcher=0x9Af89e8eDcD37aAe6a78c4e7593afd10eb4dE820`
+- 已开始的核对场 `http://127.0.0.1:4317/?launcher=0x9Af89e8eDcD37aAe6a78c4e7593afd10eb4dE820`。造出来时没有出价，后来在本机分叉上补了一笔成功的出价和一笔失败的出价，用来拍核对回执。
 - 满 32 笔 `http://127.0.0.1:4317/?launcher=0x13292eC04bC51AB97f592E796D4a6BCc7e371d2E`
 
 ## 三分钟演示
