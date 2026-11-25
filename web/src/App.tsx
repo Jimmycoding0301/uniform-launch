@@ -1027,6 +1027,7 @@ function quoteLine(snap: Snap | null, budgetWei: bigint | null, priceWei: bigint
   if (priceWei < snap.floor) return "低于保留价，这笔不会入场。";
   if (clearing === 0n) return "清算价未形成。";
   if (priceWei < clearing) return "低于当前清算价，按现价不会成交。";
+  if (priceWei === clearing) return `限价正好在清算价上，按边际成交，约 ${formatTokens(tokensFor(budgetWei, clearing))} 枚。`;
   return `按当前清算价可得约 ${formatTokens(tokensFor(budgetWei, clearing))} 枚。`;
 }
 
