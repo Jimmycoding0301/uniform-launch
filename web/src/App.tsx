@@ -208,8 +208,14 @@ export function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [demoOn]);
 
+  const seenLauncher = useRef("");
   useEffect(() => {
     if (!launcher) return;
+    if (seenLauncher.current && seenLauncher.current !== launcher) {
+      setSnap(null);
+      setHoldSkel(true);
+    }
+    seenLauncher.current = launcher;
     const client = createPublicClient({ transport: http(rpc) });
     let stop = false;
     const load = async () => {
