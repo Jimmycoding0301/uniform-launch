@@ -55,6 +55,10 @@ sets.push([
   { budget: 3n * 10n ** 18n, maxPrice: 11_000_000_000_000n },
   { budget: 1n * 10n ** 18n, maxPrice: 10_500_000_000_000n },
 ]);
+sets.push([
+  { budget: 8n * 10n ** 18n, maxPrice: 10_000_000_000_000n },
+  { budget: 4n * 10n ** 18n, maxPrice: 10_000_000_000_000n },
+]);
 for (const [width, height] of [[920, 288], [358, 260], [343, 220]]) {
   for (const bids of sets) {
     const floor = 10_000_000_000_000n;
@@ -70,7 +74,7 @@ for (const [width, height] of [[920, 288], [358, 260], [343, 220]]) {
     }
   }
 }
-console.log("二十组出价的标注都不出图、不重叠");
+console.log("生成的出价标注都不出图、不重叠");
 
 const { chromium } = await import("playwright");
 const browser = await chromium.launch();
