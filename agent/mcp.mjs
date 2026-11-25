@@ -52,6 +52,10 @@ rl.on("line", (line) => {
     return;
   }
   if (msg.id === undefined) return;
+  if (msg.method === "ping") {
+    reply(msg.id, {});
+    return;
+  }
   if (msg.method === "initialize") {
     reply(msg.id, {
       protocolVersion: "2025-06-18",

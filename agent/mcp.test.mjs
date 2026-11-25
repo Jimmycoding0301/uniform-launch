@@ -10,6 +10,7 @@ const send = (value) => child.stdin.write(`${typeof value === "string" ? value :
 send("这不是 json");
 send({ jsonrpc: "2.0", method: "notifications/initialized" });
 send({ jsonrpc: "2.0", id: 1, method: "initialize", params: { protocolVersion: "2025-06-18", capabilities: {}, clientInfo: { name: "t", version: "0" } } });
+send({ jsonrpc: "2.0", id: 4, method: "ping" });
 send({ jsonrpc: "2.0", id: 2, method: "nope" });
 send({
   jsonrpc: "2.0",
@@ -29,10 +30,12 @@ send({
 await new Promise((resolve) => setTimeout(resolve, 300));
 child.kill();
 const lines = buf.trim().split("\n").map((line) => JSON.parse(line));
-assert.equal(lines.length, 3);
+assert.equal(lines.length, 4);
 assert.equal(lines[0].id, 1);
 assert.equal(lines[0].result.serverInfo.name, "uniform-agent");
-assert.equal(lines[1].error.code, -32601);
-assert.equal(lines[2].result.isError, true);
-assert.match(lines[2].result.content[0].text, /来源编号不对/);
+assert.equal(lines[1].id, 4);
+assert.deepEqual(lines[1].result, {});
+assert.equal(lines[2].error.code, -32601);
+assert.equal(lines[3].result.isError, true);
+assert.match(lines[3].result.content[0].text, /来源编号不对/);
 console.log("MCP 忽略坏行和通知，未知方法有错误码");
