@@ -791,6 +791,9 @@ export function App() {
                     {failed ? "没有成交" : phase === "wait" ? "未形成" : clearingNow > 0n ? <Roller text={formatPrice(clearingNow)} /> : "未形成"}
                   </div>
                   {failed && <p className="fail-line"><Zh text="未达保留价，出价全额退回。" /></p>}
+                  {clearingNow === 0n && snap.bids.length > 0 && !failed && phase !== "wait" && (
+                    <p className="fail-line">已募还没到保留所需，清算价还没形成。</p>
+                  )}
                 </div>
                 <div className="axis-note">{params.get("preview") ? "画面预览。链上这场不是这个阶段。" : ""}</div>
               </div>
