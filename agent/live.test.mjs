@@ -1,5 +1,7 @@
 import { spawnSync } from "node:child_process";
 import assert from "node:assert/strict";
+import { decodeFunctionData } from "viem";
+import { launcherAbi } from "./abi.mjs";
 
 const launcher = "0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a1";
 const rpc = "http://127.0.0.1:18545";
@@ -31,6 +33,12 @@ assert.equal(tx.ok, true);
 assert.match(tx.instruction, /baw/);
 assert.match(tx.instruction, /链编号 97/);
 assert.equal(tx.gas, "8000000");
+const decoded = decodeFunctionData({ abi: launcherAbi, data: tx.data });
+assert.equal(decoded.functionName, "bid");
+assert.equal(decoded.args[0], 30000000000000n);
+assert.equal(decoded.args[1], 0);
+assert.equal(decoded.args[2], 1n);
+assert.equal(tx.value, "1000000000000000000");
 
 const sim = run(["simulate", "--json", "--budget", "1", "--max-price", "0.00003"]);
 const simJson = JSON.parse(sim.out);
