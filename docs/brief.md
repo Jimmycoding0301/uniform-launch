@@ -1,20 +1,26 @@
 # 同价发射
 
-给 Jimmy 的开工说明。按这份做，不要再加机制。
+方向已锁定为同价发射：公开限价的单次统一价格批量拍卖（uniform-price batch auction）。按本文件实现，不再改机制。
 
 一句话：基于 Agent ID 的 BNB Chain 发行协议。代理提交限价单，一次清算决定开盘价，再把带税代币发进流动性池。
 
-选定的东西是单次统一价格批量拍卖（uniform-price batch auction）。保留价（reserve price）以下不成交。卖完固定的一半供应才算成功，成功后 Launcher 从自己的地址调用一次 `launchTaxTokenV2`。卖不完就全额退款，不发币。税 100% 进 Vault，创建者随时提走，没有投票。
+保留价（reserve price）以下不成交。固定的一半供应全部卖出才算成功。成功后 Launcher 从自己的地址调用一次 `launchTaxTokenV2`。卖不完则全额退款，不发币。税 100% 进 Vault，创建者 Jimmy 随时 `withdrawAll`，没有投票。
 
-开发期按 2026-11-25 20:00 到 2026-11-27 08:00（上海）排。HackQuest 截止 2026-11-27 10:00 上海，曼谷 09:00。这轮只写说明，不部署，不发交易，不碰私钥。
+签名只走代理。页面复制指令，代理执行 `baw contract-call preview`，再 `execute`，用户在币安 App 确认。页面监听链上结果。贴交易哈希为可选核对。浏览器插件钱包不是主按钮。
+
+## 给用户的一句话
+
+同价发射是代理参与的统一价拍卖。复制出价指令给代理，并在币安 App 确认；达到保留价后按清算价获得代币，未达到则出价全额退回。
+
+开发期按 2026-11-25 20:00 到 2026-11-27 08:00（上海）排。HackQuest 截止 2026-11-27 10:00 上海，曼谷 09:00。本轮交付只有本文件，不部署，不发交易，不接触私钥。
 
 ## 结论
 
-做公开限价的单次批量拍卖，不做密封出价，不做荷兰拍，不做短局游戏。
+方向已锁定，不再更换。
 
-代理是定价主体：清算价只由出价的预算和最高价算出来。创建者只定保留价和窗口，不能改价，不能抽走出价里的 BNB。签名主路径是页面生成指令、代理 `baw contract-call preview` 再 `execute`、用户在币安 App 确认。浏览器插件钱包不做主按钮。
+清算价只由出价的预算和最高价算出。创建者只定保留价和窗口，不能改价，不能转走出价里的 BNB。
 
-邻近机制里，它最接近 Gnosis EasyAuction 的单次批量拍卖，再加上 Flap 的「清算完立刻建池」。Uniswap CCA 是同一族的连续版本，36 小时做不完，不实现。
+机制取自 Gnosis EasyAuction 的单次批量拍卖，成交结果交给 Flap 建池。Uniswap CCA 的按区块释放不实现。「三个方向」一节的表是定稿记录。
 
 ## 用词
 
@@ -52,9 +58,9 @@ CCA 技术说明写明：统一价拍卖一般做不到策略无关，仍可能�
 | 演示 | 两段确认，中间还要等揭示窗口 | 价格曲线好看，但观众看到的是时钟在降价 | 好看，评委下一句会问输家的钱在哪 | 曲线随着出价变，结算那一笔直接出代币和池子 |
 | 风险 | 揭示失败会把资金卡住，规则要写得很死 | 和「一键曲线毕业」离得近，评委不好区分 | 和已有代理竞技场撞题 | 公开订单会被最后一刻加价。接受这个缺口 |
 
-方向 1 的「税按出价贡献分给代理」和「创建者自由提税」冲突，不采用。方向 2 的「税进 Vault 自动回购」会把税锁进买盘，创建者拿不走，不采用。方向 3 的「税做下一局奖池」在一场演示里看不到下一局，不采用。
+密封竞价、荷兰拍、短局定盘已排除。税不按出价分给代理，不自动回购，不做下一局奖池。
 
-RWA 不往里塞。主奖主题有两半，这一场只接链上 Agent。报价资产是 BNB，发行的是项目代币。文案里不写 RWA，也不写 V4 Hook。Flap 这一笔是 `DIRECT_V2_POOL_TAX`，`dexId = 0`，LP 由 Portal 销毁。
+主奖主题只接链上 Agent。报价资产是 BNB，发行物是项目代币。文案不写 RWA，不写 V4 Hook。发射种类是 `DIRECT_V2_POOL_TAX`，`dexId = 0`，LP 由 Portal 销毁。
 
 ## 1. 目标
 
@@ -67,7 +73,7 @@ RWA 不往里塞。主奖主题有两半，这一场只接链上 Agent。报价�
 
 创建者能从 Vault 提走全部交易税，不需要别人投票。
 
-演示夜有一条不断的路径：看失败局的退款 → 看一场已经截单的拍卖 → 代理发一笔结算 → 页面出现代币和池子 → 再给一笔买入和一次提税。现场如果还来得及，再出一笔新的限价单，曲线跟着动。
+演示顺序固定：失败局退款，待结算局，代理结算，曲线收拢并浮现代币与池子地址，然后提税。演示中不临时加出价。
 
 ## 2. 现状与依赖
 
@@ -123,16 +129,15 @@ graduationFloor = 1500 美元 × multiplier × totalSupply / poolToken
 - `--value` 是 wei。
 - Developer Mode 只能在币安 App 里开：Agentic Wallet 管理页 → 右上角设置。余额超限会失败，错误码 `351804`。过期是 `351802`，没开是 `351801`，风控拦截是 `351803`。
 - Agent ID 用 `baw wallet agent-id` 查询，领了才有 `.ai` 名字。领取在 App 里做，不在 CLI 里做。
-- 官方示例里的 `baw wallet chains` 列出了 BSC `56`，没有 EVM 97。示例可能过时。开工第一小时跑一次 `baw wallet chains --json`，以返回为准。没有测试网就停在这一步去问现场的币安同学，不要改打主网 `56`。
+- 官方示例里的 `baw wallet chains` 返回含 BSC `56`，不含 EVM 97。开工第一小时以本机 `baw wallet chains --json` 为准。没有测试网就问现场的币安同学，不改打主网 `56`。
 
 公开文档没有给出测试网上可调用的 Agent ID 注册表。合约里不做一个假的 `onlyAgent`。资格放在指令里：代理必须先查到 Agent ID，再 preview。币安如果给出注册表地址，再给 `bid` 加一次 view 调用。
 
-### 测试网没启用时怎么演示
+### 工厂启用
 
-1. 先找 Flap 启用。这是唯一能当「测试网跑通」的路径。
-2. 启用之前，Foundry fork 测试照跑。fork 里 prank 管理员只为了测我们自己的合约。
-3. 现场如果截止前仍没启用：用 anvil 分叉测试网，只在本机 impersonate ProxyAdmin 的 owner，调用 `setLauncherFactoryMultiplier`，然后走完创建、出价、结算、退款。页面角标写「本地分叉，不是测试网」。这种交易哈希不能写进 HackQuest，不能说成测试网结果。
-4. 主网不要发币。主网创建在暂停，而且代理钱包的 `56` 不是这条赛道要的验收链。
+Jimmy 在曼谷现场把文末「给 Flap 的一页」交给 Flap 团队。测试网跑通以他们启用两个工厂为准。
+
+启用之前，Foundry fork 测试照跑。fork 里 prank 管理员只用于测试。截止前仍未启用时，用 anvil 分叉测试网，只在本机 impersonate ProxyAdmin 的 owner，调用 `setLauncherFactoryMultiplier` 与 `setVaultFactoryMultiplier`，走完创建、出价、结算、退款。页面角标写「本地分叉，不是测试网」。这类哈希不写入 HackQuest 的测试网栏。主网不发币。
 
 ## 3. 范围
 
@@ -146,6 +151,8 @@ graduationFloor = 1500 美元 × multiplier × totalSupply / poolToken
 
 不做：
 
+- 浏览器插件钱包主按钮。签名主路径只有：复制给代理，`baw contract-call preview`，`execute`，币安 App 确认。页面自己盯链。贴哈希核对为可选。
+- 投票分税、自动回购、按出价分税。税 100% 进 Vault。创建者 Jimmy 随时 `withdrawAll`。
 - commit-reveal、撤单、改单、追加预算
 - 荷兰拍、LBP、按区块释放的 CCA、bonding curve
 - 游戏、抽签、白名单、KYC
@@ -155,7 +162,7 @@ graduationFloor = 1500 美元 × multiplier × totalSupply / poolToken
 - RWA、Uniswap v4 hook、自研 AMM
 - ERC-20 报价。只收原生 BNB
 - 链下订单簿和后台撮合
-- 把浏览器插件钱包放成主按钮
+- 第二套签名路径
 
 供应量写死，避免现场配错比例。
 
@@ -210,15 +217,15 @@ graduationFloor = 1500 美元 × multiplier × totalSupply / poolToken
 | 未开始 | 当前区块 < `startBlock` | 无 | 窗口还没开 |
 | 接受出价，零笔 | 窗口内，`bidCount = 0` | 复制出价指令 | 还没有出价 |
 | 接受出价 | 窗口内，已有出价 | 复制出价指令 | 显示笔数和当前最高限价 |
-| 已截单 | 进入最后 20 个区块 | 无 | 已停止接单，等区块结束 |
-| 待结算 | 已过 `endBlock`，状态仍是 Open | 复制结算指令 | 可以结算 |
+| 已截单 | 进入最后 20 个区块 | 无 | 已停止接单 |
+| 待结算 | 已过 `endBlock`，状态仍是 Open | 复制结算指令 | 等待结算 |
 | 已发射 | Succeeded | 复制领取指令 | 写出清算价、代币、池子 |
 | 失败 | Failed | 复制退款指令 | 未达保留价，出价全额退回 |
-| 读链失败 | RPC 错误 | 保留上一次主按钮，不可点 | 读不到测试网，过几秒再试 |
+| 读链失败 | RPC 错误 | 保留上一次主按钮，不可点 | 测试网读取失败 |
 
-失败局要提前做一场放在测试网上：保留价设高，一笔小预算，结算后状态 Failed，退款交易已确认。演示时先打开这场。
+失败局提前放在测试网上：保留价设高，一笔小预算，结算后状态 Failed，退款交易已确认。演示时先打开这场。
 
-成功局也提前做到「已截单、有两笔能过保留价的出价、还没结算」。现场的代理动作优先是结算。出价窗口若来得及，再补一笔新单。
+成功局在演示前进入「已截单、两笔出价已过保留价、未结算」。现场只结算这一场。
 
 ## 5. 合约设计
 
@@ -387,7 +394,7 @@ event TaxWithdrawn(address indexed to, uint256 amount);
 | poolToken | `500_000 ether` |
 | buyTaxRate, sellTaxRate | `300`，`300`（3%） |
 | taxDuration | `30 days` |
-| antiFarmerDuration | `1 days`。和示例一致。若 fork 证明更小的值合法且不影响提税，再改，不在演示当天才改 |
+| antiFarmerDuration | `1 days` |
 | feeConfigs | 一个槽：`FeeSlotType.VAULT`，bps `10000`，`configData = abi.encode(vaultFactory, abi.encode(address(this)))` |
 | antiSniperMode | `0` |
 | exemptWindow | `0` |
@@ -416,7 +423,7 @@ event TaxWithdrawn(address indexed to, uint256 amount);
 - salt 只能由 Launcher 锁定。工厂去锁会让发射 revert `FlapSaltLockedByAnotherUser`。
 - 代理指令里的金额由页面生成。代理不得改金额。这是操作约束，不是合约约束。
 
-公开订单的剩余风险：截单前最后一个区块仍可以加价，把清算价抬高。后出价的人付的是新的统一价，不会比早期出价更便宜。演示和提交材料都这样讲。
+公开订单的剩余风险：截单前最后一个区块的加价会抬高清算价。后出价的人按新的统一价成交。页面上只在主按钮旁留一行该提示，其他位置不放风险文案。
 
 ## 6. 前端与审美
 
@@ -431,54 +438,85 @@ snapshot 用满 16 个：`demand0` 到 `demand7`，`status`，`floorPrice`，`cl
 
 ### 参照
 
-Uniswap 官网和 CCA 说明页：近黑底、大数字、细线，需求画成阶梯。MegaETH 官网：网格、等宽数字、颜色很少。两边都不要照搬插画和字体标识。
+首屏主视觉对标 uniswap.org 的 CCA 页：阶梯需求曲线、细线、大号价格。整体克制对标 MegaETH 官网：近黑底、网格、少颜色。不照搬两边的插画和字体标识。
 
-不用组件库的默认卡片、默认圆角和默认紫色。Flap 组件若不能外链字体，就用 `ui-sans-serif` 和 `ui-monospace`，字号和颜色仍按下面来。演示页自托管 Geist Sans 和 Geist Mono。
+曲线用 SVG 自绘。不用 Chart.js，不用 Recharts，不用二者的默认坐标轴、默认网格和默认 tooltip。图内无 tooltip，无图例，无标题。
+
+演示页自托管无衬线字体（Geist Sans）和等宽数字（Geist Mono，`font-variant-numeric: tabular-nums`）。Flap 组件不能外链字体时，用 `ui-sans-serif` 与 `ui-monospace`，其余参数不变。
 
 ### 参数
 
-| 项 | 值 |
-| --- | --- |
-| 页面底 | `#07080A` |
-| 块面 | `#101114` |
-| 主文字 | `#F5F5F5` |
-| 次文字 | `#9A9AA2` |
-| 网格 | 64px，1px，`rgba(255,255,255,0.06)`，不拦截点击 |
-| 强调色 | `#F0B90B`。只用在主按钮、清算价、曲线、当前区块刻度 |
-| 按钮上的字 | `#14120A` |
-| 失败 | 不使用红色。1px 白边 `rgba(255,255,255,0.24)`，文字仍是 `#F5F5F5` |
-| 圆角 | 0 |
-| 阴影 | 不加 |
-| 页边 | 桌面 48px，手机 24px |
-| 块间距 | 32px |
-| 标题 | 桌面 56px / 行高 64px，手机 36px / 44px，字重 500，字距 -0.03em |
-| 清算价 | 桌面 72px，手机 48px，字重 500，等宽，金色 |
-| 正文 | 16px / 24px |
-| 标签 | 12px / 16px，次文字。中文不加字距 |
-| 主按钮 | 高 56px，宽 100%，金底，字号 16px |
+代码里用下列常量，验收时逐项对照。
+
+```text
+COLOR_BG = #0B0B0D
+COLOR_TEXT = #F5F5F5
+COLOR_MUTED = #9A9AA2
+COLOR_GRID = rgba(255,255,255,0.06)
+GRID_PX = 64
+COLOR_ACCENT = #F0B90B
+COLOR_BUTTON_TEXT = #14120A
+CURVE_STROKE_PX = 1
+CORNER_RATIO = 0.08
+CLEARING_GLOW_BLUR_PX = 14
+CLEARING_GLOW_OPACITY = 0.35
+RESERVE_DASH = 4 4
+RESERVE_COLOR = #9A9AA2
+EASE = cubic-bezier(0.16, 1, 0.3, 1)
+SETTLE_MS = 800
+ADDR_STAGGER_MS = 150
+ADDR_OFFSET_PX = 8
+```
+
+`CLEARING_GLOW_BLUR_PX` 允许 12 到 16。`SETTLE_MS` 允许 700 到 900。页面底只用 `COLOR_BG`，不另铺卡片底。输入框 1px 边框 `rgba(255,255,255,0.16)`，背景透明。按钮高 56px，宽 100%，金底，字号 16px，圆角 0，无阴影。1440 宽的标题为 40px / 行高 48px，字重 500，字距 -0.03em。正文 16px / 24px。标签 12px / 16px。失败态不用红色。
 
 ### 曲线
 
-SVG。桌面绘图区高 420px，手机 240px。`viewBox="0 0 700 420"`，内边距 24。
+绘图区在 1440×900 中高 620px，在 390×844 中高 240px。
 
-- 横轴是价格，从保留价到「最高限价和 4 倍保留价里的较大者」。线性。
-- 纵轴是「限价不低于该价格的预算之和」。
-- 阶梯折线，描边 `#F0B90B`，宽 1.5。线下填充 `rgba(240,185,11,0.08)`。
-- 坐标轴 1px，`rgba(255,255,255,0.16)`。图内不放标题和图例。
-- 清算价是一根同样细的竖线，交点用 4px 的方块，不用圆点。
-- 没有动画。空数据时只留坐标轴，中央写「还没有出价」。
+- 横轴：累计预算，单位 BNB，从 0 到全部出价预算之和。
+- 纵轴：价格，单位 BNB/枚。
+- 出价按限价从高到低排列。每一笔是一段水平线，宽度等于该笔预算，高度等于该笔限价。下一笔限价更低时，用短过渡接到下一档。
+- 过渡用二次贝塞尔。过渡段长度不超过该阶宽度与高度中较小者的 `CORNER_RATIO`（0.08）。禁止 90 度硬折角，禁止图表库默认折线。
+- 阶梯描边 `COLOR_ACCENT`，宽 `CURVE_STROKE_PX`（1px）。线下不填充。
+- 坐标轴 1px，`rgba(255,255,255,0.16)`。刻度 12px，`COLOR_MUTED`，`tabular-nums`。
+- 尚无出价：只留坐标轴，中央写「还没有出价」。
+- 当前出价已能算出清算价时，画一条贯穿绘图区全宽的水平线，颜色 `COLOR_ACCENT`，宽 1px。外发光模糊半径 `CLEARING_GLOW_BLUR_PX`，透明度 `CLEARING_GLOW_OPACITY`。线的右端上方 8px 处挂当前清算价：无衬线，1440 宽为 48px，390 宽为 32px，`tabular-nums`，颜色 `COLOR_ACCENT`。
+- 保留价是一条水平虚线，颜色 `RESERVE_COLOR`，虚线 `RESERVE_DASH`，宽 1px，无发光。
+- 尚未形成清算价时，不画金色横线，不显示大号数字。
 
 ### 首屏
 
-桌面两栏。左栏：代币名、一行说明、保留价、软顶、剩余区块。左栏底部就是预算、最高价、金色按钮。右栏是曲线。按钮必须在第一屏里，不滚动就能点。
+1440×900 不滚动即看到「复制出价指令」。
 
-按钮下 12px 的次文字：「粘贴给代理。代理先 preview，你在币安 App 确认。」
+- 顶栏 48px。页边 48px。
+- 右栏从 x=520 起，放曲线。
+- 左栏宽 424px，自上而下：代币名、文首「给用户的一句话」、保留价、软顶、剩余区块、预算、最高价、按钮、一行风险。
+- 按钮文案为「复制出价指令」。按钮底边小于 860px。
+- 风险只此一行，12px，`COLOR_MUTED`：「最后区块的加价会抬高清算价。」
+- 出价列表从 y=900 以下开始。
 
-手机改为单列：标题、按钮、再是曲线。按钮仍在第一屏。
+390×844 不滚动即看到同一按钮。
 
-出价列表在首屏下面。地址用等宽，中间缩略。金额用完整数字，不写「约」。
+- 页边 24px。顺序：标题 32px、一句话、两个输入、按钮、同一行风险。这一组底边小于 780px。
+- 曲线放在按钮下面。
 
-底部一个单行输入：「可选：贴交易哈希核对」。核对的是 `to` 是否为这个 Launcher、收据是否成功、日志里的预算和最高价是否等于刚复制的那条。对不上就写「这笔交易对不上当前指令」。
+地址用等宽，中间缩略。金额写完整数字。页面底部保留单行输入「贴交易哈希核对」。核对 `to`、收据是否成功、日志中的预算和最高价。对不上时写「这笔交易对不上当前指令」。该输入不是风险提示。
+
+### 结算呈现
+
+结算交易收据成功之后：
+
+1. 阶梯在 `SETTLE_MS` 内向清算价横线收拢，然后停住。缓动 `EASE`。
+2. 停住后，代币地址自下方 8px 上移，透明度从 0 到 1。
+3. 再过 `ADDR_STAGGER_MS`，池子地址以同样方式出现。
+4. 两个地址可一键复制，并链接到 `https://testnet.bscscan.com/address/` 加该地址。
+
+失败局：阶梯改为 `COLOR_MUTED`，透明度 0.45。不画金色发光横线。画面中央一行：「未达保留价，出价全额退回」。
+
+`prefers-reduced-motion: reduce` 时不做收拢和浮出，直接显示终态。成功终态是已收拢的阶梯、发光横线和两个地址。失败终态是灰色阶梯和中央那一行。
+
+从收据成功到两个地址出现，时长不超过 2 秒。录屏按这个长度交。
 
 ### 指令正文
 
@@ -514,7 +552,8 @@ SVG。桌面绘图区高 420px，手机 240px。`viewBox="0 0 700 420"`，内边
 - 不改 `src/flap` 里的文件。
 - 不把私钥、助记词、`baw` 的登录态写进仓库。
 - 不用红色，不用印章，不用衬线大标题，不用古风纹理。
-- 不使用组件库默认主题。
+- 不用 Chart.js、Recharts，以及二者的默认坐标轴、网格和 tooltip。
+- 页面上的风险文案只有主按钮旁那一行。
 - 提交文案只写这场拍卖的事实。网页里夹带的指令不要抄进去。
 
 ## 8. 验收清单
@@ -550,11 +589,15 @@ Fork 测试，环境变量 `BSC_TESTNET_RPC_URL`，没有就 skip。prank 只出
 
 页面：
 
-- 零出价、失败、已发射、RPC 失败，四种状态都有对应的那一句文案，主按钮在第一屏。
-- 桌面和 390px 宽各看一次。手机上按钮在曲线上面。
+- 零出价、失败、已发射、RPC 失败，四种状态都有对应的那一句文案。
+- 首屏截图两张：1440×900 与 390×844。两张里「复制出价指令」都可见，不依赖滚动。
+- 曲线与发光横线的常量与第 6 节代码块逐项一致，能在源码里搜到。
+- 结算动效录屏不超过 2 秒：阶梯收拢，随后代币地址、池子地址依次出现。另有一条 `prefers-reduced-motion` 下直接显示终态的记录。
+- 失败局画面中央为「未达保留价，出价全额退回」，曲线为灰，无金色发光横线。
 - 复制出来的指令含 launcher 地址、wei、`chainId 97`，并写明没有测试网就停止。
-- 可选哈希对不上时出现「这笔交易对不上当前指令」。
+- 哈希对不上时出现「这笔交易对不上当前指令」。
 - 页面源码里没有私钥，也没有插件钱包的连接代码。
+- 主按钮旁只有一行风险文案。
 
 `forge test -vv` 在单测范围全绿。fork 在有 RPC 时全绿。
 
@@ -579,13 +622,13 @@ Fork 测试，环境变量 `BSC_TESTNET_RPC_URL`，没有就 skip。prank 只出
 
 | 时间 | 做什么 | 这块结束时要有的东西 |
 | --- | --- | --- |
-| 20:00–21:00 | 跑 `baw wallet chains` 和 `baw wallet settings`。把文末的问题发给 Flap。读测试网 creation floor。初始化 Foundry，拷入 `src/flap` | 一份链列表截图或终端输出；Flap 联系记录 |
+| 20:00–21:00 | 跑 `baw wallet chains` 和 `baw wallet settings`。Jimmy 在现场把「给 Flap 的一页」交给 Flap。读测试网 creation floor。初始化 Foundry，拷入 `src/flap` | 链列表输出；Flap 已收到那一页的记录 |
 | 21:00–00:00 | 只写结算纯函数和四个手算测试 | `forge test` 里结算全绿 |
 | 00:00–04:00 | Launcher 的出价、截单、失败退款。先不连 Portal | 窗口和退款单测全绿 |
 | 04:00–08:00 | 接上 `launchTaxTokenV2`、distribution、Vault、两个工厂 | 本地测试能走完成功和失败。fork 还没要求 |
 | 08:00–10:00 | 写 fork 测试。向 Flap 要启用结果。没启用就继续修 fork，不空等 | fork 全绿，或一条写明失败原因的日志 |
 | 10:00–14:00 | 启用了就部署到 97 并做成功、失败两场。没启用就把演示页接到本机 anvil 分叉，角标写明 | 两场的地址。测试网或标明为分叉 |
-| 14:00–18:00 | 演示页：曲线、复制、3 秒轮询、哈希核对、四种状态 | 桌面和手机各一条路径能点完 |
+| 14:00–18:00 | 演示页：阶梯曲线、发光横线、复制、3 秒轮询、哈希核对、四种状态、结算动效 | 1440×900 与 390×844 截图；动效录屏不超过 2 秒 |
 | 18:00–22:00 | Flap 组件和 Vault 页，16 个读取接上分档曲线 | `launcher:check-source` 通过 |
 | 22:00–02:00 | 提税三步在 fork 走通；测试网可用就发那三笔。准备已截单的成功局和已退款的失败局 | 提税哈希，或 fork 日志加「测试网未做」 |
 | 02:00–05:00 | 按 3 分钟演示脚本彩排两遍。只改文案、RPC 和会 revert 的参数 | 两遍都在 3 分钟内讲完 |
@@ -595,20 +638,20 @@ Fork 测试，环境变量 `BSC_TESTNET_RPC_URL`，没有就 skip。prank 只出
 
 ## 3 分钟演示
 
-上场前页面打开失败局。旁边那一场已经截单、有两笔出价、还没结算。Agent ID、Developer Mode、测试网 chain id 都先查过。
+上场前打开失败局。另一场已截单，有两笔出价，尚未结算。Agent ID、Developer Mode、测试网 chain id 已核对。
 
-| 秒 | 做什么 | 说的话 |
+| 秒 | 做什么 | 说明 |
 | --- | --- | --- |
-| 0–20 | 失败局。指出退款哈希和两边余额 | 保留价没到，所以没有代币。两笔 BNB 都退回去了 |
-| 20–40 | 切到待结算那场。指出曲线和两笔限价 | 价高的整笔成交，价低的按同一个清算价成交。这个数就是等下的开盘价 |
-| 40–90 | 点「复制结算指令」，交给代理。preview 的数字给观众看，再在 App 里确认 | 签名在币安 App 里。页面在等链上的 AuctionSettled |
-| 90–130 | 页面变成已发射。念清算价、poolQuote、代币地址末尾 7777 | 一半代币进池，另一半在这里等领取。花掉的 BNB 就是池子里的 BNB |
-| 130–160 | 打开税费页。若已经有税，复制提税指令并确认 | 税全部在 Vault。创建者直接提，没有投票 |
-| 160–180 | 若时间不够就停。若出价窗口还开着，补一句 | 新的限价单也是同一条路径。最后一块仍可能把价抬高，抬价的人自己也付新价格 |
+| 0–20 | 失败局。指出退款哈希 | 保留价未达到。代币未发行。出价已全额退回。 |
+| 20–40 | 打开待结算局。指出阶梯和清算价横线 | 两笔限价决定清算价。该价格为开盘价。 |
+| 40–90 | 复制结算指令。代理 preview 后，在币安 App 确认 | 签名在币安 App 完成。页面等待 AuctionSettled。 |
+| 90–130 | 看阶梯收拢，再看浮出的两个地址 | 一半代币进入池子。成交的 BNB 进入池子。 |
+| 130–170 | 打开税费页。复制提税指令并确认 | 税在 Vault。创建者调用 withdrawAll。 |
+| 170–180 | 停在代币地址 | 地址可复制，并打开测试网浏览器。 |
 
-结算确认超过 40 秒还没上链：停在 preview 画面，改口「指令已经固定，哈希我们用彩排那笔」，打开提前结算好的备用局，把备用哈希念出来。不要改走插件钱包。
+结算超过 40 秒未上链：停在 preview。打开彩排中已结算的一场，读出该交易哈希。不改用插件钱包。
 
-本地分叉时，第一句就说这是分叉，不是测试网。
+本地分叉时，第一句说明当前画面是本地分叉。
 
 ## HackQuest 提交
 
@@ -625,20 +668,74 @@ Fork 测试，环境变量 `BSC_TESTNET_RPC_URL`，没有就 skip。prank 只出
 
 若截止时工厂还没启用：提交里写明「测试网启用未完成，完整路径在 fork 测试和本地分叉」，并附测试命令和分叉步骤。不要把分叉哈希填进测试网哈希那一栏。
 
-## 问 Flap 和币安
+## 给 Flap 的一页
 
-一次问完，带上工厂地址（部署后补）：
+Jimmy 在曼谷现场把这一页交给 Flap。地址未写出时，现场手写补上。这一页不附带其他问题。
 
-1. 测试网谁能调用 `setLauncherFactoryMultiplier`？现场找谁，黑客松期间能不能先启用未审计的工厂？
-2. 乘数能不能低于 10000，让 50% 入池时的 creation floor 降到大约 1 tBNB？
-3. 测试网 BNB 的美元价现在是多少？50% 入池时，creation floor 和 graduation floor 各是多少 tBNB？`graduationFloorV2` 的参数是什么？
-4. Vault Factory 不启用时，`newVault` 还会不会被调用？我们希望启用，方便税费页登记。
-5. 测试网创建现在是否暂停？未启用的工厂是在 `newLauncher` 就 revert，还是只在暂停时拦截？
-6. 测试网 `SALT_LOCK_FEE()` 是不是 0.01 tBNB？
-7. `taxDuration` 和 `antiFarmerDuration` 的合法区间？发射后立刻买入再 `dispatch`，税能不能在同一小时进 Vault？
-8. `dexId = 0` 在测试网是不是 router `0xc9D63ddCB9549578057EAB6A83a543DdFEE2b8c3`？
-9. 元数据 CID 有没有必填字段？
-10. `launcher-config-preview/v1` 的 ZIP，27 日 10:00 前能不能挂上预览？
-11. 问币安：`baw wallet chains` 里有没有 BSC 测试网？没有的话，现场代理签名能落到哪条链？测试网有没有 Agent ID 注册表合约，`bid` 可以调用？
+### 中文
 
-第 1 个和第 11 个决定演示能不能在测试网上由代理签名完成。没有答复之前，按第 2 节的分叉备份做，不改拍卖规则。
+请在 BNB Smart Chain 测试网（chainId 97）启用下面两个工厂。
+
+Portal：`0x000042108465206185A077Edc3F3fd2b49060000`
+
+| 合约 | 地址 |
+| --- | --- |
+| Launcher Factory | `0x________________________________________` |
+| Vault Factory | `0x________________________________________` |
+
+请执行：
+
+```text
+setLauncherFactoryMultiplier(launcherFactory, 10000, true)
+setVaultFactoryMultiplier(vaultFactory, 10000, true)
+```
+
+`10000` 表示地板乘数为 1。Launcher Factory 与 Vault Factory 都需要启用。
+
+请确认三件事：
+
+1. 测试网上 `dexId = 0` 对应的 V2 Router 地址。我们从 Flap 示例 fork 读到的是 `0xc9D63ddCB9549578057EAB6A83a543DdFEE2b8c3`。
+2. 当前测试网的最低 `poolQuote`。本项目 50% 供应入池。
+3. 测试网 `SALT_LOCK_FEE()` 的返回值。
+
+联系人：Jimmy，人在曼谷现场。
+
+### English
+
+Please enable both factories on BNB Smart Chain Testnet (chainId 97).
+
+Portal: `0x000042108465206185A077Edc3F3fd2b49060000`
+
+| Contract | Address |
+| --- | --- |
+| Launcher Factory | `0x________________________________________` |
+| Vault Factory | `0x________________________________________` |
+
+Please call:
+
+```text
+setLauncherFactoryMultiplier(launcherFactory, 10000, true)
+setVaultFactoryMultiplier(vaultFactory, 10000, true)
+```
+
+`10000` is multiplier 1, with no floor discount. Please enable the Launcher Factory and the Vault Factory.
+
+Please confirm:
+
+1. The V2 router used when `dexId = 0` on testnet. The address in the Flap example fork is `0xc9D63ddCB9549578057EAB6A83a543DdFEE2b8c3`.
+2. The current minimum `poolQuote` on testnet. This launch puts 50% of supply in the pool.
+3. The value returned by `SALT_LOCK_FEE()` on testnet.
+
+Contact: Jimmy, on site in Bangkok.
+
+## 内部备问
+
+不放进交给 Flap 的那一页。
+
+- 问币安：`baw wallet chains` 是否包含 BSC 测试网。没有则问代理签名能落到哪条链。测试网是否有 Agent ID 注册表可供 `bid` 调用。
+- 测试网创建是否暂停。未启用工厂时，`newLauncher` 是否直接 revert。
+- `taxDuration` 与 `antiFarmerDuration` 的合法区间。本文件锁定为 30 天和 1 天。若发射因这两个值 revert，再向 Flap 要允许范围。
+- 元数据 CID 的必填字段。
+- `launcher-config-preview/v1` 的 ZIP 能否在 27 日 10:00 前挂上预览。
+
+工厂未启用时，按第 2 节使用本地分叉。不改拍卖规则，不改乘数 `10000`。

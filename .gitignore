@@ -1,0 +1,9 @@
+cache/
+out/
+lib/
+node_modules/
+web/node_modules/
+web/dist/
+broadcast/
+.env
+web/public/demo.json
