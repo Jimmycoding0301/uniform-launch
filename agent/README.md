@@ -114,7 +114,7 @@ node agent/cli.mjs identity --launcher 0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a
 
 ```json
 {"jsonrpc":"2.0","id":1,"result":{"protocolVersion":"2025-06-18","capabilities":{"tools":{}},"serverInfo":{"name":"uniform-agent","version":"0.1.0"}}}
-{"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"{\"ok\":true,\"clearingPrice\":\"0.00002\",\"tokens\":\"50000\",\"spend\":\"1\",\"refund\":\"0\",\"meetsMinPool\":true,\"poolQuote\":\"10\"}"}]}}
+{"jsonrpc":"2.0","id":3,"result":{"content":[{"type":"text","text":"{\"ok\":true,\"clearingPrice\":\"0.00002\",\"tokens\":\"50000\",\"spend\":\"1\",\"refund\":\"0\",\"meetsMinPool\":true,\"poolQuote\":\"10\"}"}],"isError":false}}
 ```
 
 配置片段：
