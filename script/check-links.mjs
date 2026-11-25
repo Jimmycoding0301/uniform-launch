@@ -5,7 +5,7 @@ import { fileURLToPath } from "node:url";
 const root = join(dirname(fileURLToPath(import.meta.url)), "..");
 const text = readFileSync(join(root, "README.md"), "utf8");
 const missing = [];
-for (const match of text.matchAll(/\(([^)]+)\)/g)) {
+for (const match of text.matchAll(/\[[^\]]+\]\(([^)]+)\)/g)) {
   const href = match[1];
   if (href.startsWith("http") || href.startsWith("#")) continue;
   const file = join(root, href.split("#")[0]);
