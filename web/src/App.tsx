@@ -238,7 +238,7 @@ export function App() {
       setSourceIndex(0);
     }
     seenLauncher.current = launcher;
-    const client = createPublicClient({ transport: http(rpc) });
+    const client = createPublicClient({ transport: http(rpc, { timeout: 8_000 }) });
     let stop = false;
     const load = async () => {
       const slow = window.setTimeout(() => {
@@ -466,7 +466,7 @@ export function App() {
       return;
     }
     let stop = false;
-    const client = createPublicClient({ transport: http(rpc) });
+    const client = createPublicClient({ transport: http(rpc, { timeout: 8_000 }) });
     (async () => {
       try {
         const config = await client.readContract({
@@ -508,7 +508,7 @@ export function App() {
       return;
     }
     let stop = false;
-    const client = createPublicClient({ transport: http(rpc) });
+    const client = createPublicClient({ transport: http(rpc, { timeout: 8_000 }) });
     client
       .readContract({ address: PORTAL, abi: PORTAL_ABI, functionName: "getLaunchVault", args: [snap.token] })
       .then((got) => {
@@ -528,7 +528,7 @@ export function App() {
       return;
     }
     let stop = false;
-    const client = createPublicClient({ transport: http(rpc) });
+    const client = createPublicClient({ transport: http(rpc, { timeout: 8_000 }) });
     client.readContract({
       address: vault as Address,
       abi: [{ type: "function", name: "accrued", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] }] as const,
@@ -597,7 +597,7 @@ export function App() {
     setHashBusy(true);
     setHashNote("");
     try {
-      const client = createPublicClient({ transport: http(rpc) });
+      const client = createPublicClient({ transport: http(rpc, { timeout: 8_000 }) });
       const tx = await client.getTransaction({ hash: hash as `0x${string}` });
       const receipt = await client.getTransactionReceipt({ hash: hash as `0x${string}` });
       if (tx.to?.toLowerCase() !== launcher.toLowerCase()) {
