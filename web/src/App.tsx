@@ -200,6 +200,8 @@ export function App() {
     if (!demoOn) return;
     fetch("/why.json").then((r) => (r.ok ? r.json() : null)).then(setWhy).catch(() => setWhy(null));
     const onKey = (event: KeyboardEvent) => {
+      const target = event.target;
+      if (target instanceof HTMLElement && target.closest("input, textarea")) return;
       if (event.key === "Escape") window.location.assign("/");
       if (event.key === "ArrowRight") setScene((n) => Math.min(SCENES.length - 1, n + 1));
       if (event.key === "ArrowLeft") setScene((n) => Math.max(0, n - 1));

@@ -50,9 +50,10 @@ function format(wei) {
 }
 
 const uniform = settle(floor, bids);
-const filled = uniform.fills.filter((fill) => fill.tokens > 0n);
-const uniformPrices = filled.map(() => uniform.clearingPrice);
-
+if (!uniform.ok || uniform.clearingPrice <= floor || uniform.poolQuote === 0n) {
+  console.error("这场没有可以对照的清算价");
+  process.exit(1);
+}
 function curve(quoteTarget) {
   const ratio = (uniform.clearingPrice * W) / floor;
   const sqrtRatio = isqrt(ratio * W);
