@@ -33,10 +33,10 @@ contract ShowScript is Script {
         UniformLauncher launcher = UniformLauncher(payable(portal.newLauncher{value: fee}(FACTORY, abi.encode(c))));
         vm.stopBroadcast();
         vm.startBroadcast(alice);
-        launcher.bid{value: 4 ether}(8e13);
+        launcher.bid{value: 4 ether}(8e13, 0, uint160(alice));
         vm.stopBroadcast();
         vm.startBroadcast(bob);
-        launcher.bid{value: 6 ether}(4e13);
+        launcher.bid{value: 6 ether}(4e13, 0, uint160(bob));
         vm.stopBroadcast();
         console.log("LAUNCH_SHOW", address(launcher));
     }

@@ -45,14 +45,14 @@ contract LocalForkScript is Script {
         UniformLauncher failL = _create(portal, launcherFactory, fee, 1 ether, 400, "FAIL", bytes32("fail"));
 
         vm.startBroadcast(alice);
-        openL.bid{value: 4 ether}(1e16);
-        settleL.bid{value: 20 ether}(1e16);
-        failL.bid{value: 1 ether}(1 ether);
+        openL.bid{value: 4 ether}(1e16, 0, uint160(alice));
+        settleL.bid{value: 20 ether}(1e16, 0, uint160(alice));
+        failL.bid{value: 1 ether}(1 ether, 0, uint160(alice));
         vm.stopBroadcast();
         vm.startBroadcast(bob);
-        openL.bid{value: 6 ether}(1e16);
-        settleL.bid{value: 20 ether}(1e16);
-        failL.bid{value: 1 ether}(1 ether);
+        openL.bid{value: 6 ether}(1e16, 0, uint160(bob));
+        settleL.bid{value: 20 ether}(1e16, 0, uint160(bob));
+        failL.bid{value: 1 ether}(1 ether, 0, uint160(bob));
         vm.stopBroadcast();
 
         console.log("FACTORY_L", address(launcherFactory));

@@ -34,6 +34,23 @@ const ABI = [
     inputs: [],
     outputs: [{ type: "uint256[]" }, { type: "uint256[]" }, { type: "bool[]" }],
   },
+  { type: "function", name: "identitySourceCount", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "identitySources", stateMutability: "view", inputs: [{ type: "uint256" }], outputs: [{ type: "address" }] },
+] as const;
+
+const LEGACY_BIDS = [
+  {
+    type: "function",
+    name: "getBids",
+    stateMutability: "view",
+    inputs: [],
+    outputs: [{ type: "address[]" }, { type: "uint256[]" }, { type: "uint256[]" }],
+  },
+] as const;
+
+const SOURCE_ABI = [
+  { type: "function", name: "SOURCE_ID", stateMutability: "view", inputs: [], outputs: [{ type: "bytes32" }] },
+  { type: "function", name: "standIn", stateMutability: "view", inputs: [], outputs: [{ type: "bool" }] },
 ] as const;
 
 const PORTAL = "0x000042108465206185A077Edc3F3fd2b49060000" as Address;
@@ -91,6 +108,7 @@ type Row = {
   pulled: boolean;
   sourceId: `0x${string}`;
 };
+type SourceInfo = { sourceId: `0x${string}`; standIn: boolean };
 type Snap = {
   status: number;
   floor: bigint;
@@ -106,6 +124,7 @@ type Snap = {
   previewQuote: bigint;
   previewPrice: bigint;
   bids: Row[];
+  sources: SourceInfo[];
 };
 
 const ZERO = "0x0000000000000000000000000000000000000000";
@@ -126,6 +145,8 @@ export function App() {
   const [rpcError, setRpcError] = useState(false);
   const [budget, setBudget] = useState("1");
   const [maxPrice, setMaxPrice] = useState("0.00003");
+  const [sourceIndex, setSourceIndex] = useState(0);
+  const [agentIdInput, setAgentIdInput] = useState("");
   const [hashInput, setHashInput] = useState("");
   const [hashNote, setHashNote] = useState("");
   const [hashOpen, setHashOpen] = useState(false);
@@ -164,7 +185,7 @@ export function App() {
     const load = async () => {
       try {
         const b = await client.getBlockNumber();
-        const [status, floor, clearing, softCap, start, end, token, pool, poolQuote, vaultFactory, preview, got, fills] = await Promise.all([
+        const [status, floor, clearing, softCap, start, end, token, pool, poolQuote, vaultFactory, preview, fills] = await Promise.all([
           client.readContract({ address: launcher, abi: ABI, functionName: "status" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "floorPrice" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "clearingPrice" }),
@@ -176,10 +197,47 @@ export function App() {
           client.readContract({ address: launcher, abi: ABI, functionName: "poolQuote" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "vaultFactory" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "preview" }),
-          client.readContract({ address: launcher, abi: ABI, functionName: "getBids" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "getFills" }),
         ]);
+        let got: readonly [readonly Address[], readonly bigint[], readonly bigint[], readonly `0x${string}`[], readonly bigint[]];
+        try {
+          got = await client.readContract({ address: launcher, abi: ABI, functionName: "getBids" });
+        } catch {
+          const legacy = await client.readContract({ address: launcher, abi: LEGACY_BIDS, functionName: "getBids" });
+          got = [legacy[0], legacy[1], legacy[2], [], []];
+        }
         if (stop) return;
+        const sources: SourceInfo[] = [];
+        try {
+          const sourceCount = (await client.readContract({
+            address: launcher,
+            abi: ABI,
+            functionName: "identitySourceCount",
+          })) as bigint;
+          for (let i = 0; i < Number(sourceCount); i++) {
+            const source = (await client.readContract({
+              address: launcher,
+              abi: ABI,
+              functionName: "identitySources",
+              args: [BigInt(i)],
+            })) as Address;
+            let sourceId = "0x" as `0x${string}`;
+            let standIn = false;
+            try {
+              sourceId = (await client.readContract({ address: source, abi: SOURCE_ABI, functionName: "SOURCE_ID" })) as `0x${string}`;
+            } catch {
+              sourceId = "0x";
+            }
+            try {
+              standIn = Boolean(await client.readContract({ address: source, abi: SOURCE_ABI, functionName: "standIn" }));
+            } catch {
+              standIn = false;
+            }
+            sources.push({ sourceId, standIn });
+          }
+        } catch {
+          sources.length = 0;
+        }
         const agents = got[0] as Address[];
         const budgets = got[1] as bigint[];
         const prices = got[2] as bigint[];
@@ -210,6 +268,7 @@ export function App() {
             pulled: Boolean(pulled[i]),
             sourceId: sourceIds[i] ?? "0x",
           })),
+          sources,
         };
         setBlock((prev) => (prev === b ? prev : (b as bigint)));
         setRpcError(false);
@@ -330,9 +389,12 @@ export function App() {
 
   async function copyInstruction() {
     if (!snap || !launcher) return;
+    const picked = snap.sources[sourceIndex];
+    const sourceName = picked ? sourceTag(picked.sourceId) || `来源 ${sourceIndex}` : `来源 ${sourceIndex}`;
+    const agentLine = /^\d+$/.test(agentIdInput.trim()) ? agentIdInput.trim() : "（填你的编号）";
     const action =
       phase === "open"
-        ? `data: bid(uint256)\n- maxPrice wei: ${priceWei}\n- 最高价：${priceWei ? formatPrice(priceWei) : ""} BNB/枚\n- value wei: ${budgetWei}\n- 预算：${budget} BNB`
+        ? `data: bid(uint256,uint8,uint256)\n- maxPrice wei: ${priceWei}\n- 最高价：${priceWei ? formatPrice(priceWei) : ""} BNB/枚\n- sourceIndex: ${sourceIndex}\n- 来源：${sourceName}\n- agentId: ${agentLine}\n- agentId 说明：选 Agent ID 时，合约若能调用 tokenOfOwnerByIndex 就填那个 tokenId，否则填 uint160(你的地址)。选 8004 时，填官方 Identity Registry 的 agentId，并且这个钱包必须是 ownerOf(agentId) 或 getAgentWallet(agentId)。同一来源的同一个 agentId 只能出一笔。\n- value wei: ${budgetWei}\n- 预算：${budget} BNB`
         : phase === "ready"
           ? `data: settle()\n- value wei: 0\n- gas limit: ${SETTLE_GAS_LIMIT}\n\ngas limit 固定为 ${SETTLE_GAS_LIMIT}，不要用节点估算值。估算往往只有一两百万。进入 settle 时如果剩余 gas 低于 ${MIN_SETTLE_GAS}，合约直接回滚，这场拍卖保持开放，不会被记成失败。${SETTLE_GAS_LIMIT} 扣掉基础 gas 后仍高于这条线，也够一次发射。`
           : phase === "failed"
@@ -342,7 +404,7 @@ export function App() {
 
 先做完这三步，缺一步就停止，不要发交易：
 1. 跑 baw wallet chains。确认有 BSC 测试网。没有就停，不要改用 56。
-2. 跑 baw wallet agent-id。没有 Agent ID 就停，让我去币安 App 领取。
+2. 确认身份。币安 Agent ID 或 ERC-8004 官方登记，有一个即可。两个都没有就停。Agent ID 可跑 baw wallet agent-id。ERC-8004 要能拿出官方 Identity Registry 的 agentId。
 3. 跑 baw wallet settings。Developer Mode 要开着，余额不能超限。
 
 然后只准备这一笔：
@@ -386,7 +448,7 @@ export function App() {
             同价发射
             <a className="script-link" href={demo?.open ? `/?launcher=${demo.open}` : "/"}>返回拍卖</a>
           </b>
-          <span>{demo?.localFork ? <Zh text="本地分叉，不是测试网" /> : "BSC 测试网"}</span>
+          <span className="top-meta">{demo?.localFork ? <Zh text="本地分叉，不是测试网" /> : "BSC 测试网"}</span>
         </header>
         <section className="screen" id="script">
           <ScriptPage demo={demo} />
@@ -403,15 +465,16 @@ export function App() {
           同价发射
           <a className="script-link" href="/?view=script">演示脚本</a>
         </b>
-        <span>
-          {demo?.localFork ? <Zh text="本地分叉，不是测试网" /> : "BSC 测试网"} · {block.toString()}
+        <span className="top-meta">
+          {snap?.sources.some((item) => item.standIn) ? <span className="meta-line"><Zh text="测试网 Agent ID 为替身" /></span> : null}
+          <span className="meta-line">{demo?.localFork ? <Zh text="本地分叉，不是测试网" /> : "BSC 测试网"} {block.toString()}</span>
           {rpcError && snap ? <Zh text=" · 刚刚没刷新成功。" /> : ""}
         </span>
       </header>
       <section className="screen" id="desk">
         {!launcher && !rpcError && <Empty />}
         {launcher && !snap && !rpcError && <Skeleton />}
-        {rpcError && !snap && <p className="user-line">测试网读取失败。</p>}
+        {rpcError && !snap && <p className="user-line"><Zh text="这场合约现在读不到。过几秒会再试。" /></p>}
         {snap && (
           <div className="grid">
             <div className="brand-mobile">
@@ -468,7 +531,22 @@ export function App() {
                     <label htmlFor="price">最高价 BNB/枚</label>
                     <input id="price" value={maxPrice} inputMode="decimal" autoComplete="off" spellCheck={false} placeholder={formatPrice(snap.floor)} aria-invalid={priceNote.error} aria-describedby="price-help" onChange={(e) => setMaxPrice(e.target.value)} />
                     <p id="price-help" className={priceNote.error ? "field-error" : "field-help"} role={priceNote.error ? "alert" : undefined} title={priceNote.wei ? `${priceNote.wei} wei` : undefined}><Zh text={priceNote.text} /></p>
+                    <div className="id-row">
+                      <div>
+                        <label htmlFor="source">身份来源</label>
+                        <select id="source" value={sourceIndex} onChange={(e) => setSourceIndex(Number(e.target.value))}>
+                          {(snap.sources.length > 0 ? snap.sources : [{ sourceId: "0x" as `0x${string}`, standIn: false }]).map((item, index) => (
+                            <option key={item.sourceId + index} value={index}>{sourceTag(item.sourceId) || `来源 ${index}`}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <label htmlFor="agent">agentId</label>
+                        <input id="agent" value={agentIdInput} inputMode="numeric" autoComplete="off" spellCheck={false} placeholder="例如 42" onChange={(e) => setAgentIdInput(e.target.value.replace(/[^\d]/g, ""))} />
+                      </div>
+                    </div>
                     <p className="estimate"><Zh text={estimate} /></p>
+                    <p className="field-help"><Zh text="编号怎么填，写在复制出的指令里。" /></p>
                     {button && (
                       <button className="primary" type="submit" disabled={rpcError || !bidReady} aria-live="polite">
                         <span className="btn-stack">
@@ -567,7 +645,10 @@ function Empty() {
           <line className="axis" x1="78" y1="18" x2="78" y2="332" />
           <line className="axis" x1="78" y1="332" x2="622" y2="332" />
         </svg>
-        <div className="empty"><Zh text="还没有这场拍卖。" /></div>
+        <div className="empty">
+          <p><Zh text="还没有这场拍卖。" /></p>
+          <a href="/?view=script">打开演示脚本</a>
+        </div>
       </div>
     </div>
   );
@@ -689,7 +770,9 @@ function sameSnap(a: Snap, b: Snap) {
   if (a.start !== b.start || a.end !== b.end || a.token !== b.token || a.pool !== b.pool || a.poolQuote !== b.poolQuote) return false;
   if (a.vaultFactory !== b.vaultFactory || a.previewQuote !== b.previewQuote) return false;
   if (a.previewOk !== b.previewOk || a.previewPrice !== b.previewPrice || a.bids.length !== b.bids.length) return false;
-    return a.bids.every((row, i) => row.agent === b.bids[i].agent && row.budget === b.bids[i].budget && row.maxPrice === b.bids[i].maxPrice && row.pulled === b.bids[i].pulled && row.tokensOwed === b.bids[i].tokensOwed && row.sourceId === b.bids[i].sourceId);
+  if (a.sources.length !== b.sources.length) return false;
+  if (a.sources.some((item, i) => item.sourceId !== b.sources[i].sourceId || item.standIn !== b.sources[i].standIn)) return false;
+  return a.bids.every((row, i) => row.agent === b.bids[i].agent && row.budget === b.bids[i].budget && row.maxPrice === b.bids[i].maxPrice && row.pulled === b.bids[i].pulled && row.tokensOwed === b.bids[i].tokensOwed && row.sourceId === b.bids[i].sourceId);
 }
 
 function Skeleton() {

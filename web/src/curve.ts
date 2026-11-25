@@ -136,20 +136,30 @@ export function buildStepPath(
   }
 
   let hi = floor > 0n ? floor : 1n;
-  for (const g of grouped) if (g.price > hi) hi = g.price;
+  let loPrice = hi;
+  for (const g of grouped) {
+    if (g.price > hi) hi = g.price;
+    if (g.price > 0n && g.price < loPrice) loPrice = g.price;
+  }
   if (clearing && clearing > hi) hi = clearing;
+  if (clearing && clearing > 0n && clearing < loPrice) loPrice = clearing;
+  if (floor > 0n && floor < loPrice) loPrice = floor;
   const priceLabels = [hi, floor, clearing ?? 0n].filter((p) => p > 0n).map((p) => formatPrice(p));
   const labelW = priceLabels.reduce((w, text) => Math.max(w, Math.ceil(text.length * 7.25)), 28);
   let padL = 16 + labelW + 10;
   if (padL + padR > width - 80) padL = Math.max(48, width - padR - 80);
   const innerW = Math.max(40, width - padL - padR);
   const innerH = height - padT - padB;
-  const lo = floor > 0n ? (floor * 70n) / 100n : 0n;
-  const ceil = (hi * 108n) / 100n;
+  let span = hi > loPrice ? hi - loPrice : hi > 0n ? hi / 5n : 1n;
+  if (span === 0n) span = 1n;
+  const below = span / 4n === 0n ? 1n : span / 4n;
+  const above = span / 8n === 0n ? 1n : span / 8n;
+  const lo = loPrice - below;
+  const ceil = hi + above;
   const yOf = (p: bigint) => {
-    const clamped = p > ceil ? ceil : p < lo ? lo : p;
-    const span = Math.max(Number(ceil - lo), 1);
-    return padT + innerH - ((Number(clamped) - Number(lo)) / span) * innerH;
+    const scale = Math.max(Number(ceil - lo), 1);
+    const t = (Number(p) - Number(lo)) / scale;
+    return padT + innerH - Math.min(1, Math.max(0, t)) * innerH;
   };
   const xOf = (q: bigint) => padL + (total === 0n ? 0 : (Number(q) / Number(total)) * innerW);
 

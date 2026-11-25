@@ -132,7 +132,7 @@ graduationFloor = 1500 美元 × multiplier × totalSupply / poolToken
 - Agent ID 用 `baw wallet agent-id` 查询，领了才有 `.ai` 名字。领取在 App 里做，不在 CLI 里做。
 - 官方示例里的 `baw wallet chains` 返回含 BSC `56`，不含 EVM 97。开工第一小时以本机 `baw wallet chains --json` 为准。没有测试网就问现场的币安同学，不改打主网 `56`。
 
-公开文档没有给出测试网上可调用的 Agent ID 注册表。合约里不做一个假的 `onlyAgent`。资格放在指令里：代理必须先查到 Agent ID，再 preview。币安如果给出注册表地址，再给 `bid` 加一次 view 调用。
+币安 Agent ID 的公开合约是 BNB 主网 `0x60b9262456de011f7d15a54cdd8c48baaa8b022f`（SPACE ID，symbol AI）。测试网没有这份合约，部署脚本配一个只含 `balanceOf` 的替身，页面标明。ERC-8004 接官方 Identity Registry，不自建注册表。`bid` 传入 `sourceIndex` 和 `agentId`，链上核对。
 
 ### 工厂启用
 

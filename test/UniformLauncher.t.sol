@@ -139,22 +139,22 @@ contract UniformLauncherTest is Test {
         UniformLauncher launcher = _new("TJ", 1e13);
         vm.prank(alice);
         vm.expectRevert(UniformLauncher.BelowFloor.selector);
-        launcher.bid{value: 1 ether}(1);
+        launcher.bid{value: 1 ether}(1, 0, uint160(alice));
 
         vm.prank(alice);
-        launcher.bid{value: 1 ether}(1e16);
+        launcher.bid{value: 1 ether}(1e16, 0, uint160(alice));
         vm.prank(alice);
         vm.expectRevert(UniformLauncher.AlreadyBid.selector);
-        launcher.bid{value: 1 ether}(1e16);
+        launcher.bid{value: 1 ether}(1e16, 0, uint160(alice));
 
         vm.prank(bob);
         vm.expectRevert(UniformLauncher.BadBudget.selector);
-        launcher.bid{value: 0.001 ether}(1e16);
+        launcher.bid{value: 0.001 ether}(1e16, 0, uint160(bob));
 
         vm.roll(launcher.endBlock() - launcher.CLOSE_BUFFER());
         vm.prank(bob);
         vm.expectRevert(UniformLauncher.Closed.selector);
-        launcher.bid{value: 1 ether}(1e16);
+        launcher.bid{value: 1 ether}(1e16, 0, uint160(bob));
 
         vm.roll(launcher.endBlock() - 1);
         vm.expectRevert(UniformLauncher.Early.selector);
@@ -167,21 +167,21 @@ contract UniformLauncherTest is Test {
             address who = address(uint160(1000 + i));
             vm.deal(who, 1 ether);
             vm.prank(who);
-            launcher.bid{value: 0.01 ether}(1e16);
+            launcher.bid{value: 0.01 ether}(1e16, 0, uint160(who));
         }
         address extra = address(uint160(2000));
         vm.deal(extra, 1 ether);
         vm.prank(extra);
         vm.expectRevert(UniformLauncher.Full.selector);
-        launcher.bid{value: 0.01 ether}(1e16);
+        launcher.bid{value: 0.01 ether}(1e16, 0, uint160(extra));
     }
 
     function test_failedAuctionRefundsAll() public {
         UniformLauncher launcher = _new("TJ", 1 ether);
         vm.prank(alice);
-        launcher.bid{value: 1 ether}(1 ether);
+        launcher.bid{value: 1 ether}(1 ether, 0, uint160(alice));
         vm.prank(bob);
-        launcher.bid{value: 2 ether}(1 ether);
+        launcher.bid{value: 2 ether}(1 ether, 0, uint160(bob));
         vm.roll(launcher.endBlock());
         launcher.settle();
         assertEq(uint8(launcher.status()), uint8(UniformLauncher.Status.Failed));
@@ -205,7 +205,7 @@ contract UniformLauncherTest is Test {
     function test_shortGasLeavesAuctionOpen() public {
         UniformLauncher launcher = _new("TJ", 1e13);
         vm.prank(alice);
-        launcher.bid{value: 10 ether}(1e16);
+        launcher.bid{value: 10 ether}(1e16, 0, uint160(alice));
         vm.roll(launcher.endBlock());
         uint256 bal = address(launcher).balance;
         vm.expectRevert(UniformLauncher.InsufficientGas.selector);
@@ -222,9 +222,9 @@ contract UniformLauncherTest is Test {
     function test_successClaimMatchesQuote() public {
         UniformLauncher launcher = _new("TJ", 1e13);
         vm.prank(alice);
-        launcher.bid{value: 4 ether}(1e16);
+        launcher.bid{value: 4 ether}(1e16, 0, uint160(alice));
         vm.prank(bob);
-        launcher.bid{value: 6 ether}(1e16);
+        launcher.bid{value: 6 ether}(1e16, 0, uint160(bob));
         vm.roll(launcher.endBlock());
         launcher.settle();
         assertEq(uint8(launcher.status()), uint8(UniformLauncher.Status.Succeeded));
@@ -245,9 +245,9 @@ contract UniformLauncherTest is Test {
     function test_launchRevertRefunds() public {
         UniformLauncher launcher = _new("REV", 1e13);
         vm.prank(alice);
-        launcher.bid{value: 4 ether}(1e16);
+        launcher.bid{value: 4 ether}(1e16, 0, uint160(alice));
         vm.prank(bob);
-        launcher.bid{value: 6 ether}(1e16);
+        launcher.bid{value: 6 ether}(1e16, 0, uint160(bob));
         vm.roll(launcher.endBlock());
         launcher.settle();
         assertEq(uint8(launcher.status()), uint8(UniformLauncher.Status.Failed));
@@ -262,7 +262,7 @@ contract UniformLauncherTest is Test {
     function test_guardianFailDoesNotTakeFunds() public {
         UniformLauncher launcher = _new("TJ", 1e13);
         vm.prank(alice);
-        launcher.bid{value: 1 ether}(1e16);
+        launcher.bid{value: 1 ether}(1e16, 0, uint160(alice));
         uint256 guardianBal = LaunchVaultAddresses.guardian().balance;
         vm.prank(LaunchVaultAddresses.guardian());
         launcher.guardianFail();

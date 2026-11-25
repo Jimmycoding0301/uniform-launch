@@ -2,30 +2,47 @@
 pragma solidity ^0.8.26;
 
 import {IAgentIdentitySource} from "./IAgentIdentitySource.sol";
+import {AgentIdentityAddresses} from "./AgentIdentityAddresses.sol";
 
-/// @notice 币安 Agent ID 目录。链上没有公开的官方注册表时，这个接口由调用方在创建适配器时固定。
-///         返回 0 表示该地址没有 Agent ID。
-interface IBinanceAgentDirectory {
-    function agentIdOf(address wallet) external view returns (uint256);
+/// @notice SPACE ID Agent ID（symbol AI）上实际能用的余额视图。
+///         主网 `0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F` 实现了 `balanceOf`。
+///         `supportsInterface(0x780e9d63)` 为 false，`tokenOfOwnerByIndex` 会 revert。
+interface IAgentIdNft {
+    function balanceOf(address owner) external view returns (uint256);
 }
 
-/// @notice 只读适配器。目录地址在构造时固定，没有管理员可以改。
+/// @notice 余额大于 0 才是代理。能枚举时 agentId 取 `tokenOfOwnerByIndex(account, 0)`，
+///         否则取 `uint160(account)`。申报的 agentId 必须等于这个值。
+///         NFT 地址在构造时固定。不是主网真合约时 `standIn()` 为 true。
 contract BinanceAgentIdSource is IAgentIdentitySource {
     bytes32 public constant SOURCE_ID = keccak256("binance-agent-id");
 
-    IBinanceAgentDirectory public immutable directory;
+    IAgentIdNft public immutable nft;
+    bool public immutable standIn;
 
-    error ZeroDirectory();
+    error ZeroNft();
 
-    constructor(address directory_) {
-        if (directory_ == address(0)) revert ZeroDirectory();
-        directory = IBinanceAgentDirectory(directory_);
+    constructor(address nft_) {
+        if (nft_ == address(0)) revert ZeroNft();
+        nft = IAgentIdNft(nft_);
+        standIn = nft_ != AgentIdentityAddresses.AGENT_ID_MAINNET;
     }
 
-    function isAgent(address account) external view returns (bool ok, bytes32 sourceId, uint256 agentId) {
+    function verify(address account, uint256 agentId) external view returns (bool ok, bytes32 sourceId) {
         sourceId = SOURCE_ID;
-        if (account == address(0)) return (false, sourceId, 0);
-        agentId = directory.agentIdOf(account);
-        ok = agentId != 0;
+        if (account == address(0)) return (false, sourceId);
+        try nft.balanceOf(account) returns (uint256 balance) {
+            if (balance == 0) return (false, sourceId);
+        } catch {
+            return (false, sourceId);
+        }
+        ok = agentId == _canonicalId(account);
+    }
+
+    function _canonicalId(address account) internal view returns (uint256) {
+        (bool success, bytes memory data) = address(nft)
+            .staticcall(abi.encodeWithSignature("tokenOfOwnerByIndex(address,uint256)", account, uint256(0)));
+        if (success && data.length >= 32) return abi.decode(data, (uint256));
+        return uint160(account);
     }
 }

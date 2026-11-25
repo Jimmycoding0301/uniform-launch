@@ -6,19 +6,52 @@ import {LaunchVaultAddresses} from "src/flap/LaunchVaultAddresses.sol";
 import {UniformLauncher, LaunchConfig} from "src/uniform/UniformLauncher.sol";
 import {UniformLauncherFactory} from "src/uniform/UniformLauncherFactory.sol";
 import {UniformVaultFactory} from "src/uniform/UniformVaultFactory.sol";
-import {BinanceAgentIdSource, IBinanceAgentDirectory} from "src/uniform/BinanceAgentIdSource.sol";
-import {Erc8004Registry} from "src/uniform/Erc8004Registry.sol";
+import {AgentIdentityAddresses} from "src/uniform/AgentIdentityAddresses.sol";
+import {BinanceAgentIdSource} from "src/uniform/BinanceAgentIdSource.sol";
 import {Erc8004Source} from "src/uniform/Erc8004Source.sol";
 
-contract ListedDirectory is IBinanceAgentDirectory {
-    mapping(address => uint256) public ids;
+contract ListedNft {
+    mapping(address => uint256) public balanceOf;
+    mapping(address => uint256) public tokenId;
 
     function set(address wallet, uint256 id) external {
-        ids[wallet] = id;
+        balanceOf[wallet] = 1;
+        tokenId[wallet] = id;
     }
 
-    function agentIdOf(address wallet) external view returns (uint256) {
-        return ids[wallet];
+    function tokenOfOwnerByIndex(address wallet, uint256) external view returns (uint256) {
+        return tokenId[wallet];
+    }
+}
+
+contract BalanceOnlyNft {
+    mapping(address => uint256) public balanceOf;
+
+    function set(address wallet) external {
+        balanceOf[wallet] = 1;
+    }
+}
+
+contract IdentityMock {
+    mapping(uint256 => address) public ownerOf;
+    mapping(uint256 => address) public getAgentWallet;
+    uint256 public nextId = 1;
+
+    function register() external returns (uint256 id) {
+        id = nextId++;
+        ownerOf[id] = msg.sender;
+        getAgentWallet[id] = msg.sender;
+    }
+
+    function transferFrom(address from, address to, uint256 id) external {
+        require(ownerOf[id] == from && from == msg.sender, "owner");
+        ownerOf[id] = to;
+        getAgentWallet[id] = address(0);
+    }
+
+    function setAgentWallet(uint256 id, address wallet) external {
+        require(ownerOf[id] == msg.sender, "owner");
+        getAgentWallet[id] = wallet;
     }
 }
 
@@ -32,9 +65,11 @@ contract FeePortal {
 
 contract UniformIdentityTest is Test {
     UniformLauncherFactory internal launcherFactory;
-    ListedDirectory internal binanceDir;
-    BinanceAgentIdSource internal binance;
-    Erc8004Registry internal registry;
+    ListedNft internal listed;
+    BalanceOnlyNft internal balanceOnly;
+    BinanceAgentIdSource internal listedSource;
+    BinanceAgentIdSource internal balanceSource;
+    IdentityMock internal registry;
     Erc8004Source internal erc8004;
     address internal creator = address(0xC0DE0001);
     uint256 internal saltNonce = 400;
@@ -44,96 +79,112 @@ contract UniformIdentityTest is Test {
         address portal = LaunchVaultAddresses.hub();
         vm.etch(portal, address(new FeePortal()).code);
         vm.deal(portal, 1 ether);
-        vm.deal(address(this), 10 ether);
         uint256 nonce = vm.getNonce(address(this));
         address predicted = vm.computeCreateAddress(address(this), nonce + 1);
         UniformVaultFactory vaultFactory = new UniformVaultFactory(predicted);
         launcherFactory = new UniformLauncherFactory(address(vaultFactory));
-        binanceDir = new ListedDirectory();
-        binance = new BinanceAgentIdSource(address(binanceDir));
-        registry = new Erc8004Registry();
+        listed = new ListedNft();
+        balanceOnly = new BalanceOnlyNft();
+        listedSource = new BinanceAgentIdSource(address(listed));
+        balanceSource = new BinanceAgentIdSource(address(balanceOnly));
+        registry = new IdentityMock();
         erc8004 = new Erc8004Source(address(registry));
+        vm.deal(address(this), 1 ether);
     }
 
     function _launcher(address[] memory sources) internal returns (UniformLauncher launcher) {
         LaunchConfig memory c;
         c.name = "Tongjia";
         c.symbol = "ID";
-        c.meta = "bafytest";
+        c.meta = "bafy";
         c.salt = bytes32(++saltNonce);
-        c.floorPrice = 1e13;
+        c.floorPrice = 1;
         c.durationBlocks = 200;
         c.identitySources = sources;
-        vm.prank(LaunchVaultAddresses.hub());
+        address portal = LaunchVaultAddresses.hub();
+        vm.prank(portal);
         launcher = UniformLauncher(payable(launcherFactory.newLauncher{value: 0.005 ether}(creator, abi.encode(c))));
+    }
+
+    function _only(address source) internal pure returns (address[] memory sources) {
+        sources = new address[](1);
+        sources[0] = source;
     }
 
     function _both() internal view returns (address[] memory sources) {
         sources = new address[](2);
-        sources[0] = address(binance);
+        sources[0] = address(balanceSource);
         sources[1] = address(erc8004);
     }
 
-    function _onlyBinance() internal view returns (address[] memory sources) {
-        sources = new address[](1);
-        sources[0] = address(binance);
-    }
-
-    function _only8004() internal view returns (address[] memory sources) {
-        sources = new address[](1);
-        sources[0] = address(erc8004);
-    }
-
-    function test_onlyBinanceAgentCanBid() public {
+    function test_onlyAgentIdPassesWithUint160WhenEnumerationMissing() public {
         address who = address(0xA11CE);
-        binanceDir.set(who, 42);
-        UniformLauncher launcher = _launcher(_onlyBinance());
+        balanceOnly.set(who);
+        UniformLauncher launcher = _launcher(_only(address(balanceSource)));
         vm.deal(who, 1 ether);
         vm.prank(who);
-        launcher.bid{value: 1 ether}(1e16);
+        vm.expectRevert(UniformLauncher.NotAgent.selector);
+        launcher.bid{value: 1 ether}(1e16, 0, 42);
+        vm.prank(who);
+        launcher.bid{value: 1 ether}(1e16, 0, uint160(who));
         (,,, bytes32[] memory sources, uint256[] memory ids) = launcher.getBids();
         assertEq(sources[0], keccak256("binance-agent-id"));
+        assertEq(ids[0], uint160(who));
+        assertTrue(balanceSource.standIn());
+    }
+
+    function test_enumerableAgentIdUsesTokenId() public {
+        address who = address(0xA11CE);
+        listed.set(who, 42);
+        UniformLauncher launcher = _launcher(_only(address(listedSource)));
+        vm.deal(who, 1 ether);
+        vm.prank(who);
+        vm.expectRevert(UniformLauncher.NotAgent.selector);
+        launcher.bid{value: 1 ether}(1e16, 0, uint160(who));
+        vm.prank(who);
+        launcher.bid{value: 1 ether}(1e16, 0, 42);
+        (,,,, uint256[] memory ids) = launcher.getBids();
         assertEq(ids[0], 42);
     }
 
-    function test_onlyErc8004CanBid() public {
+    function test_onlyErc8004Passes() public {
         address who = address(0xB0B);
         vm.prank(who);
         uint256 id = registry.register();
-        UniformLauncher launcher = _launcher(_only8004());
+        UniformLauncher launcher = _launcher(_only(address(erc8004)));
         vm.deal(who, 1 ether);
         vm.prank(who);
-        launcher.bid{value: 1 ether}(1e16);
+        launcher.bid{value: 1 ether}(1e16, 0, id);
         (,,, bytes32[] memory sources, uint256[] memory ids) = launcher.getBids();
         assertEq(sources[0], keccak256("erc-8004"));
         assertEq(ids[0], id);
     }
 
-    function test_eitherSourcePasses() public {
+    function test_eitherSourcePassesWhenTheAgentPicksIt() public {
         address binanceOnly = address(0xA11CE);
         address ercOnly = address(0xB0B);
         address both = address(0xCAFE);
-        binanceDir.set(binanceOnly, 7);
-        binanceDir.set(both, 8);
+        balanceOnly.set(binanceOnly);
+        balanceOnly.set(both);
         vm.prank(ercOnly);
-        registry.register();
+        uint256 ercId = registry.register();
         vm.prank(both);
-        registry.register();
+        uint256 bothId = registry.register();
         UniformLauncher launcher = _launcher(_both());
         vm.deal(binanceOnly, 1 ether);
         vm.deal(ercOnly, 1 ether);
         vm.deal(both, 1 ether);
         vm.prank(binanceOnly);
-        launcher.bid{value: 1 ether}(1e16);
+        launcher.bid{value: 1 ether}(1e16, 0, uint160(binanceOnly));
         vm.prank(ercOnly);
-        launcher.bid{value: 1 ether}(1e16);
+        launcher.bid{value: 1 ether}(1e16, 1, ercId);
         vm.prank(both);
-        launcher.bid{value: 1 ether}(1e16);
+        launcher.bid{value: 1 ether}(1e16, 1, bothId);
         assertEq(launcher.bidCount(), 3);
         (,,, bytes32[] memory sources,) = launcher.getBids();
         assertEq(sources[0], keccak256("binance-agent-id"));
         assertEq(sources[1], keccak256("erc-8004"));
-        assertEq(sources[2], keccak256("binance-agent-id"));
+        assertEq(sources[2], keccak256("erc-8004"));
     }
 
     function test_plainWalletRejected() public {
@@ -142,7 +193,10 @@ contract UniformIdentityTest is Test {
         vm.deal(who, 1 ether);
         vm.prank(who);
         vm.expectRevert(UniformLauncher.NotAgent.selector);
-        launcher.bid{value: 1 ether}(1e16);
+        launcher.bid{value: 1 ether}(1e16, 0, uint160(who));
+        vm.prank(who);
+        vm.expectRevert(UniformLauncher.NotAgent.selector);
+        launcher.bid{value: 1 ether}(1e16, 1, 1);
     }
 
     function test_transferredNftRejectsOldOwner() public {
@@ -151,15 +205,15 @@ contract UniformIdentityTest is Test {
         vm.prank(oldOwner);
         uint256 id = registry.register();
         vm.prank(oldOwner);
-        registry.transfer(next, id);
-        UniformLauncher launcher = _launcher(_only8004());
+        registry.transferFrom(oldOwner, next, id);
+        UniformLauncher launcher = _launcher(_only(address(erc8004)));
         vm.deal(oldOwner, 1 ether);
         vm.prank(oldOwner);
         vm.expectRevert(UniformLauncher.NotAgent.selector);
-        launcher.bid{value: 1 ether}(1e16);
+        launcher.bid{value: 1 ether}(1e16, 0, id);
         vm.deal(next, 1 ether);
         vm.prank(next);
-        launcher.bid{value: 1 ether}(1e16);
+        launcher.bid{value: 1 ether}(1e16, 0, id);
         (,,,, uint256[] memory ids) = launcher.getBids();
         assertEq(ids[0], id);
     }
@@ -171,19 +225,41 @@ contract UniformIdentityTest is Test {
         uint256 id = registry.register();
         vm.prank(owner);
         registry.setAgentWallet(id, wallet);
-        UniformLauncher launcher = _launcher(_only8004());
+        UniformLauncher launcher = _launcher(_only(address(erc8004)));
         vm.deal(owner, 1 ether);
         vm.deal(wallet, 1 ether);
         vm.prank(owner);
-        launcher.bid{value: 1 ether}(1e16);
+        launcher.bid{value: 1 ether}(1e16, 0, id);
         vm.prank(wallet);
         vm.expectRevert(UniformLauncher.AgentAlreadyBid.selector);
-        launcher.bid{value: 1 ether}(1e16);
+        launcher.bid{value: 1 ether}(1e16, 0, id);
         assertEq(launcher.bidCount(), 1);
     }
 
+    function test_sharedEnumerableIdCannotBidTwice() public {
+        address first = address(0xA11CE);
+        address second = address(0xB0B);
+        listed.set(first, 42);
+        listed.set(second, 42);
+        UniformLauncher launcher = _launcher(_only(address(listedSource)));
+        vm.deal(first, 1 ether);
+        vm.deal(second, 1 ether);
+        vm.prank(first);
+        launcher.bid{value: 1 ether}(1e16, 0, 42);
+        vm.prank(second);
+        vm.expectRevert(UniformLauncher.AgentAlreadyBid.selector);
+        launcher.bid{value: 1 ether}(1e16, 0, 42);
+    }
+
     function test_sourcesAreFixed() public {
-        UniformLauncher launcher = _launcher(_only8004());
+        UniformLauncher launcher = _launcher(_only(address(erc8004)));
+        assertEq(launcher.identitySourceCount(), 1);
         assertEq(launcher.identitySources(0), address(erc8004));
+    }
+
+    function test_mainnetAgentIdAddressIsTheContractWeRead() public pure {
+        assertEq(AgentIdentityAddresses.AGENT_ID_MAINNET, 0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F);
+        assertEq(AgentIdentityAddresses.ERC8004_MAINNET, 0x8004A169FB4a3325136EB29fA0ceB6D2e539a432);
+        assertEq(AgentIdentityAddresses.ERC8004_TESTNET, 0x8004A818BFB912233c491871b3d84c89A494BD9e);
     }
 }

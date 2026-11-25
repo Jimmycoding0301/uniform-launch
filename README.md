@@ -71,20 +71,29 @@ forge verify-contract --chain 97 --watch \
 
 需要 `ETHERSCAN_API_KEY`。BscScan 的测试网验证走 chain 97。
 
-脚本同时部署一份 ERC-8004 参考注册表和 `Erc8004Source`。官方注册表已经在测试网，但没有从钱包反查 `agentId` 的视图，所以拍卖用的是这份带 `agentIdOf` 的参考实现。创建某一场时，把 `identitySources` 设成当时要接受的来源，创建后不能改。
+脚本按 `block.chainid` 选择身份合约。56 上 Agent ID 和 ERC-8004 都指向官方地址。97 上 ERC-8004 指向官方 Identity Registry；主网 Agent ID 合约在测试网没有代码，所以另部署只含 `balanceOf` 的 `AgentIdStandIn`，页面右上写「测试网 Agent ID 为替身」。创建某一场时，把 `identitySources` 设成当时要接受的来源，创建后不能改。出价是 `bid(uint256 maxPrice, uint8 sourceIndex, uint256 agentId)`，代理自己申报编号。
 
 ## ERC-8004 注册表
 
-官方规范：[ERC-8004: Trustless Agents](https://eips.ethereum.org/EIPS/eip-8004)。合约仓库：[erc-8004/erc-8004-contracts](https://github.com/erc-8004/erc-8004-contracts)。地址表：[Contract addresses](https://erc-8004.quicknode.com/docs/contracts)，和 BNB Chain 仓库 [bnb-chain/erc-8004-contracts](https://github.com/bnb-chain/erc-8004-contracts) 一致。
+官方规范：[ERC-8004: Trustless Agents](https://eips.ethereum.org/EIPS/eip-8004)。合约：[IdentityRegistryUpgradeable.sol](https://github.com/erc-8004/erc-8004-contracts/blob/master/contracts/IdentityRegistryUpgradeable.sol)。地址表：[Contract addresses](https://erc-8004.quicknode.com/docs/contracts)，和 [bnb-chain/erc-8004-contracts](https://github.com/bnb-chain/erc-8004-contracts) 一致。
 
 | 网络 | Identity Registry |
 | --- | --- |
 | BNB Chain 主网 | `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` |
 | BNB Chain 测试网 | `0x8004A818BFB912233c491871b3d84c89A494BD9e` |
 
-2026-11-25 在测试网读过这份合约：`getVersion()` 返回 `2.0.0`，`balanceOf` 可用，`tokenOfOwnerByIndex` 和 `agentIdOf` 都会 revert。规范里的 `agentWallet` 在 NFT 转走时会被清掉。因为不能从地址反查编号，部署脚本另外部署参考实现 `Erc8004Registry`，登记 owner 和 agentWallet，并提供 `agentIdOf`。同一 `agentId` 的 owner 和 agentWallet 只能有一笔出价。
+2026-11-25 在测试网读过这份代理：`getVersion()` 返回 `2.0.0`，名字 `AgentIdentity`，符号 `AGENT`。`ownerOf(uint256)` 和 `getAgentWallet(uint256)` 都返回 address。`register()` 的 eth_call 能铸出下一个编号。`tokenOfOwnerByIndex` 会 revert，合约不从地址反查。NFT 转走时 `agentWallet` 被清空。拍卖不部署自己的注册表。代理在 `bid` 里传入 `agentId`，合约核对 `ownerOf(agentId) == msg.sender` 或 `getAgentWallet(agentId) == msg.sender`。同一 `(sourceId, agentId)` 只能有一笔出价。
 
-币安 Agent ID 目前没有公开的链上注册表。`BinanceAgentIdSource` 在构造时固定一个只读目录，目录返回 0 就不是代理。没有管理员可以事后往一场拍卖里加来源。
+## 币安 Agent ID
+
+SPACE ID 文档：[Agent ID](https://docs.space.id/agent-id)。BNB 主网合约 `0x60b9262456de011f7d15a54cdd8c48baaa8b022f`，名字 `SPACE ID Agent ID`，符号 `AI`，soulbound ERC-721。2026-11-25 用主网 RPC 只读核对：`balanceOf` 对持有者返回 1，`ownerOf(tokenId)` 返回该钱包，`supportsInterface(0x780e9d63)` 为 false，`tokenOfOwnerByIndex` 会 revert。适配器用 `balanceOf(msg.sender) > 0` 判断资格；枚举可用时取 `tokenOfOwnerByIndex(account, 0)` 作 agentId，否则用 `uint160(msg.sender)`。测试网这条地址上没有代码。部署脚本在 chain 97 部署替身，主网配置指向真合约。没有管理员可以事后往一场拍卖里加来源。
+
+## 界面技能
+
+装在仓库 `.agents/skills/`。
+
+- `npx skills add nextlevelbuilder/ui-ux-pro-max-skill` 写进 `.agents/skills/ui-ux-pro-max`，同一次还带上了 `banner-design`、`brand`、`design`、`design-system`、`slides`、`ui-styling`。
+- `npx skills add anthropics/skills --skill frontend-design` 写进 `.agents/skills/frontend-design`。
 
 ## 本地页面
 

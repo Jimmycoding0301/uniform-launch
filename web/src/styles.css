@@ -51,15 +51,18 @@ body {
 }
 .skip:focus { transform: none; }
 .top {
-  height: 40px;
+  min-height: 40px;
   flex: none;
   display: flex;
   align-items: center;
   justify-content: space-between;
-  padding: 0 40px;
+  gap: 12px;
+  padding: 8px 40px;
   font-size: 12px;
   color: #9A9AA2;
 }
+.top-meta { text-align: right; line-height: 16px; }
+.meta-line { display: block; }
 .top b { color: #F5F5F5; font-weight: 500; font-size: 14px; letter-spacing: -0.02em; }
 .script-link { margin-left: 12px; color: #F0B90B; font-weight: 400; font-size: 12px; text-decoration: none; }
 .script-link:hover { color: #FFC83D; }
@@ -182,7 +185,7 @@ h1 {
 .floor { text-align: right; }
 .floor b { font-size: 20px; line-height: 32px; }
 label { display: block; margin-top: 12px; font-size: 12px; line-height: 16px; color: #9A9AA2; }
-input {
+input, select {
   width: 100%;
   height: 40px;
   margin-top: 4px;
@@ -195,8 +198,12 @@ input {
   font: 500 16px/24px "Geist Mono", ui-monospace, monospace;
   outline: none;
 }
-input:focus { outline: none; }
-input:focus-visible { outline: 2px solid #F0B90B; outline-offset: 3px; border-bottom-color: #F0B90B; }
+input:focus, select:focus { outline: none; }
+input:focus-visible, select:focus-visible { outline: 2px solid #F0B90B; outline-offset: 3px; border-bottom-color: #F0B90B; }
+select { appearance: none; cursor: pointer; }
+select option { background: #0B0B0D; color: #F5F5F5; }
+.id-row { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.id-row label { margin-top: 12px; }
 .field-help, .field-error { min-height: 16px; margin: 4px 0 0; font-size: 12px; line-height: 16px; }
 .field-help { color: #9A9AA2; }
 .field-error { color: #E7B3A8; }
@@ -327,7 +334,7 @@ h1 .char { display: inline-block; }
 .axis { stroke: rgba(255,255,255,0.16); stroke-width: 1; }
 .tick { fill: #9A9AA2; font-size: 12px; font-family: "Geist Mono", ui-monospace, monospace; }
 .clear-line, .volume, .reserve { vector-effect: non-scaling-stroke; }
-.step { fill: none; stroke: #F0B90B; stroke-width: 1.5px; stroke-linejoin: miter; stroke-linecap: butt; shape-rendering: geometricPrecision; }
+.step { fill: none; stroke: #F0B90B; stroke-width: 1.5px; stroke-linejoin: miter; stroke-linecap: butt; stroke-dasharray: none; shape-rendering: geometricPrecision; }
 .step.failed { stroke: #C8C8CE; stroke-width: 1.5px; }
 .step-fill { stroke: none; shape-rendering: geometricPrecision; }
 .clear-line { stroke: #F0B90B; stroke-width: 2px; stroke-opacity: 0.9; fill: none; }
@@ -340,12 +347,17 @@ h1 .char { display: inline-block; }
   position: absolute;
   inset: 0;
   display: flex;
+  flex-direction: column;
+  gap: 8px;
   align-items: center;
   justify-content: center;
   color: #F5F5F5;
   font-size: 16px;
-  pointer-events: none;
 }
+.empty p { margin: 0; }
+.empty a { color: #F0B90B; font-size: 14px; text-decoration: none; }
+.empty a:hover { color: #FFC83D; }
+.empty a:focus-visible { outline: 2px solid #F0B90B; outline-offset: 3px; }
 .tip {
   position: absolute;
   z-index: 2;
@@ -433,6 +445,10 @@ h1 .char { display: inline-block; }
   html, body, #root, .page { height: auto; }
   .page { display: block; }
   .top, .screen { padding-left: 16px; padding-right: 16px; }
+  .top { flex-wrap: wrap; row-gap: 0; }
+  .top b { white-space: nowrap; }
+  .top-meta { flex-basis: 100%; text-align: left; }
+  input, select { height: 36px; }
   .screen { display: block; padding-bottom: 88px; }
   .grid { display: flex; flex-direction: column; gap: 8px; height: auto; }
   .col-chart { order: 2; }
@@ -442,8 +458,11 @@ h1 .char { display: inline-block; }
   .en { font-size: 20px; line-height: 24px; }
   .user-line { margin-top: 6px; }
   .phases { margin-top: 10px; }
-  .plot-wrap { height: 260px; min-height: 260px; flex: none; padding-left: 0; padding-right: 0; }
-  .stage { height: 260px; min-height: 260px; margin-top: 0; flex: none; }
+  .plot-wrap { height: 184px; min-height: 184px; flex: none; padding-left: 0; padding-right: 0; }
+  .stage { height: 184px; min-height: 184px; margin-top: 0; flex: none; }
+  form > .field-help:last-of-type { display: none; }
+  html { scroll-padding-bottom: 80px; }
+  input, select, button { scroll-margin-bottom: 80px; }
   .empty-plot { min-height: 280px; height: 280px; }
   .tick { font-size: 12px; }
   .brand-mobile { display: block; order: 1; }
@@ -457,7 +476,16 @@ h1 .char { display: inline-block; }
   label { margin-top: 6px; }
   input { height: 36px; }
   .screen { padding-bottom: 24px; }
-  button.primary { margin-top: 8px; }
+  button.primary {
+    position: fixed;
+    left: 16px;
+    right: 16px;
+    bottom: 12px;
+    width: auto;
+    margin-top: 0;
+    z-index: 4;
+  }
+  .screen { padding-bottom: 76px; }
   .phases li { font-size: 11px; }
   .facts { margin-top: 10px; }
 }

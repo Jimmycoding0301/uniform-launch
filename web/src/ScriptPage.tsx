@@ -28,7 +28,7 @@ export function ScriptPage({ demo }: { demo: Desk }) {
             <Zh text="预算填 1，最高价填 0.00009。点「复制出价指令」。按钮变成「已复制 ✓」。" />
           </p>
           <p>
-            <Zh text="剪贴板第一句是「在 BNB Smart Chain 测试网操作。EVM chainId 是 97。」接着要求先跑 baw wallet chains、agent-id、settings，缺一步就停。然后只有一笔：to 是这场合约，data 是 bid(uint256)，最高价 0.00009 BNB/枚，预算 1 BNB。口头说明代理要先 preview，确认后再 execute。台上不发。" />
+            <Zh text="剪贴板第一句是「在 BNB Smart Chain 测试网操作。EVM chainId 是 97。」接着要求先确认测试网，再确认币安 Agent ID 或 ERC-8004 官方登记。然后只有一笔：to 是这场合约，data 是 bid(uint256,uint8,uint256)，里面有 sourceIndex、agentId、最高价和预算。口头说明代理要先 preview，确认后再 execute。台上不发。" />
           </p>
         </li>
         <li>

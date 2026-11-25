@@ -74,7 +74,7 @@ contract ReenterPortal {
         Distribution calldata distribution,
         IPortalTypes.CreatorBuyParams calldata
     ) external payable returns (address token, address pool) {
-        try UniformLauncher(payable(msg.sender)).bid{value: 0.01 ether}(p.poolToken) {
+        try UniformLauncher(payable(msg.sender)).bid{value: 0.01 ether}(p.poolToken, 0, uint160(address(this))) {
             bidLanded = true;
         } catch {}
         if (msg.value != p.poolQuote) revert("value");
@@ -99,7 +99,7 @@ contract HostileBidder {
     }
 
     function place() external payable {
-        launcher.bid{value: msg.value}(price);
+        launcher.bid{value: msg.value}(price, 0, uint160(address(this)));
     }
 
     function claim() external {
@@ -113,7 +113,7 @@ contract HostileBidder {
         try launcher.refund() {
             refundLanded = true;
         } catch {}
-        try launcher.bid{value: 0.01 ether}(price) {
+        try launcher.bid{value: 0.01 ether}(price, 0, uint160(address(this))) {
             secondBidLanded = true;
         } catch {}
     }
@@ -174,7 +174,7 @@ contract UniformAuditTest is Test {
     function _bid(UniformLauncher launcher, address who, uint256 pay, uint256 price) internal {
         vm.deal(who, who.balance + pay);
         vm.prank(who);
-        launcher.bid{value: pay}(price);
+        launcher.bid{value: pay}(price, 0, uint160(who));
     }
 
     function _claimAll(UniformLauncher launcher) internal returns (uint256 paid) {
@@ -265,7 +265,7 @@ contract UniformAuditTest is Test {
         vm.deal(who, who.balance + 1 ether);
         vm.prank(who);
         vm.expectRevert(UniformLauncher.AlreadyBid.selector);
-        launcher.bid{value: 1 ether}(1e16);
+        launcher.bid{value: 1 ether}(1e16, 0, uint160(who));
         assertEq(launcher.bidCount(), 1);
     }
 
@@ -279,7 +279,7 @@ contract UniformAuditTest is Test {
         vm.deal(late, 1 ether);
         vm.prank(late);
         vm.expectRevert(UniformLauncher.Closed.selector);
-        launcher.bid{value: 1 ether}(1e16);
+        launcher.bid{value: 1 ether}(1e16, 0, uint160(late));
     }
 
     function test_marginalPartialFillThenSolvent() public {

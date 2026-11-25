@@ -102,11 +102,12 @@ contract DeskScript is Script {
         _bid(launcher, address(uint160(0xC0DE0007)), 1.5 ether, 1.6e13);
         _bid(launcher, address(uint160(0xC0DE0008)), 1.2 ether, 1.4e13);
         _bid(launcher, address(uint160(0xC0DE0009)), 1 ether, 1.2e13);
+        _bid(launcher, address(uint160(0xC0DE000A)), 1 ether, 1.1e13);
     }
 
     function _bid(UniformLauncher launcher, address who, uint256 value, uint256 price) internal {
         vm.startBroadcast(who);
-        launcher.bid{value: value}(price);
+        launcher.bid{value: value}(price, 0, uint160(who));
         vm.stopBroadcast();
     }
 

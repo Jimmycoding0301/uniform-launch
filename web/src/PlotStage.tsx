@@ -63,7 +63,6 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
   const hRef = useRef<SVGLineElement>(null);
   const vRef = useRef<SVGLineElement>(null);
   const canvasRef = useRef<HTMLCanvasElement>(null);
-  const dashed = useRef(false);
   const sawSettle = useRef<boolean | null>(null);
   const [sweep, setSweep] = useState(false);
   const [pulse, setPulse] = useState(false);
@@ -82,7 +81,6 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
     setPulse(false);
     const from = shownRef.current;
     const to = targetRef.current;
-    clearDash(strokeRef.current);
     if (reduced || from.pts.length === 0) {
       shownRef.current = to;
       setShown(to);
@@ -120,7 +118,6 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
       setShown(target);
       return;
     }
-    clearDash(strokeRef.current);
     const t0 = performance.now();
     let frame = 0;
     const step = (now: number) => {
@@ -133,26 +130,6 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
     frame = requestAnimationFrame(step);
     return () => cancelAnimationFrame(frame);
   }, [target, settle, reduced, intro]);
-
-  useLayoutEffect(() => {
-    if (dashed.current || reduced || !intro) return;
-    const el = strokeRef.current;
-    if (!el || !shown.stroke) return;
-    const len = el.getTotalLength();
-    if (len < 1) return;
-    dashed.current = true;
-    el.style.strokeDasharray = `${len}`;
-    el.style.strokeDashoffset = `${len}`;
-    requestAnimationFrame(() => {
-      el.style.transition = "stroke-dashoffset 900ms cubic-bezier(0.16, 1, 0.3, 1) 200ms";
-      el.style.strokeDashoffset = "0";
-    });
-    el.addEventListener("transitionend", () => {
-      el.style.transition = "";
-      el.style.strokeDasharray = "none";
-      el.style.strokeDashoffset = "0";
-    }, { once: true });
-  }, [shown.stroke, intro, reduced]);
 
   useEffect(() => {
     if (!intro && !settle) setPulse(true);
@@ -240,7 +217,7 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
           {resting && ghost.fill && <path className="step-fill ghost" d={ghost.fill} fill="url(#fillGold)" />}
           {resting && ghost.stroke && <path className="step ghost" d={ghost.stroke} />}
           {!resting && plot.fill && <path ref={fillRef} className={failed ? "step-fill failed" : "step-fill"} d={plot.fill} fill={failed ? "url(#fillGray)" : "url(#fillGold)"} />}
-          {!resting && plot.stroke && <path ref={strokeRef} className={failed ? "step failed" : "step"} d={plot.stroke} />}
+          {!resting && plot.stroke && <path ref={strokeRef} className={failed ? "step failed" : "step"} d={plot.stroke} strokeDasharray="none" />}
         </g>
         <line className="reserve" x1={plot.left} x2={plot.right} y1={plot.reserveY} y2={plot.reserveY} />
         {plot.clearingY != null && !failed && (
@@ -293,13 +270,6 @@ function mixPlot(from: Plot, to: Plot, t: number): Plot {
     crossX: ly(from.crossX, to.crossX),
     reserveY: from.reserveY + (to.reserveY - from.reserveY) * t,
   };
-}
-
-function clearDash(el: SVGPathElement | null) {
-  if (!el) return;
-  el.style.transition = "";
-  el.style.strokeDasharray = "none";
-  el.style.strokeDashoffset = "0";
 }
 
 function burst(canvas: HTMLCanvasElement | null, svg: SVGSVGElement | null, plot: Plot, reduced: boolean) {

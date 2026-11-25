@@ -208,6 +208,10 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         return _bids.length;
     }
 
+    function identitySourceCount() external view returns (uint256) {
+        return identitySources.length;
+    }
+
     function statusCode() external view returns (uint8) {
         return uint8(status);
     }
@@ -291,14 +295,19 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         return (o.ok, o.clearingPrice, o.poolQuote);
     }
 
-    function bid(uint256 maxPrice) external payable nonReentrant {
+    /// @notice `sourceIndex` 选择创建时固定的身份来源。`agentId` 由代理自己申报。
+    ///         Agent ID：有 `tokenOfOwnerByIndex` 时填 tokenId，否则填 `uint160(msg.sender)`。
+    ///         ERC-8004：填官方 Identity Registry 的编号，且本地址是 owner 或 `getAgentWallet`。
+    function bid(uint256 maxPrice, uint8 sourceIndex, uint256 agentId) external payable nonReentrant {
         if (status != Status.Open) revert Closed();
         if (block.number < startBlock || block.number >= endBlock - CLOSE_BUFFER) revert Closed();
         if (bidOf[msg.sender] != 0) revert AlreadyBid();
         if (msg.value < MIN_BUDGET || msg.value > MAX_BUDGET) revert BadBudget();
         if (maxPrice < floorPrice) revert BelowFloor();
         if (_bids.length >= MAX_BIDS) revert Full();
-        (bool agentOk, bytes32 sourceId, uint256 agentId) = _identify(msg.sender);
+        if (sourceIndex >= identitySources.length) revert NotAgent();
+        (bool agentOk, bytes32 sourceId) =
+            IAgentIdentitySource(identitySources[sourceIndex]).verify(msg.sender, agentId);
         if (!agentOk) revert NotAgent();
         if (_agentUsed[sourceId][agentId]) revert AgentAlreadyBid();
         _agentUsed[sourceId][agentId] = true;
@@ -419,14 +428,6 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
             return floor.meetsCreateFloor && floor.meetsFloor;
         } catch {
             return false;
-        }
-    }
-
-    function _identify(address account) internal view returns (bool ok, bytes32 sourceId, uint256 agentId) {
-        uint256 n = identitySources.length;
-        for (uint256 i; i < n; ++i) {
-            (bool pass, bytes32 sid, uint256 aid) = IAgentIdentitySource(identitySources[i]).isAgent(account);
-            if (pass && aid != 0) return (true, sid, aid);
         }
     }
 

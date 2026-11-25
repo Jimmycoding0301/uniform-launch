@@ -105,7 +105,7 @@ contract Handler is Test {
         uint256 price = bound(priceSeed, launcher.floorPrice(), launcher.floorPrice() * 30);
         vm.deal(who, who.balance + pay);
         vm.prank(who);
-        launcher.bid{value: pay}(price);
+        launcher.bid{value: pay}(price, 0, uint160(who));
         totalIn += pay;
         _statusForward();
     }

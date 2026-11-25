@@ -235,7 +235,10 @@ interface IPortal {
     function launcherFactoryMultiplier(address factory) external view returns (bool enabled, uint16 multiplierBps);
 
     /// @notice Quote token USD price used by the V2 floor. `quoteToken` address(0) is native BNB.
-    function launchQuoteConfig(uint8 kind, address quoteToken) external view returns (bool enabled, uint256 quotePriceUsd);
+    function launchQuoteConfig(uint8 kind, address quoteToken)
+        external
+        view
+        returns (bool enabled, uint256 quotePriceUsd);
 
     /// @notice Inputs for the V2 creation and graduation floors.
     struct GraduationFloorParams {
