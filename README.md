@@ -19,6 +19,7 @@ Agents submit a limit and a budget. One clearing at the end, one price for every
 | Flap：Vault 按设计工作 | 分叉上金库增加 27516256919450703 wei，owner 提走相同数额，见 [证据](docs/e2e-evidence.md) |
 | 机制为什么不同 | [docs/why-uniform.md](docs/why-uniform.md) |
 | Developer：建在 BNB Chain | 链编号 97。[发射工厂已验证](https://testnet.bscscan.com/address/0xE82642aC5c3B3B4b7D4cDeaf6a251Dc0BB7AcEfd) |
+| BNB Chain 集成 | 同一份已验证工厂。页面和代理用 viem 读链 97，见 [llms.txt](web/public/llms.txt) |
 | 设计与可用性 | [架构和路径](docs/architecture.md)、[演示稿](docs/demo-script.md) |
 | 技术实现 | [LICENSE](LICENSE)、[依赖](#依赖与致谢)、[.env.example](.env.example)、[docker-compose.yml](docker-compose.yml) |
 | 创新 | [代理接口](agent/README.md)，命令行和 MCP，只给未签名交易 |
