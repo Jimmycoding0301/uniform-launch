@@ -11,6 +11,8 @@ contract LocalRpcTest is Test {
         assertTrue(LocalRpc.isLocal("http://LOCALHOST:18545"));
         assertTrue(LocalRpc.isLocal("http://127.0.0.1/"));
         assertTrue(LocalRpc.isLocal("127.0.0.1:18546"));
+        assertTrue(LocalRpc.isLocal("http://user:pass@127.0.0.1:18545"));
+        assertFalse(LocalRpc.isLocal("http://user:pass@bsc-testnet-rpc.publicnode.com"));
         assertFalse(LocalRpc.isLocal("https://bsc-testnet-rpc.publicnode.com"));
         assertFalse(LocalRpc.isLocal("https://data-seed-prebsc-1-s1.binance.org:8545"));
         assertFalse(LocalRpc.isLocal(""));
