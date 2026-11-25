@@ -57,8 +57,6 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
   const targetRef = useRef(target);
   targetRef.current = target;
   const svgRef = useRef<SVGSVGElement>(null);
-  const strokeRef = useRef<SVGPathElement>(null);
-  const fillRef = useRef<SVGPathElement>(null);
   const vRef = useRef<SVGLineElement>(null);
   const tipRef = useRef<HTMLDivElement>(null);
   const tipLines = useRef<Array<HTMLParagraphElement | null>>([]);
@@ -255,7 +253,7 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
           {failed && plot.stroke && <path className="step failed" d={plot.stroke} />}
           {!failed && plot.inStroke && <path className={settle ? "step-in ghost" : "step-in"} d={plot.inStroke} />}
           {!failed && plot.outStroke && <path className="step-out" d={plot.outStroke} />}
-          {!failed && !plot.inStroke && plot.stroke && <path ref={strokeRef} className="step" d={plot.stroke} />}
+          {!failed && !plot.inStroke && plot.stroke && <path className="step" d={plot.stroke} />}
         </g>
         <line className="reserve" x1={hair(plot.left)} x2={hair(plot.right)} y1={hair(plot.reserveY)} y2={hair(plot.reserveY)} />
         <text className="tick" x={plot.left + 4} y={Math.min(plot.bottom - 4, Math.max(14, plot.reserveY + (plot.clearingY != null && Math.abs(plot.clearingY - plot.reserveY) < 18 ? 14 : -6)))}>

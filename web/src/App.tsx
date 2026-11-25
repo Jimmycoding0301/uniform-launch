@@ -561,7 +561,7 @@ export function App() {
 
   return (
     <div className={showIntro ? "page intro" : "page"}>
-      {button ? <div className="dock-fade" aria-hidden="true" /> : null}
+      {snap ? <div className="dock-fade" aria-hidden="true" /> : null}
       <a className="skip" href="#desk">跳到拍卖</a>
       <header className="top">
         <b>
