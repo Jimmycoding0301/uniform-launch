@@ -21,6 +21,12 @@ const after = await desk.evaluate(() => {
 });
 const helpMargin = await desk.evaluate(() => getComputedStyle(document.querySelector(".help")).marginTop);
 assert.equal(helpMargin, "8px", `帮助行间距 ${helpMargin}`);
+const rails = await desk.evaluate(() => ({
+  mid: getComputedStyle(document.querySelector(".bid.mid")).backgroundImage.includes("repeating-linear-gradient"),
+  solid: getComputedStyle(document.querySelector(".bid.in")).boxShadow.includes("rgb(240, 185, 11)"),
+}));
+assert.ok(rails.mid, "边际行不是虚线");
+assert.ok(rails.solid, "价内行不是实线");
 const stack = await desk.evaluate(() => {
   const plot = document.querySelector(".plot-wrap").getBoundingClientRect();
   const facts = document.querySelector(".facts").getBoundingClientRect();
