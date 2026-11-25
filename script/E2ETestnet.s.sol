@@ -76,12 +76,14 @@ contract E2ETestnet is Script {
         uint256 minPool = 4335714285714285715;
         if (CREATOR.balance < fee + gasReserve) {
             console2.log(unicode"测试币不够");
-            console2.log("short", fee + gasReserve - CREATOR.balance);
+            console2.log(unicode"差额");
+            console2.log(fee + gasReserve - CREATOR.balance);
             revert("short-creator");
         }
         if (ALICE.balance + BOB.balance + CAROL.balance < minPool) {
             console2.log(unicode"测试币不够");
-            console2.log("short", minPool - (ALICE.balance + BOB.balance + CAROL.balance));
+            console2.log(unicode"差额");
+            console2.log(minPool - (ALICE.balance + BOB.balance + CAROL.balance));
             revert("short-pool");
         }
         console2.log(unicode"预计花费");
