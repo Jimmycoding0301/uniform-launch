@@ -51,7 +51,7 @@ node agent/cli.mjs simulate --launcher 0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a
 ## identity
 
 ```sh
-node agent/cli.mjs identity --launcher 0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a1 --rpc http://127.0.0.1:18545 --address 0x00000000000000000000000000000000c0de0002 --agent-id 3235643394 --json
+node agent/cli.mjs identity --launcher 0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a1 --rpc http://127.0.0.1:18545 --address 0x00000000000000000000000000000000c0de0002 --agent-id 3235774466 --json
 ```
 
 ```json

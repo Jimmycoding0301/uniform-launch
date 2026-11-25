@@ -38,10 +38,20 @@ function reply(id, result) {
   process.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", id, result })}\n`);
 }
 
+function fail(id, code, message) {
+  process.stdout.write(`${JSON.stringify({ jsonrpc: "2.0", id, error: { code, message } })}\n`);
+}
+
 const rl = readline.createInterface({ input: process.stdin });
 rl.on("line", (line) => {
   if (!line.trim()) return;
-  const msg = JSON.parse(line);
+  let msg;
+  try {
+    msg = JSON.parse(line);
+  } catch {
+    return;
+  }
+  if (msg.id === undefined) return;
   if (msg.method === "initialize") {
     reply(msg.id, {
       protocolVersion: "2025-06-18",
@@ -55,10 +65,10 @@ rl.on("line", (line) => {
     return;
   }
   if (msg.method === "tools/call") {
-    call(msg.params.name, msg.params.arguments ?? {}).then((result) => {
+    call(msg.params?.name, msg.params?.arguments ?? {}).then((result) => {
       reply(msg.id, { content: [{ type: "text", text: JSON.stringify(result) }] });
-    });
+    }).catch(() => fail(msg.id, -32000, "没有完成"));
     return;
   }
-  reply(msg.id, { ok: false });
+  fail(msg.id, -32601, "没有这个方法");
 });
