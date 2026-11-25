@@ -879,12 +879,16 @@ export function App() {
             </div>
           </div>
         )}
-        {demoOn && scene === 3 && vaultBal !== null && (
-          <pre className="slip">金库余额 {formatBnb(vaultBal)} BNB</pre>
+        {demoOn && scene === 3 && (
+          <pre className="slip">{vaultBal !== null ? `金库余额 ${formatBnb(vaultBal)} BNB` : "金库余额还没读到。换一个能读到链的地址再看。"}</pre>
         )}
-        {demoOn && scene === 2 && sim && (
+        {demoOn && scene === 2 && (
           <pre className="slip">
-            {`清算价 ${formatPrice(sim.clearingPrice)}\n成交 ${formatTokens(sim.fills.at(-1)?.tokens ?? 0n)} 枚\n实付 ${formatBnb(sim.fills.at(-1)?.spend ?? 0n)} BNB\n退回 ${formatBnb(sim.fills.at(-1)?.refund ?? 0n)} BNB\n入池 ${formatBnb(sim.poolQuote)} BNB`}
+            {!snap
+              ? "正在读这一场。"
+              : sim
+                ? `清算价 ${formatPrice(sim.clearingPrice)}\n成交 ${formatTokens(sim.fills.at(-1)?.tokens ?? 0n)} 枚\n实付 ${formatBnb(sim.fills.at(-1)?.spend ?? 0n)} BNB\n退回 ${formatBnb(sim.fills.at(-1)?.refund ?? 0n)} BNB\n入池 ${formatBnb(sim.poolQuote)} BNB`
+                : "预算或最高价还不能算。单笔 0.01 到 100 BNB，最高价不低于保留价。"}
           </pre>
         )}
         {demoOn && scene === 5 && (
