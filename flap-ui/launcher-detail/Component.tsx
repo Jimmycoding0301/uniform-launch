@@ -143,8 +143,8 @@ export function Launcher({ context, messages }: LauncherProps) {
   const token = shownAddress(snap.token);
   const pool = shownAddress(snap.pool);
   const template = status === 2n
-    ? `${messages.refundTemplate}\n${context.launcherAddress}\n链编号 97\n退款，金额 0`
-    : `${messages.bidTemplate}\n${context.launcherAddress}\n链编号 97\n出价。预算和最高价由代理填写。`;
+    ? `${messages.refundTemplate}\n${context.launcherAddress}\n${messages.chain}\n${messages.refundAction}`
+    : `${messages.bidTemplate}\n${context.launcherAddress}\n${messages.chain}\n${messages.bidAction}`;
   return (
     <section style={card}>
       <div style={grid}>

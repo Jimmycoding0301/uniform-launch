@@ -17,7 +17,10 @@
     "agent": "Bids go through your agent",
     "agentBody": "Hand this text to your agent. It previews with baw, then you confirm in the Binance app.",
     "bidTemplate": "Bid template",
-    "refundTemplate": "Refund template"
+    "refundTemplate": "Refund template",
+    "chain": "Chain 97",
+    "bidAction": "Place a bid. The agent fills in the budget and the limit.",
+    "refundAction": "Refund. Amount 0."
   },
   "zh": {
     "title": "同价发射",
@@ -37,7 +40,10 @@
     "agent": "出价走代理",
     "agentBody": "把这段交给你的代理，用 baw 预览后在币安 App 确认。",
     "bidTemplate": "出价指令",
-    "refundTemplate": "退款指令"
+    "refundTemplate": "退款指令",
+    "chain": "链编号 97",
+    "bidAction": "出价。预算和最高价由代理填写。",
+    "refundAction": "退款，金额 0"
   },
   "ko": {
     "title": "동일가 발행",
@@ -57,6 +63,9 @@
     "agent": "입찰은 에이전트 경유",
     "agentBody": "이 글을 에이전트에 넘기세요. baw 로 미리 본 뒤 바이낸스 앱에서 확인합니다.",
     "bidTemplate": "입찰 지시문",
-    "refundTemplate": "환불 지시문"
+    "refundTemplate": "환불 지시문",
+    "chain": "체인 97",
+    "bidAction": "입찰합니다. 예산과 상한가는 에이전트가 적습니다.",
+    "refundAction": "환불. 금액 0"
   }
 }
