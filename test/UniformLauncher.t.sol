@@ -176,6 +176,23 @@ contract UniformLauncherTest is Test {
         launcher.claim();
     }
 
+    function test_shortGasLeavesAuctionOpen() public {
+        UniformLauncher launcher = _new("TJ", 1e13);
+        vm.prank(alice);
+        launcher.bid{value: 10 ether}(1e16);
+        vm.roll(launcher.endBlock());
+        uint256 bal = address(launcher).balance;
+        vm.expectRevert(UniformLauncher.InsufficientGas.selector);
+        launcher.settle{gas: 3_000_000}();
+        assertEq(uint8(launcher.status()), uint8(UniformLauncher.Status.Open));
+        assertEq(launcher.token(), address(0));
+        assertEq(address(launcher).balance, bal);
+
+        launcher.settle{gas: 8_000_000}();
+        assertEq(uint8(launcher.status()), uint8(UniformLauncher.Status.Succeeded));
+        assertEq(launcher.MIN_SETTLE_GAS(), 7_000_000);
+    }
+
     function test_successClaimMatchesQuote() public {
         UniformLauncher launcher = _new("TJ", 1e13);
         vm.prank(alice);

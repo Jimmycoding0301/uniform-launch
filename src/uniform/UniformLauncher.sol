@@ -37,6 +37,10 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
     uint256 public constant MAX_BUDGET = 100 ether;
     uint256 public constant MAX_BIDS = 32;
     uint64 public constant CLOSE_BUFFER = 20;
+    /// @notice 进入 settle 后若剩余 gas 低于此值，直接回滚且不改状态。
+    ///         指令里的 gas limit 是 8000000。扣掉基础 gas 后仍高于这条线，
+    ///         也盖得住一次成功发射（实测约 460 万）。估算值往往更低，低了就不能把拍卖打成失败。
+    uint256 public constant MIN_SETTLE_GAS = 7_000_000;
     uint64 public constant MIN_DURATION = 200;
     uint64 public constant MAX_DURATION = 20_000;
     uint16 public constant BUY_TAX_BPS = 300;
@@ -102,6 +106,7 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
     error RefundUnavailable();
     error NothingToRefund();
     error NotCreator();
+    error InsufficientGas();
 
     modifier nonReentrant() {
         if (busy) revert Busy();
@@ -183,6 +188,18 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
     function demand6() external view returns (uint256) { return demandBins[6]; }
     function demand7() external view returns (uint256) { return demandBins[7]; }
 
+    function getFills() external view returns (uint256[] memory tokensOwed, uint256[] memory quoteOwed, bool[] memory pulled) {
+        uint256 n = _bids.length;
+        tokensOwed = new uint256[](n);
+        quoteOwed = new uint256[](n);
+        pulled = new bool[](n);
+        for (uint256 i; i < n; ++i) {
+            tokensOwed[i] = _bids[i].tokensOwed;
+            quoteOwed[i] = _bids[i].quoteOwed;
+            pulled[i] = _bids[i].pulled;
+        }
+    }
+
     function getBids() external view returns (address[] memory agents, uint256[] memory budgets, uint256[] memory maxPrices) {
         uint256 n = _bids.length;
         agents = new address[](n);
@@ -217,6 +234,7 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
     }
 
     function settle() external nonReentrant {
+        if (gasleft() < MIN_SETTLE_GAS) revert InsufficientGas();
         if (status != Status.Open) revert Closed();
         if (block.number < endBlock) revert Early();
 
