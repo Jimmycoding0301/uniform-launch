@@ -713,7 +713,7 @@ export function App() {
                     {phase === "failed" ? (
                       <div className="result-card">
                         <h2>没有成交</h2>
-                        <p className="help">未达保留价。出价按原数退回，退回后这一行会写成已退回。</p>
+                        <p className="help">出价按原数退回。退回后这一行会写成已退回。</p>
                       </div>
                     ) : phase === "done" ? (
                       <div className="result-card">
@@ -841,7 +841,7 @@ export function App() {
                   <div className={phase !== "wait" && clearingNow > 0n && !failed ? "chart-price" : "chart-price dim"}>
                     {failed ? "没有成交" : phase === "wait" ? "未形成" : clearingNow > 0n ? <Roller text={formatPrice(clearingNow)} /> : "未形成"}
                   </div>
-                  {failed && <p className="fail-line"><Zh text="未达保留价，出价全额退回。" /></p>}
+                  {failed && <p className="fail-line"><Zh text="没有成交，出价全额退回。" /></p>}
                   {clearingNow === 0n && snap.bids.length > 0 && !failed && phase !== "wait" && (
                     <p className="fail-line">已募还没到保留所需，清算价还没形成。</p>
                   )}

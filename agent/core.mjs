@@ -160,7 +160,7 @@ export async function simulate(rpc, launcher, budgetText, priceText) {
     if (budget < WAD / 100n || budget > 100n * WAD) {
       return { ok: false, reason: "预算不在范围内", next: "单笔 0.01 到 100 BNB。" };
     }
-    if (maxPrice < snap.floor) return { ok: false, reason: "低于保留价", next: "把最高价提到保留价以上。" };
+    if (maxPrice < snap.floor) return { ok: false, reason: "低于保留价，这笔不会入场", next: "把最高价提到保留价以上。" };
     if (snap.bids >= 32n) return { ok: false, reason: "名额已满", next: "这一场最多 32 笔。" };
     const phase = phaseOf(snap.status, snap.block, snap.start, snap.end);
     if (phase !== "接单") return { ok: false, reason: "窗口已关", next: "这一场已经不接出价。" };
