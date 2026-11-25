@@ -176,6 +176,7 @@ export function App() {
   const [copyFail, setCopyFail] = useState("");
   const [launchLine, setLaunchLine] = useState("");
   const [vault, setVault] = useState("");
+  const [vaultBal, setVaultBal] = useState<bigint | null>(null);
   const [intro, setIntro] = useState(() => !window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   const initialStatus = useRef<number | null>(null);
   const animStarted = useRef(false);
@@ -502,6 +503,27 @@ export function App() {
     };
   }, [rpc, snap]);
 
+  useEffect(() => {
+    if (!vault || vault === ZERO) {
+      setVaultBal(null);
+      return;
+    }
+    let stop = false;
+    const client = createPublicClient({ transport: http(rpc) });
+    client.readContract({
+      address: vault as Address,
+      abi: [{ type: "function", name: "accrued", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] }] as const,
+      functionName: "accrued",
+    }).then((got) => {
+      if (!stop) setVaultBal(got);
+    }).catch(() => {
+      if (!stop) setVaultBal(null);
+    });
+    return () => {
+      stop = true;
+    };
+  }, [rpc, vault]);
+
   async function copyInstruction() {
     if (!launcher) return;
     const picked = snap?.sources[sourceIndex];
@@ -702,6 +724,7 @@ export function App() {
                         {showToken && snap.token !== ZERO && <Addr label="代币" value={snap.token} />}
                         {showPool && snap.pool !== ZERO && <Addr label="池子" value={snap.pool} swap={snap.token !== ZERO ? pancakeSwapLink(snap.token) : ""} />}
                         {vault && vault !== ZERO && <Addr label="Flap Vault" value={vault} />}
+                        {vaultBal !== null && <div className="result-row"><span>金库余额</span><b>{formatBnb(vaultBal)} BNB</b></div>}
                       </div>
                     ) : (
                       <>
