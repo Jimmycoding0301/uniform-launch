@@ -69,7 +69,9 @@ rl.on("line", (line) => {
     return;
   }
   if (msg.method === "tools/call") {
-    call(msg.params?.name, msg.params?.arguments ?? {}).then((result) => {
+    const args = msg.params?.arguments;
+    const safe = args && typeof args === "object" ? args : {};
+    call(msg.params?.name, safe).then((result) => {
       reply(msg.id, { content: [{ type: "text", text: JSON.stringify(result) }], isError: result.ok === false });
     }).catch(() => fail(msg.id, -32000, "没有完成"));
     return;
