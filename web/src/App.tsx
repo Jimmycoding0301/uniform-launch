@@ -773,7 +773,7 @@ export function App() {
                       data-lock={phase === "open" ? "0" : "1"}
                       onKeyDown={(event) => {
                         if (phase !== "open") return;
-                        if (event.key === "ArrowRight") setSourceIndex(1);
+                        if (event.key === "ArrowRight" && snap.sources.length > 1) setSourceIndex(1);
                         if (event.key === "ArrowLeft") setSourceIndex(0);
                       }}
                     >
