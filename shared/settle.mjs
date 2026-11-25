@@ -26,7 +26,7 @@ function charge(tokens, price, budget) {
   return spend;
 }
 
-function pinFeasible(bids, order, price) {
+function pinFeasible(bids, order, price, sellAmount) {
   let infra = 0n;
   let marginal = 0n;
   for (const pos of order) {
@@ -34,14 +34,14 @@ function pinFeasible(bids, order, price) {
     if (b.maxPrice > price) infra += (b.budget * WAD) / price;
     else if (b.maxPrice === price) marginal += b.budget;
   }
-  if (infra >= SELL_AMOUNT) return null;
-  const remaining = SELL_AMOUNT - infra;
+  if (infra >= sellAmount) return null;
+  const remaining = sellAmount - infra;
   const cost = (remaining * price) / WAD;
   if (marginal < cost || marginal === 0n) return null;
   return { infra, marginal, remaining };
 }
 
-export function settle(floorPrice, bids) {
+export function settle(sellAmount, floorPrice, bids) {
   const fills = bids.map((b) => ({
     index: b.index,
     tokens: 0n,
@@ -66,7 +66,7 @@ export function settle(floorPrice, bids) {
   for (let k = 1; k <= order.length; k++) {
     cum += bids[order[k - 1]].budget;
     const mMin = bids[order[k - 1]].maxPrice;
-    const p = (cum * WAD) / SELL_AMOUNT;
+    const p = (cum * WAD) / sellAmount;
     if (p >= floorPrice && p <= mMin && p > bestP) {
       bestP = p;
       kind = 1;
@@ -78,7 +78,7 @@ export function settle(floorPrice, bids) {
     const price = bids[pos].maxPrice;
     if (lastPrice === price) continue;
     lastPrice = price;
-    const pin = pinFeasible(bids, order, price);
+    const pin = pinFeasible(bids, order, price, sellAmount);
     if (!pin) continue;
     if (price > bestP) {
       bestP = price;
@@ -94,14 +94,14 @@ export function settle(floorPrice, bids) {
     for (let i = 0; i < winK; i++) budgetSum += bids[order[i]].budget;
     for (let i = 0; i < winK; i++) {
       const pos = order[i];
-      fills[pos].tokens = (bids[pos].budget * SELL_AMOUNT) / budgetSum;
+      fills[pos].tokens = (bids[pos].budget * sellAmount) / budgetSum;
       fills[pos].spend = bids[pos].budget;
       fills[pos].refund = 0n;
     }
     return { ok: true, clearingPrice: bestP, poolQuote: budgetSum, fills };
   }
 
-  const pin = pinFeasible(bids, order, pinPrice);
+  const pin = pinFeasible(bids, order, pinPrice, sellAmount);
   let spent = 0n;
   for (const pos of order) {
     const b = bids[pos];

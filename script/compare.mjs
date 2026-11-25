@@ -1,6 +1,6 @@
 import { readFileSync, writeFileSync } from "node:fs";
 import { createRequire } from "node:module";
-import { settle } from "../shared/settle.mjs";
+import { SELL_AMOUNT, settle } from "../shared/settle.mjs";
 
 const require = createRequire(new URL("../agent/package.json", import.meta.url));
 const { createPublicClient, http } = require("viem");
@@ -49,7 +49,7 @@ function format(wei) {
   return frac ? `${whole}.${frac}` : `${whole}`;
 }
 
-const uniform = settle(floor, bids);
+const uniform = settle(SELL_AMOUNT, floor, bids);
 if (!uniform.ok || uniform.clearingPrice <= floor || uniform.poolQuote === 0n) {
   console.error("这场没有可以对照的清算价");
   process.exit(1);

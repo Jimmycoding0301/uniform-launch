@@ -1,12 +1,13 @@
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { settle } from "../shared/settle.mjs";
+import { SELL_AMOUNT, settle } from "../shared/settle.mjs";
 
 const file = new URL("../shared/vectors.json", import.meta.url);
 const data = JSON.parse(fs.readFileSync(file, "utf8"));
 assert.equal(data.cases.length, 20);
 for (const item of data.cases) {
   const out = settle(
+    SELL_AMOUNT,
     BigInt(item.floor),
     item.bids.map((bid) => ({ index: BigInt(bid.index), budget: BigInt(bid.budget), maxPrice: BigInt(bid.maxPrice) })),
   );

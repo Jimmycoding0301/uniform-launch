@@ -1,7 +1,7 @@
 import { createPublicClient, encodeFunctionData, getAddress, http, keccak256, toBytes } from "viem";
 import { launcherAbi } from "./abi.mjs";
 import { explain } from "./errors.mjs";
-import { settle } from "../shared/settle.mjs";
+import { SELL_AMOUNT, settle } from "../shared/settle.mjs";
 
 const WAD = 10n ** 18n;
 export const CHAIN_ID = 97;
@@ -166,7 +166,7 @@ export async function simulate(rpc, launcher, budgetText, priceText) {
     if (phase !== "接单") return { ok: false, reason: "窗口已关", next: "这一场已经不接出价。" };
     const bids = bookBids(await loadBook(snap.client, addr(launcher)));
     bids.push({ index: BigInt(bids.length), budget, maxPrice });
-    const out = settle(snap.floor, bids);
+    const out = settle(SELL_AMOUNT, snap.floor, bids);
     const mine = out.fills[out.fills.length - 1];
     return {
       ok: true,

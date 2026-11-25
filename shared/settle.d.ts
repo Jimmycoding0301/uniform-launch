@@ -1,4 +1,5 @@
 export function settle(
+  sellAmount: bigint,
   floor: bigint,
   bids: { index: bigint; budget: bigint; maxPrice: bigint }[],
 ): {

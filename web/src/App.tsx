@@ -415,7 +415,7 @@ export function App() {
     if (!demoOn || scene !== 2 || !snap || budgetWei == null || priceWei == null) return null;
     const rows = snap.bids.map((row, index) => ({ index: BigInt(index), budget: row.budget, maxPrice: row.maxPrice }));
     rows.push({ index: BigInt(rows.length), budget: budgetWei, maxPrice: priceWei });
-    return settleBids(snap.floor, rows) as {
+    return settleBids(500_000n * 10n ** 18n, snap.floor, rows) as {
       clearingPrice: bigint;
       poolQuote: bigint;
       fills: { tokens: bigint; spend: bigint; refund: bigint }[];
