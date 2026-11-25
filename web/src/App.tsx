@@ -910,10 +910,10 @@ export function App() {
       </main>
       {demoOn && (
         <div className="demo-bar">
-          <p>第 {scene + 1} / {SCENES.length} 幕 {SCENES[scene]}</p>
+          <p>{demoState === "missing" ? "还没有演示场。先跑演示命令。" : `第 ${scene + 1} / ${SCENES.length} 幕 ${SCENES[scene]}`}</p>
           <div>
-            <button type="button" onClick={() => setScene((n) => Math.max(0, n - 1))} disabled={scene === 0}>上一幕</button>
-            <button type="button" className="next" onClick={() => setScene((n) => Math.min(SCENES.length - 1, n + 1))} disabled={scene === SCENES.length - 1}>下一幕</button>
+            <button type="button" onClick={() => setScene((n) => Math.max(0, n - 1))} disabled={demoState === "missing" || scene === 0}>上一幕</button>
+            <button type="button" className="next" onClick={() => setScene((n) => Math.min(SCENES.length - 1, n + 1))} disabled={demoState === "missing" || scene === SCENES.length - 1}>下一幕</button>
           </div>
         </div>
       )}
@@ -955,9 +955,8 @@ function DemoMissing() {
         <p className="user-line"><Zh text={USER_LINE} /></p>
       </div>
       <div className="plot-wrap empty-plot">
-        <div className="empty">
-          <p><Zh text="还没有演示场。" /></p>
-          <p><Zh text="先跑演示命令。命令跑完会写下地址，再刷新这个页面。" /></p>
+        <div className="empty stack">
+          <p><Zh text="还没有演示场。先跑演示命令。命令跑完会写下地址，再刷新这个页面。" /></p>
         </div>
       </div>
     </div>

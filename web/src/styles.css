@@ -361,6 +361,8 @@ svg.plot { display: block; touch-action: none; background: var(--bg); }
   pointer-events: none;
 }
 .empty.note { align-items: flex-end; padding: 0 var(--space-4) 36px; }
+.empty.stack { padding: 0 24px; }
+.empty.stack p { max-width: 36em; margin: 0; }
 .bids { margin-top: var(--space-1); }
 .bid {
   display: grid;
