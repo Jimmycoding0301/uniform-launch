@@ -84,5 +84,26 @@ await reduced.waitForSelector(".uniform-rect");
 await reduced.waitForTimeout(300);
 const running = await reduced.evaluate(() => document.getAnimations().filter((item) => item.playState === "running").length);
 assert.equal(running, 0, `减少动态后仍有 ${running} 个动画`);
+async function demoGap(width, height) {
+  const page = await browser.newPage({ viewport: { width, height } });
+  await page.goto("http://127.0.0.1:4317/?demo=1", { waitUntil: "domcontentloaded" });
+  await page.waitForSelector("button.primary");
+  await page.waitForSelector(".demo-bar");
+  return page.evaluate(() => {
+    const btn = document.querySelector("button.primary").getBoundingClientRect();
+    const bar = document.querySelector(".demo-bar").getBoundingClientRect();
+    return {
+      btnTop: Math.round(btn.top),
+      btnBottom: Math.round(btn.bottom),
+      barTop: Math.round(bar.top),
+      barBottom: Math.round(bar.bottom),
+      overlap: btn.bottom > bar.top && btn.top < bar.bottom,
+    };
+  });
+}
+const demoDesk = await demoGap(1440, 900);
+const demoPhone = await demoGap(390, 844);
+assert.equal(demoDesk.overlap, false, `桌面演示条挡住按钮 ${JSON.stringify(demoDesk)}`);
+assert.equal(demoPhone.overlap, false, `手机演示条挡住按钮 ${JSON.stringify(demoPhone)}`);
 await browser.close();
-console.log("布局检查通过", { desk: before, mobile, covered: covered.length, reducedMotion: running });
+console.log("布局检查通过", { desk: before, mobile, covered: covered.length, reducedMotion: running, demoDesk, demoPhone });

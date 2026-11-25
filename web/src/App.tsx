@@ -4,8 +4,9 @@ import { formatBnb, formatPrice, formatRemain, formatTokens, parseBnb, tokensFor
 import { agentLabel } from "./names";
 import { Roller, useReducedMotion, Zh } from "./motion";
 import { PlotStage } from "./PlotStage";
-import { ScriptPage } from "./ScriptPage";
 import { pancakeSwapLink } from "./dex";
+// @ts-expect-error 共享模拟器是普通 JavaScript，返回值在调用处收窄。
+import { settle as settleBids } from "../../shared/settle.mjs";
 import { ADDR_STAGGER_MS, COPY_MS, MIN_SETTLE_GAS, RISK_LINE, SETTLE_GAS_LIMIT, SETTLE_MS, SWEEP_MS, USER_LINE } from "./theme";
 import { TESTNET_ROWS } from "./networks";
 
@@ -107,6 +108,15 @@ const PORTAL_ABI = [
 ] as const;
 
 type DemoFile = { localFork?: boolean; rpc?: string; open?: string; launched?: string; settle?: string; failed?: string };
+type WhyFile = { clearing?: string; sameRaise?: { ratio: number; firstAvg: string; lastAvg: string; gap: string } };
+const SCENES = [
+  "接单场。看清算价和需求阶梯。",
+  "填预算和最高价，点复制出价指令。",
+  "代理接口。这一笔如果现在加进去。",
+  "已发射。看开盘价、入池和金库。",
+  "没有成交。全额退款。",
+  "为什么同价。同一组出价的对照。",
+];
 type Row = {
   agent: Address;
   budget: bigint;
@@ -174,7 +184,11 @@ export function App() {
 
   const forceEmpty = params.get("empty") === "1";
   const testnetBoard = params.get("network") === "testnet" && !params.get("launcher");
-  const launcher = (forceEmpty || testnetBoard ? "" : params.get("launcher") || demo?.open || "") as Address;
+  const demoOn = params.get("demo") === "1" || params.get("view") === "script";
+  const [scene, setScene] = useState(0);
+  const [why, setWhy] = useState<WhyFile | null>(null);
+  const sceneAddress = [demo?.open, demo?.open, demo?.open, demo?.launched, demo?.failed, demo?.open][scene] || "";
+  const launcher = (forceEmpty || testnetBoard ? "" : demoOn ? sceneAddress : params.get("launcher") || demo?.open || "") as Address;
   const rpc = demo?.rpc || "http://127.0.0.1:18545";
   useEffect(() => {
     fetch("/demo.json")
@@ -182,6 +196,17 @@ export function App() {
       .then(setDemo)
       .catch(() => setDemo({}));
   }, []);
+  useEffect(() => {
+    if (!demoOn) return;
+    fetch("/why.json").then((r) => (r.ok ? r.json() : null)).then(setWhy).catch(() => setWhy(null));
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key === "Escape") window.location.assign("/");
+      if (event.key === "ArrowRight") setScene((n) => Math.min(SCENES.length - 1, n + 1));
+      if (event.key === "ArrowLeft") setScene((n) => Math.max(0, n - 1));
+    };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [demoOn]);
 
   useEffect(() => {
     if (!launcher) return;
@@ -377,6 +402,16 @@ export function App() {
 
   const budgetWei = parseBnb(budget);
   const priceWei = parseBnb(maxPrice);
+  const sim = useMemo(() => {
+    if (!demoOn || scene !== 2 || !snap || budgetWei == null || priceWei == null) return null;
+    const rows = snap.bids.map((row, index) => ({ index: BigInt(index), budget: row.budget, maxPrice: row.maxPrice }));
+    rows.push({ index: BigInt(rows.length), budget: budgetWei, maxPrice: priceWei });
+    return settleBids(snap.floor, rows) as {
+      clearingPrice: bigint;
+      poolQuote: bigint;
+      fills: { tokens: bigint; spend: bigint; refund: bigint }[];
+    };
+  }, [demoOn, scene, snap, budgetWei, priceWei]);
   const bidReady =
     phase === "open" &&
     budgetWei !== null &&
@@ -546,34 +581,15 @@ export function App() {
   const budgetNote = noteBudget(budget);
   const priceNote = snap ? notePrice(maxPrice, snap.floor) : { error: false, text: "", wei: "" };
   const showIntro = intro && !reduced && !!snap;
-  const scriptView = params.get("view") === "script";
-
-  if (scriptView) {
-    return (
-      <div className="page scroll">
-        <a className="skip" href="#script">跳到脚本</a>
-        <header className="top">
-          <b>
-            同价发射
-            <a className="script-link" href={demo?.open ? `/?launcher=${demo.open}` : "/"}>返回拍卖</a>
-          </b>
-          <span className="top-meta">{demo?.localFork ? <Zh text="本地分叉，不是测试网" /> : "BSC 测试网"}</span>
-        </header>
-        <main className="screen" id="script">
-          <ScriptPage demo={demo} />
-        </main>
-      </div>
-    );
-  }
 
   return (
-    <div className={showIntro ? "page intro" : "page"}>
+    <div className={["page", showIntro ? "intro" : "", demoOn ? "demo" : ""].filter(Boolean).join(" ")}>
       {snap ? <div className="dock-fade" aria-hidden="true" /> : null}
       <a className="skip" href="#desk">跳到拍卖</a>
       <header className="top">
         <b>
           同价发射
-          <a className="script-link" href="/?view=script">演示脚本</a>
+          <a className="script-link" href="/?demo=1">演示脚本</a>
         </b>
         <span className="top-meta">
           {snap?.sources.some((item) => item.standIn) ? <span className="meta-line"><Zh text="测试网 Agent ID 为替身" /></span> : null}
@@ -829,7 +845,28 @@ export function App() {
             </div>
           </div>
         )}
+        {demoOn && scene === 2 && sim && (
+          <pre className="slip">
+            {`清算价 ${formatPrice(sim.clearingPrice)}\n成交 ${formatTokens(sim.fills.at(-1)?.tokens ?? 0n)} 枚\n实付 ${formatBnb(sim.fills.at(-1)?.spend ?? 0n)} BNB\n退回 ${formatBnb(sim.fills.at(-1)?.refund ?? 0n)} BNB\n入池 ${formatBnb(sim.poolQuote)} BNB`}
+          </pre>
+        )}
+        {demoOn && scene === 5 && (
+          <pre className="slip">
+            {why?.sameRaise
+              ? `同价单价比 1\n曲线单价比 ${why.sameRaise.ratio}\n价差 ${why.sameRaise.gap} BNB/枚\n模拟，参数见脚本`
+              : "对照数字还没生成。先跑 node script/compare.mjs。"}
+          </pre>
+        )}
       </main>
+      {demoOn && (
+        <div className="demo-bar">
+          <p>第 {scene + 1} / {SCENES.length} 幕 {SCENES[scene]}</p>
+          <div>
+            <button type="button" onClick={() => setScene((n) => Math.max(0, n - 1))} disabled={scene === 0}>上一幕</button>
+            <button type="button" className="next" onClick={() => setScene((n) => Math.min(SCENES.length - 1, n + 1))} disabled={scene === SCENES.length - 1}>下一幕</button>
+          </div>
+        </div>
+      )}
     </div>
   );
 
@@ -873,7 +910,7 @@ function Empty() {
         </svg>
         <div className="empty">
           <p><Zh text="还没有这场拍卖。" /></p>
-          <a href="/?view=script">打开演示脚本</a>
+          <a href="/?demo=1">打开演示脚本</a>
         </div>
       </div>
     </div>

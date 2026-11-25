@@ -508,6 +508,11 @@ svg.plot { display: block; touch-action: none; background: var(--bg); }
   .plaque .addr { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
   .plaque .addr { margin-right: auto; }
   .bid { height: 40px; }
+  .demo-bar { left: 0; right: 0; height: 64px; }
+  .page.demo .action { bottom: 64px; }
+  .page.demo .dock-fade { bottom: 160px; }
+  .page.demo .screen { padding-bottom: 192px; }
+  .slip { top: auto; left: 16px; right: 16px; bottom: 168px; width: auto; }
   .action {
     position: fixed;
     left: 0;
@@ -542,6 +547,52 @@ svg.plot { display: block; touch-action: none; background: var(--bg); }
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+.demo-bar {
+  position: fixed;
+  left: var(--pad);
+  right: var(--pad);
+  bottom: 0;
+  z-index: 6;
+  height: 56px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 16px;
+  padding: 0 16px;
+  background: var(--bg);
+  border-top: 1px solid var(--rule-strong);
+  color: var(--text);
+  font-size: var(--fs-14);
+}
+.demo-bar p { margin: 0; }
+.demo-bar button {
+  height: 40px;
+  padding: 0 14px;
+  background: transparent;
+  color: var(--text);
+  border: 1px solid var(--rule-strong);
+  font: inherit;
+  font-size: var(--fs-14);
+}
+.demo-bar button.next { border-color: var(--accent); color: var(--accent); }
+.demo-bar button:disabled { opacity: 0.4; }
+.slip {
+  position: fixed;
+  top: 56px;
+  right: var(--pad);
+  width: 280px;
+  z-index: 5;
+  margin: 0;
+  padding: 16px;
+  border: 1px solid var(--rule-strong);
+  background: var(--bg);
+  color: var(--text);
+  font-family: var(--font-mono);
+  font-size: var(--fs-14);
+  line-height: 22px;
+  text-align: left;
+  white-space: pre-wrap;
 }
 .script { max-width: 720px; padding: var(--space-7) var(--pad); }
 .script h1 { font-size: var(--fs-48); line-height: var(--lh-52); font-weight: 400; }
