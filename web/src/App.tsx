@@ -745,9 +745,9 @@ export function App() {
                         <div className="result-row"><span>开盘价</span><b>{formatPrice(snap.clearing)} BNB/枚</b></div>
                         <div className="result-row"><span>成交量</span><b>{formatBnb(snap.previewQuote > 0n ? snap.previewQuote : snap.poolQuote)} BNB</b></div>
                         <div className="result-row"><span>入池 BNB</span><b>{formatBnb(snap.poolQuote)} BNB</b></div>
-                        {showToken && snap.token !== ZERO && <Addr label="代币" value={snap.token} />}
-                        {showPool && snap.pool !== ZERO && <Addr label="池子" value={snap.pool} swap={snap.token !== ZERO && !demo?.localFork ? pancakeSwapLink(snap.token) : ""} />}
-                        {vault && vault !== ZERO && <Addr label="金库" value={vault} />}
+                        {showToken && snap.token !== ZERO && <Addr label="代币" value={snap.token} local={!!demo?.localFork} />}
+                        {showPool && snap.pool !== ZERO && <Addr label="池子" value={snap.pool} local={!!demo?.localFork} swap={snap.token !== ZERO && !demo?.localFork ? pancakeSwapLink(snap.token) : ""} />}
+                        {vault && vault !== ZERO && <Addr label="金库" value={vault} local={!!demo?.localFork} />}
                         {vaultBal !== null && <div className="result-row"><span>金库余额</span><b>{formatBnb(vaultBal)} BNB</b></div>}
                       </div>
                     ) : (
@@ -1147,15 +1147,17 @@ function quoteLine(snap: Snap | null, budgetWei: bigint | null, priceWei: bigint
   return `按当前清算价可得约 ${formatTokens(tokensFor(budgetWei, clearing))} 枚。`;
 }
 
-function Addr({ label, value, swap }: { label: string; value: string; swap?: string }) {
+function Addr({ label, value, swap, local }: { label: string; value: string; swap?: string; local?: boolean }) {
   return (
     <div className="addr show">
       <span className="addr-label">{label}</span>
       <span className="addr-value">{value.slice(0, 6)}…{value.slice(-4)}</span>
       <button type="button" aria-label={`复制${label}地址`} onClick={() => navigator.clipboard.writeText(value)}>复制</button>
-      <a href={`https://testnet.bscscan.com/address/${value}`} target="_blank" rel="noreferrer">
-        BscScan
-      </a>
+      {!local && (
+        <a href={`https://testnet.bscscan.com/address/${value}`} target="_blank" rel="noreferrer">
+          BscScan
+        </a>
+      )}
       {swap && (
         <a href={swap} target="_blank" rel="noreferrer">
           PancakeSwap
