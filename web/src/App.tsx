@@ -368,7 +368,10 @@ export function App() {
     if (block >= snap.end - 20n) return "closed";
     return "open";
   }, [snap, block]);
-  const phase = params.get("preview") || chainPhase;
+  const preview = params.get("preview");
+  const forced = preview && ["wait", "open", "closed", "ready", "done", "failed"].includes(preview) ? preview : null;
+  const phase = forced ?? chainPhase;
+  const previewing = forced != null && forced !== chainPhase;
 
   const clearingNow = snap && snap.status === 1 ? snap.clearing : snap?.previewOk ? snap.previewPrice : 0n;
 
@@ -795,7 +798,7 @@ export function App() {
                     <p className="fail-line">已募还没到保留所需，清算价还没形成。</p>
                   )}
                 </div>
-                <div className="axis-note">{params.get("preview") ? "画面预览。链上这场不是这个阶段。" : ""}</div>
+                <div className="axis-note">{previewing ? "画面预览。链上这场不是这个阶段。" : ""}</div>
               </div>
               <div className="plot-wrap">
                 <PlotStage
