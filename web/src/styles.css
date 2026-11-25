@@ -368,7 +368,11 @@ svg.plot { display: block; touch-action: none; background: var(--bg); }
 .bid.head { height: 24px; color: var(--muted); border-top: 0; }
 .bid.out { color: var(--muted); }
 .bid.in { box-shadow: inset 2px 0 0 var(--accent); }
-.bid.mid { box-shadow: inset 2px 0 0 var(--accent); }
+.bid.mid {
+  background-image: repeating-linear-gradient(to bottom, var(--accent) 0 3px, transparent 3px 6px);
+  background-size: 2px 100%;
+  background-repeat: no-repeat;
+}
 .bid.fresh { animation: bid-in 1200ms linear both; }
 .src-tag {
   margin-left: var(--space-2);

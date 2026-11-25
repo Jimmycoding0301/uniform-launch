@@ -38,7 +38,7 @@ function labels(plot, floor, clearing, yourPrice, width, height) {
 }
 
 const sets = [];
-for (let n = 0; n < 5; n++) {
+for (let n = 0; n < 20; n++) {
   const count = 3 + (n * 3) % 8;
   const bids = [];
   let price = 80_000_000_000_000n - BigInt(n) * 5_000_000_000_000n;
@@ -55,7 +55,7 @@ sets.push([
   { budget: 3n * 10n ** 18n, maxPrice: 11_000_000_000_000n },
   { budget: 1n * 10n ** 18n, maxPrice: 10_500_000_000_000n },
 ]);
-for (const [width, height] of [[920, 288], [358, 260]]) {
+for (const [width, height] of [[920, 288], [358, 260], [343, 220]]) {
   for (const bids of sets) {
     const floor = 10_000_000_000_000n;
     const clearing = bids[Math.floor(bids.length / 2)].maxPrice;
@@ -70,7 +70,7 @@ for (const [width, height] of [[920, 288], [358, 260]]) {
     }
   }
 }
-console.log("五组出价的标注都不出图、不重叠");
+console.log("二十组出价的标注都不出图、不重叠");
 
 const { chromium } = await import("playwright");
 const browser = await chromium.launch();
