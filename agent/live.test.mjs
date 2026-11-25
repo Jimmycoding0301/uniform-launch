@@ -61,6 +61,14 @@ assert.match(low.out, /0\.01 到 100/);
 
 const early = run(["settle-tx"]);
 assert.match(early.out, /还没到结算/);
+const ready = spawnSync("node", ["cli.mjs", "settle-tx", "--json", "--launcher", "0xdA237694120AFC09f2005b0F00dAfA70974ABe82", "--rpc", rpc], {
+  cwd: new URL(".", import.meta.url).pathname,
+  encoding: "utf8",
+});
+const readyJson = JSON.parse(ready.stdout);
+assert.equal(readyJson.ok, true);
+assert.equal(readyJson.data, "0x11da60b4");
+assert.match(readyJson.instruction, /8000000/);
 const claim = run(["claim-tx"]);
 assert.match(claim.out, /现在不能领取/);
 const refund = run(["refund-tx"]);
