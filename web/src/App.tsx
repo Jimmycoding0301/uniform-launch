@@ -869,8 +869,7 @@ function Empty() {
       </div>
       <div className="plot-wrap empty-plot">
         <svg className="plot" viewBox="0 0 640 360" preserveAspectRatio="none" aria-hidden="true">
-          <line className="axis" x1="78" y1="18" x2="78" y2="332" />
-          <line className="axis" x1="78" y1="332" x2="622" y2="332" />
+          <line className="baseline" x1="78" y1="332" x2="622" y2="332" />
         </svg>
         <div className="empty">
           <p><Zh text="还没有这场拍卖。" /></p>
