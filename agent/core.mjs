@@ -27,7 +27,7 @@ export function formatBnb(wei) {
 }
 
 function clientOf(rpc) {
-  return createPublicClient({ transport: http(rpc) });
+  return createPublicClient({ transport: http(rpc, { timeout: 8_000 }) });
 }
 
 function addr(value) {
