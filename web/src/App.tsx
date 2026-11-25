@@ -792,7 +792,7 @@ export function App() {
                   </div>
                   {failed && <p className="fail-line"><Zh text="未达保留价，出价全额退回。" /></p>}
                 </div>
-                <div className="axis-note" />
+                <div className="axis-note">{params.get("preview") ? "画面预览。链上这场不是这个阶段。" : ""}</div>
               </div>
               <div className="plot-wrap">
                 <PlotStage
