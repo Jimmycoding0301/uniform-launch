@@ -220,6 +220,12 @@ export function App() {
     window.addEventListener("keydown", onKey);
     return () => window.removeEventListener("keydown", onKey);
   }, [demoOn]);
+  useEffect(() => {
+    setHashOpen(false);
+    setHashNote("");
+    setHashReceipt(null);
+    setHashInput("");
+  }, [scene]);
 
   const seenLauncher = useRef("");
   useEffect(() => {
