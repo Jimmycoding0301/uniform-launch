@@ -92,8 +92,10 @@ SPACE ID 文档：[Agent ID](https://docs.space.id/agent-id)。BNB 主网合约 
 
 装在仓库 `.agents/skills/`。
 
-- `npx skills add nextlevelbuilder/ui-ux-pro-max-skill` 写进 `.agents/skills/ui-ux-pro-max`，同一次还带上了 `banner-design`、`brand`、`design`、`design-system`、`slides`、`ui-styling`。
-- `npx skills add anthropics/skills --skill frontend-design` 写进 `.agents/skills/frontend-design`。
+- `ui-ux-pro-max` 在 `.agents/skills/ui-ux-pro-max`。
+- `frontend-design` 在 `.agents/skills/frontend-design`。
+
+锁定文件是 `skills-lock.json`。仓库里只留这两个技能。
 
 ## 本地页面
 

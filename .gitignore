@@ -10,3 +10,5 @@ web/public/demo.json
 __pycache__/
 *.pyc
 .coverage
+*.mp4
+*.webm
