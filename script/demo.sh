@@ -9,6 +9,9 @@ WEB="http://127.0.0.1:4317"
 if ! cast block-number --rpc-url "$ANVIL_RPC" >/dev/null 2>&1; then
   bash script/local-fork.sh
 fi
+if [ ! -d web/node_modules ]; then
+  (cd web && npm ci)
+fi
 if ! curl -sf -o /dev/null "$WEB"; then
   (cd web && npm run dev -- --host 0.0.0.0 --port 4317 >/tmp/uniform-web.log 2>&1 &)
   for _ in $(seq 1 30); do

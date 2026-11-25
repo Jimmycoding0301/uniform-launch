@@ -103,3 +103,5 @@ Wed Nov 25 08:34:50 PM UTC 2026
 模拟的中文短句给成交枚数加了千分位，和页面一样。
 Wed Nov 25 08:35:25 PM UTC 2026
 代理命令的说明补上先 npm ci。没装依赖时 node 会直接找不到 viem。
+Wed Nov 25 08:35:33 PM UTC 2026
+demo.sh 在 web/node_modules 不存在时先 npm ci。现在依赖已在，命令只打印两个地址。
