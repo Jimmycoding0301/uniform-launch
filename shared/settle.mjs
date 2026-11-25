@@ -52,8 +52,9 @@ export function settle(sellAmount, floorPrice, bids) {
     return { ok: false, clearingPrice: 0n, poolQuote: 0n, fills };
   }
   const order = [];
-  for (const b of bids) {
-    if (b.maxPrice >= floorPrice && b.budget > 0n) order.push(b.index);
+  for (let i = 0; i < bids.length; i++) {
+    const b = bids[i];
+    if (b.maxPrice >= floorPrice && b.budget > 0n) order.push(i);
   }
   if (order.length === 0) return { ok: false, clearingPrice: 0n, poolQuote: 0n, fills };
   sortOrder(bids, order);
