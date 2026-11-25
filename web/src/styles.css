@@ -38,6 +38,9 @@ body {
   left: var(--space-3);
   top: var(--space-2);
   transform: translateY(-140%);
+  display: inline-flex;
+  align-items: center;
+  min-height: 44px;
   background: var(--accent);
   color: var(--accent-ink);
   padding: var(--space-2) var(--space-3);
@@ -492,6 +495,8 @@ svg.plot { display: block; touch-action: none; background: var(--bg); }
   .brand-desk { display: none; }
   .plot-wrap, .stage { height: 260px; min-height: 260px; flex: none; }
   .window input, .seg button, .hash-toggle, .text-btn, button.primary { scroll-margin-bottom: 96px; }
+  .seg, .seg button { height: 44px; }
+  .hash-toggle, .script-link { min-height: 44px; display: inline-flex; align-items: center; }
   .plaque .row { display: flex; flex-wrap: wrap; grid-template-columns: none; }
   .plaque .addr { margin-right: auto; }
   .bid { height: 40px; }
