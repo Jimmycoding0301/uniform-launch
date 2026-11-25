@@ -69,7 +69,8 @@ contract LocalForkScript is Script {
         }
         UniformLauncher doneL = _create(portal, launcherFactory, fee, 1e13, 200, "DONE9", bytes32("done9"));
         vm.startBroadcast(alice);
-        doneL.bid{value: 5 ether}(1e16, 0, uint160(alice));
+        // 40 BNB 单笔成交后清算价是 0.00008，入池 40。和演示稿里这一幕看到的数一样。
+        doneL.bid{value: 40 ether}(1e16, 0, uint160(alice));
         vm.stopBroadcast();
         UniformLauncher failL = _create(portal, launcherFactory, fee, 1 ether, 200, "FAIL9", bytes32("fail9"));
         vm.startBroadcast(bob);

@@ -35,6 +35,11 @@ assert.equal(one.ok, true);
 assert.equal(one.fills[0].tokens, SELL_AMOUNT);
 assert.equal(one.poolQuote, 20n * W);
 
+const launched = settle(SELL_AMOUNT, floor, [{ index: 0n, budget: 40n * W, maxPrice: 10n ** 16n }]);
+assert.equal(launched.ok, true);
+assert.equal(launched.clearingPrice, 80000000000000n);
+assert.equal(launched.poolQuote, 40n * W);
+
 const minPool = 4335714285714285715n;
 const exact = settle(SELL_AMOUNT, 1n, [{ index: 0n, budget: minPool, maxPrice: W }]);
 const marginal = settle(100n * W, 1n * W, [
