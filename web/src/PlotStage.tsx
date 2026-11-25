@@ -235,11 +235,15 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
         <text className="tick unit" x={plot.left - 8} y={12} textAnchor="end">
           BNB/枚
         </text>
-        {plot.xTicks.map((tick) => (
-          <text className="tick x-tick" key={tick.text + tick.x} x={tick.x} y={plot.bottom + 16} textAnchor={tick.x === plot.left ? "start" : "end"}>
-            {tick.text}
-          </text>
-        ))}
+        {plot.xTicks.map((tick, index) => {
+          const next = plot.xTicks[index + 1];
+          const crowded = next != null && next.x - tick.x < 84 && tick.x !== plot.left;
+          return (
+            <text className="tick x-tick" key={tick.text + tick.x} x={tick.x} y={crowded ? plot.bottom - 4 : plot.bottom + 16} textAnchor={tick.x === plot.left ? "start" : tick.x > plot.right - 8 ? "end" : "middle"}>
+              {tick.text}
+            </text>
+          );
+        })}
         <clipPath id="drawClip">
           <rect className="draw-rect" x="0" y="0" width={vw} height={vh} />
         </clipPath>
@@ -272,7 +276,12 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
             <text className="badge" x={plot.right - 4} y={plot.clearingY - 8} textAnchor="end">
               清算价 {formatPrice(clearing ?? 0n)}
             </text>
-            <text className="tick" x={(plot.crossX ?? plot.left) + 6} y={Math.min(plot.bottom - 8, (plot.clearingY ?? plot.bottom) + 16)}>
+            <text
+              className="tick"
+              x={(plot.right - (plot.crossX ?? plot.left)) < 96 ? (plot.crossX ?? plot.left) - 6 : (plot.crossX ?? plot.left) + 6}
+              y={Math.min(plot.bottom - 16, (plot.clearingY ?? plot.bottom) + 16)}
+              textAnchor={(plot.right - (plot.crossX ?? plot.left)) < 96 ? "end" : "start"}
+            >
               成交 {formatBnb(plot.filled)} BNB
             </text>
             <g className={pulse ? "clear-dot once" : "clear-dot"} transform={`translate(${plot.crossX ?? plot.left} ${plot.clearingY})`}>

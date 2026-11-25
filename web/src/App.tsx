@@ -180,6 +180,9 @@ export function App() {
     const client = createPublicClient({ transport: http(rpc) });
     let stop = false;
     const load = async () => {
+      const slow = window.setTimeout(() => {
+        if (!stop) setRpcError(true);
+      }, 3000);
       try {
         const b = await client.getBlockNumber();
         const [status, floor, clearing, softCap, start, end, token, pool, poolQuote, vaultFactory, preview, fills] = await Promise.all([
@@ -272,6 +275,8 @@ export function App() {
         setSnap((prev) => (prev && sameSnap(prev, next) ? prev : next));
       } catch {
         if (!stop) setRpcError(true);
+      } finally {
+        window.clearTimeout(slow);
       }
     };
     load();
@@ -302,6 +307,40 @@ export function App() {
   }, [status, reduced]);
 
   const introOnce = useRef(false);
+  const skelSince = useRef(0);
+  const [holdSkel, setHoldSkel] = useState(false);
+  useEffect(() => {
+    if (!launcher || snap) {
+      if (!skelSince.current) {
+        setHoldSkel(false);
+        return;
+      }
+      const wait = Math.max(0, 400 - (Date.now() - skelSince.current));
+      const timer = window.setTimeout(() => {
+        skelSince.current = 0;
+        setHoldSkel(false);
+      }, wait);
+      return () => window.clearTimeout(timer);
+    }
+    const timer = window.setTimeout(() => {
+      skelSince.current = Date.now();
+      setHoldSkel(true);
+    }, 200);
+    return () => window.clearTimeout(timer);
+  }, [launcher, snap]);
+  useEffect(() => {
+    const onFocus = (event: FocusEvent) => {
+      const el = event.target;
+      if (!(el instanceof HTMLElement) || el.closest("button.primary")) return;
+      const dock = document.querySelector("button.primary");
+      if (!dock) return;
+      const rect = el.getBoundingClientRect();
+      const dockTop = dock.getBoundingClientRect().top;
+      if (rect.bottom > dockTop - 12) el.scrollIntoView({ block: "center", inline: "nearest" });
+    };
+    document.addEventListener("focusin", onFocus);
+    return () => document.removeEventListener("focusin", onFocus);
+  }, []);
   useEffect(() => {
     if (!snap || reduced || introOnce.current) return;
     introOnce.current = true;
@@ -386,8 +425,8 @@ export function App() {
   }, [launcher, phase, rpc, snap]);
 
   async function copyInstruction() {
-    if (!snap || !launcher) return;
-    const picked = snap.sources[sourceIndex];
+    if (!launcher) return;
+    const picked = snap?.sources[sourceIndex];
     const sourceName = picked ? sourceTag(picked.sourceId) || `来源 ${sourceIndex}` : `来源 ${sourceIndex}`;
     const autoAgent = !picked || sourceTag(picked.sourceId) !== "8004";
     const agentLine = autoAgent
@@ -396,7 +435,7 @@ export function App() {
         ? agentIdInput.trim()
         : "（你在 ERC-8004 登记的编号）";
     const action =
-      phase === "open"
+      phase === "open" || !snap
         ? `data: bid(uint256,uint8,uint256)\n- maxPrice wei: ${priceWei}\n- 最高价：${priceWei ? formatPrice(priceWei) : ""} BNB/枚\n- sourceIndex: ${sourceIndex}\n- 来源：${sourceName}\n- agentId: ${agentLine}\n- agentId 说明：Agent ID 不用手填，按上面的规则从钱包地址得出。8004 填官方 Identity Registry 的编号，并且这个钱包必须是 ownerOf(agentId) 或 getAgentWallet(agentId)。同一来源的同一个 agentId 只能出一笔。\n- value wei: ${budgetWei}\n- 预算：${budget} BNB`
         : phase === "ready"
           ? `data: settle()\n- value wei: 0\n- gas limit: ${SETTLE_GAS_LIMIT}\n\ngas limit 固定为 ${SETTLE_GAS_LIMIT}，不要用节点估算值。估算往往只有一两百万。进入 settle 时如果剩余 gas 低于 ${MIN_SETTLE_GAS}，合约直接回滚，这场拍卖保持开放，不会被记成失败。${SETTLE_GAS_LIMIT} 扣掉基础 gas 后仍高于这条线，也够一次发射。`
@@ -505,14 +544,40 @@ export function App() {
           {snap?.sources.some((item) => item.standIn) ? <span className="meta-line"><Zh text="测试网 Agent ID 为替身" /></span> : null}
           <span className="meta-line">{demo?.localFork ? <Zh text="本地分叉，不是测试网" /> : "BSC 测试网"}</span>
           {block > 0n && <span className="meta-line">区块 {groupFull(block)}</span>}
-          {rpcError && snap ? <span className="meta-line"><Zh text="刚刚没刷新成功，正在重试。" /></span> : null}
+          {rpcError ? <span className="meta-line"><Zh text="刚刚没刷新成功，正在重试。" /></span> : null}
         </span>
       </header>
       <p className="status-line"><Zh text={mobileStatus(demo?.localFork, snap?.sources.some((item) => item.standIn))} /></p>
       <section className="screen" id="desk">
         {!launcher && !rpcError && params.get("network") === "testnet" && <TestnetBoard />}
         {!launcher && !rpcError && params.get("network") !== "testnet" && <Empty />}
-        {launcher && !snap && !rpcError && <Skeleton />}
+        {launcher && !snap && (rpcError || holdSkel) && (
+          <div className="grid">
+            <div className="col-form">
+              <h1>同价发射</h1>
+              <p className="en">Uniform Launch</p>
+              <p className="user-line"><Zh text={USER_LINE} /></p>
+              <form className="ticket" onSubmit={(event) => { event.preventDefault(); void copyInstruction(); }}>
+                <label htmlFor="budget">预算</label>
+                <div className="window">
+                  <input id="budget" value={budget} inputMode="decimal" autoComplete="off" spellCheck={false} onChange={(e) => setBudget(e.target.value)} />
+                  <span className="unit">BNB</span>
+                </div>
+                <label htmlFor="price">最高价</label>
+                <div className="window">
+                  <input id="price" value={maxPrice} inputMode="decimal" autoComplete="off" spellCheck={false} onChange={(e) => setMaxPrice(e.target.value)} />
+                  <span className="unit">BNB/枚</span>
+                </div>
+                <p className="help">链上读数还没到。指令里的金额用你现在填的。</p>
+                <button className="primary" type="submit">{copied ? "已复制" : "复制出价指令"}</button>
+                <p className="risk"><Zh text={RISK_LINE} /></p>
+              </form>
+            </div>
+            <div className="col-chart">
+              <div className="skel plot" />
+            </div>
+          </div>
+        )}
         {rpcError && !snap && <p className="user-line"><Zh text="这场合约现在读不到。过几秒会再试。" /></p>}
         {snap && (
           <div className="grid">
