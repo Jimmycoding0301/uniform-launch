@@ -911,7 +911,7 @@ function BidTable({ rows, phase, clearing }: { rows: Row[]; phase: string; clear
         return (
           <div className={`${fresh.has(id) ? "bid fresh" : "bid"} ${mark.label === "价内" || mark.label === "待领取" ? "in" : mark.label === "边际" ? "mid" : mark.label === "价外" ? "out" : ""}`} key={row.agent}>
             <i className={mark.dot} />
-            <span className={label.named ? "agent-name" : "agent-addr"}>
+            <span className={label.named ? "agent-name" : "agent-addr"} title={row.agent}>
               {label.text}
               {sourceTag(row.sourceId) && <i className="src-tag">{sourceTag(row.sourceId)}</i>}
             </span>
