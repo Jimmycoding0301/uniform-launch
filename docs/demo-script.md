@@ -23,11 +23,11 @@
 | 0:00–0:15 | Open `/?demo=1` and stay on scene 1 | On a new listing, bots and snipers buy the cheap price in the first block. Later buyers pay more. On a curve, the first fill and the last fill can be 1.8 times apart. | Open auction, clearing price and ladder |
 | 0:15–0:45 | Point at the ladder and the reserve. Do not click yet | An agent sends a limit and a budget. At the end there is one clearing, and every fill pays it. If the pool is too small, everyone is refunded. A success launches one Flap pool, and all tax goes to the vault. | Still scene 1 |
 | 0:45–1:00 | Stay on scene 1 | This is the live book. The line is the clearing price. The steps are demand. | Clearing price 0.00002 and the ladder |
-| 1:00–1:15 | Next scene. Point at the budget and the copy button | Enter a budget and a limit, then hand this text to the agent. The page does not sign. | Scene 2, copy instruction |
-| 1:15–1:30 | Next scene | The agent simulates first. Price, tokens, spend and refund are read from the chain. | Scene 3, the receipt |
-| 1:30–1:45 | Next scene | After the window, one settlement. Open price, pool and vault are here. | Scene 4, launched, 40 BNB in the pool |
-| 1:45–2:00 | Next scene | If the pool is short, there is no token. Everyone gets the full budget back. | Scene 5, no fill |
-| 2:00–2:15 | Next scene | On the same bids the uniform ratio is 1 and the curve is 1.8. This is a simulation. | Scene 6, three lines |
+| 1:00–1:15 | Click 下一幕. Point at 预算 and 复制出价指令 | Enter a budget and a limit, then hand this text to the agent. The page does not sign. | Scene 2, copy instruction |
+| 1:15–1:30 | Click 下一幕 | The agent simulates first. Price, tokens, spend and refund are read from the chain. | Scene 3, the receipt |
+| 1:30–1:45 | Click 下一幕 | After the window, one settlement. Open price, pool and vault are here. | Scene 4, launched, 40 BNB in the pool |
+| 1:45–2:00 | Click 下一幕 | If the pool is short, there is no token. Everyone gets the full budget back. | Scene 5, no fill |
+| 2:00–2:15 | Click 下一幕 | On the same bids the uniform ratio is 1 and the curve is 1.8. This is a simulation. | Scene 6, three lines |
 | 2:15–2:30 | Stay on scene 6 | The component passed Flap's checker. The testnet contracts are verified. An agent can call the MCP server. Next we wait for Flap to enable the factory. | The comparison stays on screen |
 
 ## 出事预案
