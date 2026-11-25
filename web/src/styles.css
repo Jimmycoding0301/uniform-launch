@@ -241,6 +241,7 @@ button.primary {
   cursor: pointer;
 }
 button.primary:hover:not(:disabled) { background: var(--accent-hover); }
+button.primary:focus-visible { outline: 2px solid var(--text); outline-offset: 3px; }
 button.primary:active:not(:disabled) { transform: translateY(1px); box-shadow: var(--press-shadow); }
 button.primary:disabled { opacity: 0.4; cursor: default; }
 .ticket { display: flex; flex-direction: column; }
