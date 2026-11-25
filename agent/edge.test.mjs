@@ -86,4 +86,18 @@ assert.equal(dust.poolQuote, 3n * W);
 const empty = settle(100n * W, 1n * W, []);
 assert.equal(empty.ok, false);
 
-console.log("边界：32 笔、同价、一笔、最小入池、边际、前缀、低于保留价、余数、空场，都通过");
+const zeroBudget = settle(SELL_AMOUNT, floor, [
+  { index: 0n, budget: 0n, maxPrice: 10n ** 16n },
+  { index: 1n, budget: 20n * W, maxPrice: 10n ** 16n },
+]);
+assert.equal(zeroBudget.ok, true);
+assert.equal(zeroBudget.fills[0].tokens, 0n);
+assert.equal(zeroBudget.fills[0].refund, 0n);
+assert.equal(zeroBudget.fills[1].tokens, SELL_AMOUNT);
+
+const zeroFloor = settle(SELL_AMOUNT, 0n, [{ index: 0n, budget: 20n * W, maxPrice: 10n ** 16n }]);
+assert.equal(zeroFloor.ok, false);
+assert.equal(zeroFloor.fills[0].refund, 20n * W);
+assert.throws(() => settle(0n, floor, [{ index: 0n, budget: W, maxPrice: W }]));
+
+console.log("边界：32 笔、同价、一笔、最小入池、边际、前缀、低于保留价、余数、空场、零预算、零保留价、零出售，都通过");
