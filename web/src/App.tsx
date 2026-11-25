@@ -213,7 +213,7 @@ export function App() {
         return;
       }
       const target = event.target;
-      if (target instanceof HTMLElement && target.closest("input, textarea")) return;
+      if (target instanceof HTMLElement && target.closest("input, textarea, [role=radiogroup]")) return;
       if (event.key === "ArrowRight") setScene((n) => Math.min(SCENES.length - 1, n + 1));
       if (event.key === "ArrowLeft") setScene((n) => Math.max(0, n - 1));
     };
