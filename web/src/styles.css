@@ -527,7 +527,7 @@ svg.plot { display: block; touch-action: none; background: var(--bg); }
   }
 }
 .script { max-width: 720px; padding: var(--space-7) var(--pad); }
-.script h1 { font-size: var(--fs-36); line-height: var(--lh-40); font-weight: 400; }
-.lede, .script li { font-size: var(--fs-14); line-height: var(--lh-22); color: var(--text-2); }
+.script h1 { font-size: var(--fs-48); line-height: var(--lh-52); font-weight: 400; }
+.lede, .script li, .script h2 { font-size: var(--fs-14); line-height: var(--lh-22); color: var(--text-2); font-weight: 500; }
 .script ol { display: grid; gap: var(--space-4); padding: 0; list-style: none; }
 .when { color: var(--accent); font-family: var(--font-mono); font-size: var(--fs-12); line-height: var(--lh-16); }

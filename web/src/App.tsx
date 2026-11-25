@@ -606,7 +606,6 @@ export function App() {
             </div>
           </div>
         )}
-        {rpcError && !snap && <p className="user-line"><Zh text="这场合约现在读不到。过几秒会再试。" /></p>}
         {snap && (
           <div className="grid">
             <div className="brand-mobile">
