@@ -9,3 +9,5 @@ Wed Nov 25 07:30:18 PM UTC 2026
 v3 模拟器。shared/settle.mjs 按 UniformSettle 逐行移植。forge test --match-contract UniformSimulatorTest 通过，20 组向量和库一致。node agent/settle.test.mjs 通过。网页曲线只负责画，不算清算价，所以没有第二份算法。
 Wed Nov 25 07:34:23 PM UTC 2026
 v4 代理接口。status、simulate、identity、bid-tx、settle-tx、claim-tx、refund-tx 都对着本机分叉跑出真实结果。MCP initialize、tools/list、tools/call simulate_bid 通过。扫描没有签名或广播。
+Wed Nov 25 07:40:19 PM UTC 2026
+v5 端到端。UniformE2EForkTest 两条新测试通过。e2e-fork.sh 从零跑完七个阶段，金库增加 27516256919450703 wei，owner 增加相同数额。公共测试网不广播时停在未开权限；带广播时脚本拒绝。

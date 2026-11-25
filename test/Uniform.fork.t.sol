@@ -421,6 +421,18 @@ contract UniformForkTest is Test {
         internal
         returns (UniformLauncher launcher)
     {
+        address[] memory sources = new address[](1);
+        sources[0] = address(new BinanceAgentIdSource(address(new PermissiveAgentDirectory())));
+        return _launch(floor, duration, symbol, seed, sources);
+    }
+
+    function _launch(
+        uint256 floor,
+        uint64 duration,
+        string memory symbol,
+        bytes32 seed,
+        address[] memory sources
+    ) internal returns (UniformLauncher launcher) {
         LaunchConfig memory c;
         c.name = "Tongjia";
         c.symbol = symbol;
@@ -428,8 +440,7 @@ contract UniformForkTest is Test {
         c.salt = _mineSalt(seed);
         c.floorPrice = floor;
         c.durationBlocks = duration;
-        c.identitySources = new address[](1);
-        c.identitySources[0] = address(new BinanceAgentIdSource(address(new PermissiveAgentDirectory())));
+        c.identitySources = sources;
         uint256 fee = portal.SALT_LOCK_FEE();
         if (fee == 0) fee = PORTAL_FEE_FALLBACK;
         vm.prank(creator);

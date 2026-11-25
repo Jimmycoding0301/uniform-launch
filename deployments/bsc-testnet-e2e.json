@@ -1,0 +1,53 @@
+{
+  "launcher": "0x67d6d25bcfc55c906B9628a31F96E81EFf7682e3",
+  "createFee": "5000000000000000",
+  "txs": {
+    "create": [
+      "0x6297027a5a6dcea5779bc6c31ddf420403724224696eb64681d11a3026c726ae"
+    ],
+    "bid-alice": [
+      "0xf1b1bcaeb25da50595b43eac90a939482e7ad36ae967ac1f5f72ecaa716eb300",
+      "0x4a4bedd41896771189722f19af6552cca5b4a82f5de476f7e62991006a545d1a"
+    ],
+    "bid-bob": [
+      "0x36b6d0d425652c936431c355b2b45ae194e8174830935a169d5e531a7f522a3a",
+      "0x3cb3a41fd55e129bfd3ce460227b589d71d826ccd7a135258bfac990305d2199"
+    ],
+    "bid-carol": [
+      "0xdf868888c03d816ed5fee42b8f023e495c0c5783881c652416eb8f99b4195420",
+      "0x947d9bb5f7e2a08522915eb125d9a5e444f036b671f7deb10d95f0093e1e955b"
+    ],
+    "settle": [
+      "0xd37d8c76bb7b3bb23778f67f837200d7d9195250f8b70baedb81f52f7451b853"
+    ],
+    "claim": [
+      "0x380ec6858fa06cb5cb200ccddb10e950f99b6084c331a4fa6d91b63be973d186",
+      "0x21e61ed105cb8717a94dee2547b7621ee9e6df3e03ee290cd3cce9992819601b",
+      "0xffa682b3f0b2e2ed75956f6b84151fa7696231a0b4da5dce71f59872723fb7e8"
+    ],
+    "trade": [
+      "0x9b8437e7bb9c46d9d5e75e6d5af87d1798ecd071bef8eded7fcb637d52f5c838",
+      "0x34c96fda14062653b2007e77549086fb673e345b3f37a4dceb6aa45a23587dbf",
+      "0xe87893bda6a9132bab37a71a7454289ae74ba82b4a858ec5e2d9fddf884a9f4b",
+      "0x77f98a1498f58b952ed33804cc8364cc5c2af9f2d43f564f69f0a4845b2e3e51"
+    ],
+    "withdraw": [
+      "0x5b9ff2b1acb9b70b13794c23f774f17c773d139a15439fc91c3347561cb24f93"
+    ]
+  },
+  "bidCount": "3",
+  "bobAgentId": "2923",
+  "clearingPrice": "80000000000000",
+  "poolQuote": "40000000000000000000",
+  "token": "0xe70018757F585d9F1C7bbe726F164a48D19f7777",
+  "pool": "0x853fDB01b08bcB0A6Dc2ea21613DbB226018655E",
+  "status": "1",
+  "aliceTokens": "250000000000000000000000",
+  "bobTokens": "250000000000000000000000",
+  "carolTokens": "0",
+  "vault": "0xbadFB4C7c18003a509Ef2777c42dA410FA479c33",
+  "vaultBefore": "0",
+  "vaultAfter": "27516256919450703",
+  "withdrawn": "27516256919450703",
+  "ownerDelta": "27516256919450703"
+}
