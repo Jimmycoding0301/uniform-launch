@@ -22,7 +22,7 @@ function labels(plot, floor, clearing, yourPrice, width, height) {
   if (plot.clearingY != null) {
     out.push(box(`清算价 ${formatPrice(clearing)}`, plot.right - 4, Math.max(14, plot.clearingY - 8), "end"));
     const near = plot.right - (plot.crossX ?? plot.left) < 96;
-    const x = near ? (plot.crossX ?? plot.left) - 6 : (plot.crossX ?? plot.left) + 6;
+    const x = near ? (plot.crossX ?? plot.left) - 10 : (plot.crossX ?? plot.left) + 10;
     const y = Math.min(plot.bottom - 16, plot.clearingY + 16);
     out.push(box(`成交 ${formatBnb(plot.filled)} BNB`, x, y, near ? "end" : "start"));
   }

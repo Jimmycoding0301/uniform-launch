@@ -281,7 +281,7 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
             </text>
             <text
               className="tick"
-              x={(plot.right - (plot.crossX ?? plot.left)) < 96 ? (plot.crossX ?? plot.left) - 6 : (plot.crossX ?? plot.left) + 6}
+              x={(plot.right - (plot.crossX ?? plot.left)) < 96 ? (plot.crossX ?? plot.left) - 10 : (plot.crossX ?? plot.left) + 10}
               y={Math.min(plot.bottom - 16, (plot.clearingY ?? plot.bottom) + 16)}
               textAnchor={(plot.right - (plot.crossX ?? plot.left)) < 96 ? "end" : "start"}
             >
