@@ -925,7 +925,7 @@ export function App() {
       </main>
       {demoOn && (
         <div className="demo-bar">
-          <p>{demoState === "missing" ? "还没有演示场。先跑演示命令。" : `第 ${scene + 1} / ${SCENES.length} 幕 ${SCENES[scene]}`}</p>
+          <p aria-live="polite">{demoState === "missing" ? "还没有演示场。先跑演示命令。" : `第 ${scene + 1} / ${SCENES.length} 幕 ${SCENES[scene]}`}</p>
           <div>
             <button type="button" onClick={() => setScene((n) => Math.max(0, n - 1))} disabled={demoState === "missing" || scene === 0}>上一幕</button>
             <button type="button" className="next" onClick={() => setScene((n) => Math.min(SCENES.length - 1, n + 1))} disabled={demoState === "missing" || scene === SCENES.length - 1}>下一幕</button>
