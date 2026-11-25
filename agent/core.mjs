@@ -246,19 +246,32 @@ function tx(launcher, functionName, args, value) {
 function instruction(kind, launcher, extra) {
   return [
     "在 BNB Smart Chain 测试网操作。链编号 97。",
-    "先确认这是测试网，再确认身份。币安 Agent ID 或 ERC-8004 有一个即可。两个都没有就停。",
-    "不要改金额，不要多发一笔。先用 baw 预览，确认后再执行。",
+    "先做完这三步，缺一步就停止，不要发交易：",
+    "1. 跑 baw wallet chains。确认有 BSC 测试网。没有就停，不要改用 56。",
+    "2. 确认身份。币安 Agent ID 或 ERC-8004 有一个即可。两个都没有就停。",
+    "3. 跑 baw wallet settings。Developer Mode 要开着，余额不能超限。",
+    "然后只准备这一笔。不要改金额，不要多发一笔。先用 baw 预览，确认后再执行。",
     `合约：${launcher}`,
     extra,
     kind,
   ].join("\n");
 }
 
-export async function bidTx(rpc, launcher, budgetText, priceText, sourceIndex, agentId) {
+export async function bidTx(rpc, launcher, budgetText, priceText, sourceIndex, agentId, from) {
   try {
     const budget = parseBnb(budgetText);
     const price = parseBnb(priceText);
     const id = agentIdOf(agentId);
+    if (from) {
+      const balance = await clientOf(rpc).getBalance({ address: addr(from) });
+      if (balance < budget) {
+        return {
+          ok: false,
+          reason: "余额不够",
+          next: `还差 ${formatBnb(budget - balance)} BNB。补足后再生成交易。`,
+        };
+      }
+    }
     const built = tx(launcher, "bid", [price, Number(sourceIndex), id], budget);
     built.instruction = instruction("动作：出价。", launcher, `预算 ${budgetText} BNB，最高价 ${priceText} BNB/枚。`);
     return built;

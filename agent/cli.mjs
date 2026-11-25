@@ -24,7 +24,7 @@ let result;
 if (command === "status") result = await status(rpc, launcher);
 else if (command === "simulate") result = await simulate(rpc, launcher, arg("budget"), arg("max-price"));
 else if (command === "identity") result = await identity(rpc, launcher, arg("address"), arg("agent-id"));
-else if (command === "bid-tx") result = await bidTx(rpc, launcher, arg("budget"), arg("max-price"), arg("source", "0"), arg("agent-id"));
+else if (command === "bid-tx") result = await bidTx(rpc, launcher, arg("budget"), arg("max-price"), arg("source", "0"), arg("agent-id"), arg("address"));
 else if (command === "settle-tx") result = await settleTx(rpc, launcher);
 else if (command === "claim-tx") result = await claimTx(rpc, launcher);
 else if (command === "refund-tx") result = await refundTx(rpc, launcher);

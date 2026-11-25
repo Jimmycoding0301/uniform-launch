@@ -34,6 +34,7 @@
     "Full": "名额已满",
     "NotAgent": "身份不过",
     "AgentAlreadyBid": "这个身份已经出过价",
-    "InsufficientGas": "结算燃料不够"
+    "InsufficientGas": "结算燃料不够",
+    "Balance": "余额不够"
   }
 }

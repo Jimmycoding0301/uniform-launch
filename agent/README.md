@@ -74,11 +74,11 @@ node agent/cli.mjs identity --launcher 0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a
   "valueBnb": "1",
   "gas": "8000000",
   "chainId": 97,
-  "instruction": "在 BNB Smart Chain 测试网操作。链编号 97。\n先确认这是测试网，再确认身份。币安 Agent ID 或 ERC-8004 有一个即可。两个都没有就停。\n不要改金额，不要多发一笔。先用 baw 预览，确认后再执行。\n预算 1 BNB，最高价 0.00003 BNB/枚。\n动作：出价。"
+  "instruction": "在 BNB Smart Chain 测试网操作。链编号 97。\n先做完这三步，缺一步就停止，不要发交易：\n1. 跑 baw wallet chains。确认有 BSC 测试网。没有就停，不要改用 56。\n2. 确认身份。币安 Agent ID 或 ERC-8004 有一个即可。两个都没有就停。\n3. 跑 baw wallet settings。Developer Mode 要开着，余额不能超限。\n然后只准备这一笔。不要改金额，不要多发一笔。先用 baw 预览，确认后再执行。\n合约：0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a1\n预算 1 BNB，最高价 0.00003 BNB/枚。\n动作：出价。"
 }
 ```
 
-`data` 是 `bid(uint256,uint8,uint256)` 的编码，这里不重复整段。
+`data` 是 `bid(uint256,uint8,uint256)` 的编码，这里不重复整段。带 `--address` 时先读这个地址的余额。空地址 `0x00000000000000000000000000000000000000b1` 的原文是：`余额不够。还差 1 BNB。补足后再生成交易。`
 
 ## settle-tx
 

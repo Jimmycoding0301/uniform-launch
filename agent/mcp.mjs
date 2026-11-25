@@ -5,7 +5,7 @@ const tools = [
   { name: "status", description: "读一场拍卖的阶段和读数", schema: { launcher: "string", rpc: "string" } },
   { name: "simulate_bid", description: "模拟加上一笔出价", schema: { launcher: "string", rpc: "string", budget: "string", maxPrice: "string" } },
   { name: "check_identity", description: "检查地址和身份编号", schema: { launcher: "string", rpc: "string", address: "string", agentId: "string" } },
-  { name: "build_bid_tx", description: "生成未签名出价交易", schema: { launcher: "string", rpc: "string", budget: "string", maxPrice: "string", sourceIndex: "string", agentId: "string" } },
+  { name: "build_bid_tx", description: "生成未签名出价交易", schema: { launcher: "string", rpc: "string", budget: "string", maxPrice: "string", sourceIndex: "string", agentId: "string", address: "string" } },
   { name: "build_settle_tx", description: "生成未签名结算交易", schema: { launcher: "string", rpc: "string" } },
   { name: "build_claim_tx", description: "生成未签名领取交易", schema: { launcher: "string", rpc: "string" } },
   { name: "build_refund_tx", description: "生成未签名退款交易", schema: { launcher: "string", rpc: "string" } },
@@ -16,7 +16,7 @@ function schemaOf(tool) {
   const required = [];
   for (const [key, type] of Object.entries(tool.schema)) {
     properties[key] = { type };
-    if (key !== "rpc") required.push(key);
+    if (key !== "rpc" && key !== "address") required.push(key);
   }
   return { type: "object", properties, required };
 }
@@ -27,7 +27,7 @@ async function call(name, args) {
   if (name === "status") return status(rpc, launcher);
   if (name === "simulate_bid") return simulate(rpc, launcher, args.budget, args.maxPrice);
   if (name === "check_identity") return identity(rpc, launcher, args.address, args.agentId);
-  if (name === "build_bid_tx") return bidTx(rpc, launcher, args.budget, args.maxPrice, args.sourceIndex ?? "0", args.agentId);
+  if (name === "build_bid_tx") return bidTx(rpc, launcher, args.budget, args.maxPrice, args.sourceIndex ?? "0", args.agentId, args.address);
   if (name === "build_settle_tx") return settleTx(rpc, launcher);
   if (name === "build_claim_tx") return claimTx(rpc, launcher);
   if (name === "build_refund_tx") return refundTx(rpc, launcher);
