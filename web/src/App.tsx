@@ -813,7 +813,7 @@ export function App() {
                   yourPrice={phase === "open" ? priceWei : null}
                   hideEmpty={phase === "wait"}
                 />
-                {phase === "wait" && <div className="empty">接单还没开始，开始区块 {groupFull(snap.start)}。</div>}
+                {phase === "wait" && <div className="empty note">接单还没开始，开始区块 {groupFull(snap.start)}。</div>}
               </div>
             </div>
             <div className="col-bids">
