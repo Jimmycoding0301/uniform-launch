@@ -21,3 +21,5 @@ Wed Nov 25 07:48:38 PM UTC 2026
 v8 提交材料。README 按评审维度重写，架构三张图，路线图，MIT，env 示例，docker-compose。本环境没有 docker，demo.sh 不依赖它，已打印页面和演示地址。
 Wed Nov 25 07:49:56 PM UTC 2026
 第二次从零跑 e2e-fork.sh。清算价 0.00008，入池 40 BNB，金库和 owner 都是 27516256919450703 wei。证据改成这次的哈希。出价指令和网页同一口径：先确认测试网和身份，baw 预览后再执行。
+Wed Nov 25 07:50:40 PM UTC 2026
+把分叉测试的公共准备抽到 ForkBase。UniformForkTest 和端到端测试各跑各的，不再把同一批分叉测试跑两遍。端到端成功和失败退款仍通过。

@@ -9,10 +9,10 @@ import {BinanceAgentIdSource} from "src/uniform/BinanceAgentIdSource.sol";
 import {Erc8004Source} from "src/uniform/Erc8004Source.sol";
 import {PermissiveAgentDirectory} from "./PermissiveAgentDirectory.sol";
 import {AgentIdentityAddresses} from "src/uniform/AgentIdentityAddresses.sol";
-import {UniformForkTest, IOfficial8004} from "./Uniform.fork.t.sol";
+import {ForkBase, IOfficial8004} from "./Uniform.fork.t.sol";
 
 /// @notice 一条从头到尾的分叉流程：两种身份、一笔低于清算价、领取金额对照清算库、买卖税、owner 提走相同数额。
-contract UniformE2EForkTest is UniformForkTest {
+contract UniformE2EForkTest is ForkBase {
     address internal carol = address(uint160(0xC0DE0005));
 
     function test_e2eSuccessClaimTradeAndWithdraw() public {

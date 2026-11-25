@@ -64,7 +64,7 @@ interface IRouterLike {
 }
 
 /// @notice 对 BSC 测试网 Portal 的只读分叉。没有 BSC_TESTNET_RPC_URL 就跳过。不向活网发交易。
-contract UniformForkTest is Test {
+abstract contract ForkBase is Test {
     uint256 internal constant PORTAL_FEE_FALLBACK = 0.005 ether;
 
     IPortal internal portal;
@@ -110,6 +110,163 @@ contract UniformForkTest is Test {
         vm.stopPrank();
     }
 
+    function _taxLiquidated(address proc) internal view returns (bool) {
+        ITaxProcessorLike t = ITaxProcessorLike(proc);
+        return t.feeQuoteBalance() > 0 || t.marketQuoteBalance() > 0 || t.pendingDividendQuoteTokenBalance() > 0
+            || t.lpQuoteBalance() > 0;
+    }
+
+    function _generateTaxAndDispatch(address token) internal {
+        vm.warp(block.timestamp + 2 days);
+        address proc = ITaxTokenLike(token).taxProcessor();
+        address[] memory buyPath = new address[](2);
+        buyPath[0] = WBNB;
+        buyPath[1] = token;
+        address[] memory sellPath = new address[](2);
+        sellPath[0] = token;
+        sellPath[1] = WBNB;
+        vm.startPrank(trader);
+        IRouterLike(ROUTER).swapExactETHForTokensSupportingFeeOnTransferTokens{value: 8 ether}(
+            0, buyPath, trader, block.timestamp + 600
+        );
+        for (uint256 i; i < 12; ++i) {
+            if (_taxLiquidated(proc)) break;
+            uint256 sellAmt = IERC20(token).balanceOf(trader) * 30 / 100;
+            if (sellAmt == 0) break;
+            IERC20(token).approve(ROUTER, sellAmt);
+            uint256 beforeBal = trader.balance;
+            IRouterSell(ROUTER)
+                .swapExactTokensForETHSupportingFeeOnTransferTokens(sellAmt, 0, sellPath, trader, block.timestamp + 600);
+            uint256 proceeds = trader.balance - beforeBal;
+            if (proceeds > 0) {
+                IRouterLike(ROUTER).swapExactETHForTokensSupportingFeeOnTransferTokens{value: proceeds * 90 / 100}(
+                    0, buyPath, trader, block.timestamp + 600
+                );
+            }
+        }
+        vm.stopPrank();
+        ITaxProcessorLike(proc).dispatch();
+    }
+
+    function _floor(UniformLauncher launcher, uint256 quoteIn)
+        internal
+        view
+        returns (IPortal.GraduationFloorResultV2 memory)
+    {
+        (bool enabled, uint256 price) = portal.launchQuoteConfig(0, address(0));
+        require(enabled && price != 0, "quote config");
+        return portal.graduationFloorV2ForLauncher(
+            IPortal.GraduationFloorParams({
+                quoteToken: address(0),
+                quotePriceUsd: price,
+                poolQuote: quoteIn,
+                poolToken: launcher.POOL_AMOUNT(),
+                totalSupply: launcher.TOTAL_SUPPLY(),
+                vaultFactory: launcher.vaultFactory()
+            }),
+            address(launcher)
+        );
+    }
+
+    function _create8004(bytes32 seed) internal returns (UniformLauncher launcher) {
+        Erc8004Source source = new Erc8004Source(AgentIdentityAddresses.ERC8004_TESTNET);
+        LaunchConfig memory c;
+        c.name = "Tongjia";
+        c.symbol = "E8";
+        c.meta = "bafkreig4y5nwb4izyilbbmiydumvkld446d4k7j4ohg3x3q2lfel3fo4yq";
+        c.salt = _mineSalt(seed);
+        c.floorPrice = 1e13;
+        c.durationBlocks = 200;
+        c.identitySources = new address[](1);
+        c.identitySources[0] = address(source);
+        uint256 fee = portal.SALT_LOCK_FEE();
+        if (fee == 0) fee = PORTAL_FEE_FALLBACK;
+        vm.prank(creator);
+        launcher = UniformLauncher(payable(portal.newLauncher{value: fee}(address(launcherFactory), abi.encode(c))));
+    }
+
+    function _agentWalletDigest(address registry, uint256 agentId, address wallet, address owner, uint256 deadline)
+        internal
+        view
+        returns (bytes32)
+    {
+        bytes32 typehash = keccak256("AgentWalletSet(uint256 agentId,address newWallet,address owner,uint256 deadline)");
+        bytes32 structHash = keccak256(abi.encode(typehash, agentId, wallet, owner, deadline));
+        bytes32 domain = keccak256(
+            abi.encode(
+                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
+                keccak256("ERC8004IdentityRegistry"),
+                keccak256("1"),
+                block.chainid,
+                registry
+            )
+        );
+        return keccak256(abi.encodePacked("\x19\x01", domain, structHash));
+    }
+
+    function _create(uint256 floor, uint64 duration, string memory symbol, bytes32 seed)
+        internal
+        returns (UniformLauncher launcher)
+    {
+        address[] memory sources = new address[](1);
+        sources[0] = address(new BinanceAgentIdSource(address(new PermissiveAgentDirectory())));
+        return _launch(floor, duration, symbol, seed, sources);
+    }
+
+    function _launch(
+        uint256 floor,
+        uint64 duration,
+        string memory symbol,
+        bytes32 seed,
+        address[] memory sources
+    ) internal returns (UniformLauncher launcher) {
+        LaunchConfig memory c;
+        c.name = "Tongjia";
+        c.symbol = symbol;
+        c.meta = "bafkreig4y5nwb4izyilbbmiydumvkld446d4k7j4ohg3x3q2lfel3fo4yq";
+        c.salt = _mineSalt(seed);
+        c.floorPrice = floor;
+        c.durationBlocks = duration;
+        c.identitySources = sources;
+        uint256 fee = portal.SALT_LOCK_FEE();
+        if (fee == 0) fee = PORTAL_FEE_FALLBACK;
+        vm.prank(creator);
+        launcher = UniformLauncher(payable(portal.newLauncher{value: fee}(address(launcherFactory), abi.encode(c))));
+    }
+
+    function _mineSalt(bytes32 seed) internal returns (bytes32 salt) {
+        uint256 start = ++saltNonce << 128;
+        for (uint256 i = start;; ++i) {
+            assembly ("memory-safe") {
+                mstore(0x00, seed)
+                mstore(0x20, i)
+                salt := keccak256(0x00, 0x40)
+            }
+            if (uint16(uint160(Clones.predictDeterministicAddress(TOKEN_IMPL, salt, address(portal)))) == 0x7777) {
+                return salt;
+            }
+        }
+    }
+
+    function _contains(string memory hay, string memory needle) internal pure returns (bool) {
+        bytes memory h = bytes(hay);
+        bytes memory n = bytes(needle);
+        if (n.length > h.length) return false;
+        for (uint256 i; i + n.length <= h.length; ++i) {
+            bool ok = true;
+            for (uint256 j; j < n.length; ++j) {
+                if (h[i + j] != n[j]) {
+                    ok = false;
+                    break;
+                }
+            }
+            if (ok) return true;
+        }
+        return false;
+    }
+}
+
+contract UniformForkTest is ForkBase {
     function test_successLaunchClaimBuyAndWithdrawTax() public {
         UniformLauncher launcher = _create(1e13, 200, "TJ", bytes32(uint256(11)));
         assertEq(portal.getLauncher(address(launcher)).launcherFactory, address(launcherFactory));
@@ -323,158 +480,4 @@ contract UniformForkTest is Test {
         assertEq(uint8(launcher.status()), uint8(UniformLauncher.Status.Succeeded));
     }
 
-    function _taxLiquidated(address proc) internal view returns (bool) {
-        ITaxProcessorLike t = ITaxProcessorLike(proc);
-        return t.feeQuoteBalance() > 0 || t.marketQuoteBalance() > 0 || t.pendingDividendQuoteTokenBalance() > 0
-            || t.lpQuoteBalance() > 0;
-    }
-
-    function _generateTaxAndDispatch(address token) internal {
-        vm.warp(block.timestamp + 2 days);
-        address proc = ITaxTokenLike(token).taxProcessor();
-        address[] memory buyPath = new address[](2);
-        buyPath[0] = WBNB;
-        buyPath[1] = token;
-        address[] memory sellPath = new address[](2);
-        sellPath[0] = token;
-        sellPath[1] = WBNB;
-        vm.startPrank(trader);
-        IRouterLike(ROUTER).swapExactETHForTokensSupportingFeeOnTransferTokens{value: 8 ether}(
-            0, buyPath, trader, block.timestamp + 600
-        );
-        for (uint256 i; i < 12; ++i) {
-            if (_taxLiquidated(proc)) break;
-            uint256 sellAmt = IERC20(token).balanceOf(trader) * 30 / 100;
-            if (sellAmt == 0) break;
-            IERC20(token).approve(ROUTER, sellAmt);
-            uint256 beforeBal = trader.balance;
-            IRouterSell(ROUTER)
-                .swapExactTokensForETHSupportingFeeOnTransferTokens(sellAmt, 0, sellPath, trader, block.timestamp + 600);
-            uint256 proceeds = trader.balance - beforeBal;
-            if (proceeds > 0) {
-                IRouterLike(ROUTER).swapExactETHForTokensSupportingFeeOnTransferTokens{value: proceeds * 90 / 100}(
-                    0, buyPath, trader, block.timestamp + 600
-                );
-            }
-        }
-        vm.stopPrank();
-        ITaxProcessorLike(proc).dispatch();
-    }
-
-    function _floor(UniformLauncher launcher, uint256 quoteIn)
-        internal
-        view
-        returns (IPortal.GraduationFloorResultV2 memory)
-    {
-        (bool enabled, uint256 price) = portal.launchQuoteConfig(0, address(0));
-        require(enabled && price != 0, "quote config");
-        return portal.graduationFloorV2ForLauncher(
-            IPortal.GraduationFloorParams({
-                quoteToken: address(0),
-                quotePriceUsd: price,
-                poolQuote: quoteIn,
-                poolToken: launcher.POOL_AMOUNT(),
-                totalSupply: launcher.TOTAL_SUPPLY(),
-                vaultFactory: launcher.vaultFactory()
-            }),
-            address(launcher)
-        );
-    }
-
-    function _create8004(bytes32 seed) internal returns (UniformLauncher launcher) {
-        Erc8004Source source = new Erc8004Source(AgentIdentityAddresses.ERC8004_TESTNET);
-        LaunchConfig memory c;
-        c.name = "Tongjia";
-        c.symbol = "E8";
-        c.meta = "bafkreig4y5nwb4izyilbbmiydumvkld446d4k7j4ohg3x3q2lfel3fo4yq";
-        c.salt = _mineSalt(seed);
-        c.floorPrice = 1e13;
-        c.durationBlocks = 200;
-        c.identitySources = new address[](1);
-        c.identitySources[0] = address(source);
-        uint256 fee = portal.SALT_LOCK_FEE();
-        if (fee == 0) fee = PORTAL_FEE_FALLBACK;
-        vm.prank(creator);
-        launcher = UniformLauncher(payable(portal.newLauncher{value: fee}(address(launcherFactory), abi.encode(c))));
-    }
-
-    function _agentWalletDigest(address registry, uint256 agentId, address wallet, address owner, uint256 deadline)
-        internal
-        view
-        returns (bytes32)
-    {
-        bytes32 typehash = keccak256("AgentWalletSet(uint256 agentId,address newWallet,address owner,uint256 deadline)");
-        bytes32 structHash = keccak256(abi.encode(typehash, agentId, wallet, owner, deadline));
-        bytes32 domain = keccak256(
-            abi.encode(
-                keccak256("EIP712Domain(string name,string version,uint256 chainId,address verifyingContract)"),
-                keccak256("ERC8004IdentityRegistry"),
-                keccak256("1"),
-                block.chainid,
-                registry
-            )
-        );
-        return keccak256(abi.encodePacked("\x19\x01", domain, structHash));
-    }
-
-    function _create(uint256 floor, uint64 duration, string memory symbol, bytes32 seed)
-        internal
-        returns (UniformLauncher launcher)
-    {
-        address[] memory sources = new address[](1);
-        sources[0] = address(new BinanceAgentIdSource(address(new PermissiveAgentDirectory())));
-        return _launch(floor, duration, symbol, seed, sources);
-    }
-
-    function _launch(
-        uint256 floor,
-        uint64 duration,
-        string memory symbol,
-        bytes32 seed,
-        address[] memory sources
-    ) internal returns (UniformLauncher launcher) {
-        LaunchConfig memory c;
-        c.name = "Tongjia";
-        c.symbol = symbol;
-        c.meta = "bafkreig4y5nwb4izyilbbmiydumvkld446d4k7j4ohg3x3q2lfel3fo4yq";
-        c.salt = _mineSalt(seed);
-        c.floorPrice = floor;
-        c.durationBlocks = duration;
-        c.identitySources = sources;
-        uint256 fee = portal.SALT_LOCK_FEE();
-        if (fee == 0) fee = PORTAL_FEE_FALLBACK;
-        vm.prank(creator);
-        launcher = UniformLauncher(payable(portal.newLauncher{value: fee}(address(launcherFactory), abi.encode(c))));
-    }
-
-    function _mineSalt(bytes32 seed) internal returns (bytes32 salt) {
-        uint256 start = ++saltNonce << 128;
-        for (uint256 i = start;; ++i) {
-            assembly ("memory-safe") {
-                mstore(0x00, seed)
-                mstore(0x20, i)
-                salt := keccak256(0x00, 0x40)
-            }
-            if (uint16(uint160(Clones.predictDeterministicAddress(TOKEN_IMPL, salt, address(portal)))) == 0x7777) {
-                return salt;
-            }
-        }
-    }
-
-    function _contains(string memory hay, string memory needle) internal pure returns (bool) {
-        bytes memory h = bytes(hay);
-        bytes memory n = bytes(needle);
-        if (n.length > h.length) return false;
-        for (uint256 i; i + n.length <= h.length; ++i) {
-            bool ok = true;
-            for (uint256 j; j < n.length; ++j) {
-                if (h[i + j] != n[j]) {
-                    ok = false;
-                    break;
-                }
-            }
-            if (ok) return true;
-        }
-        return false;
-    }
 }
