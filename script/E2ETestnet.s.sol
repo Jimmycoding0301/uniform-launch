@@ -263,7 +263,7 @@ contract E2ETestnet is Script {
         _put(key, vm.toString(got));
     }
 
-    function _refuseRemote() internal {
+    function _refuseRemote() internal view {
         if (vm.isContext(VmSafe.ForgeContext.ScriptBroadcast)) {
             string memory rpc = vm.envOr("UNIFORM_RPC_URL", string(""));
             if (!LocalRpc.isLocal(rpc)) {
