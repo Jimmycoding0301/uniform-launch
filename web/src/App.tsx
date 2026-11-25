@@ -243,8 +243,13 @@ export function App() {
     let stop = false;
     let inflight = false;
     let dead = false;
+    let timer = 0;
     const load = async () => {
-      if (inflight || dead) return;
+      if (dead) {
+        window.clearInterval(timer);
+        return;
+      }
+      if (inflight) return;
       inflight = true;
       const slow = window.setTimeout(() => {
         if (!stop) setRpcError(true);
@@ -359,7 +364,7 @@ export function App() {
       }
     };
     load();
-    const timer = setInterval(load, 1000);
+    timer = window.setInterval(load, 1000);
     return () => {
       stop = true;
       clearInterval(timer);
