@@ -86,9 +86,9 @@ Run `npm ci` in `agent/` first. The tools return unsigned transactions. The user
 
 ## 安全
 
-不在网页、命令行或 MCP 里签名，也不广播。结算进入时剩余燃料低于 7000000 会在改状态前回滚，所以燃料上限用 8000000。身份在测试网是替身。
+不在网页、命令行或 MCP 里签名，也不广播。Foundry 脚本只在 RPC 主机名是本机时才允许广播。结算进入时剩余燃料低于 7000000 会在改状态前回滚，所以燃料上限用 8000000。身份在测试网是替身。
 
-No signing and no broadcasting in the app, the CLI, or the MCP server.
+No signing and no broadcasting in the app, the CLI, or the MCP server. Forge scripts broadcast only when the RPC host is loopback.
 
 ## 商业模式
 
