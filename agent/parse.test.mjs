@@ -1,5 +1,13 @@
 import assert from "node:assert/strict";
+import { readFileSync } from "node:fs";
 import { bidTx, identity, parseBnb, status } from "./core.mjs";
+import { reasons } from "./errors.mjs";
+
+const catalog = JSON.parse(readFileSync(new URL("../web/public/agent.json", import.meta.url), "utf8"));
+const catalogReasons = new Set(Object.values(catalog.errors));
+for (const item of Object.values(reasons)) {
+  assert.equal(catalogReasons.has(item.reason), true, item.reason);
+}
 
 const W = 10n ** 18n;
 assert.equal(parseBnb("1"), W);

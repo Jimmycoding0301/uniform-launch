@@ -30,11 +30,14 @@
     "Early": "还没到结算",
     "AlreadyBid": "这个地址已经出过价",
     "BadBudget": "预算不在范围内",
-    "BelowFloor": "低于保留价",
+    "BelowFloor": "低于保留价，这笔不会入场",
     "Full": "名额已满",
     "NotAgent": "身份不过",
     "AgentAlreadyBid": "这个身份已经出过价",
     "InsufficientGas": "结算燃料不够",
+    "NothingToClaim": "没有可领取的",
+    "NothingToRefund": "没有可退的",
+    "RefundUnavailable": "现在不能退款",
     "Balance": "余额不够"
   }
 }
