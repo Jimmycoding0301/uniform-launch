@@ -3,6 +3,7 @@ out/
 node_modules/
 web/node_modules/
 web/dist/
+dist-flap/
 web/tsconfig.tsbuildinfo
 broadcast/
 .env
