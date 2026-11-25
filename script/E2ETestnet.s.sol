@@ -120,7 +120,10 @@ contract E2ETestnet is Script {
         if (n == 0) _bidAgent(launcher, ALICE, 20 ether, 1e16);
         else if (n == 1) _bid8004(launcher);
         else if (n == 2) _bidAgent(launcher, CAROL, 1 ether, 2e13);
-        else console2.log(unicode"出价已经齐了");
+        else {
+            console2.log(unicode"出价已经齐了");
+            revert("bids-full");
+        }
         _put("bidCount", vm.toString(launcher.bidCount()));
     }
 
