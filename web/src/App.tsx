@@ -517,7 +517,7 @@ export function App() {
       const tx = await client.getTransaction({ hash: hash as `0x${string}` });
       const receipt = await client.getTransactionReceipt({ hash: hash as `0x${string}` });
       if (tx.to?.toLowerCase() !== launcher.toLowerCase()) {
-        setHashNote("这笔交易对不上当前指令。检查是否发到了 chainId 97 的这场合约。");
+        setHashNote("这笔交易对不上当前指令。检查是否发到了链编号 97 的这场合约。");
         return;
       }
       if (receipt.status === "reverted") {
@@ -534,7 +534,7 @@ export function App() {
       });
       setHashNote("");
     } catch {
-      setHashNote("这笔交易对不上当前指令。检查是否发到了 chainId 97 的这场合约。");
+      setHashNote("这笔交易对不上当前指令。检查是否发到了链编号 97 的这场合约。");
     } finally {
       setHashBusy(false);
     }
