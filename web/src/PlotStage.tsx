@@ -20,10 +20,9 @@ type Props = {
   settle: boolean;
   intro: boolean;
   reduced: boolean;
-  tall: boolean;
 };
 
-export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduced, tall }: Props) {
+export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduced }: Props) {
   const stageRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   useLayoutEffect(() => {
@@ -31,7 +30,7 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
     if (!el) return;
     const apply = () => {
       const w = Math.floor(el.clientWidth);
-      const h = tall ? 260 : Math.floor(el.clientHeight);
+      const h = Math.floor(el.clientHeight);
       if (w < 40 || h < 40) return;
       setSize((prev) => (prev.w === w && prev.h === h ? prev : { w, h }));
     };
@@ -39,7 +38,7 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
     const observer = new ResizeObserver(apply);
     observer.observe(el);
     return () => observer.disconnect();
-  }, [tall]);
+  }, []);
   const vw = Math.max(size.w, 1);
   const vh = Math.max(size.h, 1);
   const target = useMemo(
@@ -181,8 +180,10 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
       <svg
         ref={svgRef}
         className="plot"
+        width={vw}
+        height={vh}
         viewBox={`0 0 ${vw} ${vh}`}
-        preserveAspectRatio="none"
+        preserveAspectRatio="xMinYMin meet"
         onPointerMove={onMove}
         onPointerLeave={onLeave}
         role="img"

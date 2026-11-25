@@ -333,7 +333,7 @@ button.primary:disabled { opacity: 0.4; cursor: default; }
 .empty-plot { min-height: 640px; }
 .empty-plot svg { width: 100%; height: 100%; }
 .stage { position: relative; flex: 1; min-height: 240px; min-width: 0; width: 100%; max-width: 100%; margin-top: 4px; overflow: hidden; }
-svg.plot { width: 100%; max-width: 100%; height: 100%; display: block; overflow: hidden; touch-action: none; }
+svg.plot { display: block; overflow: hidden; touch-action: none; }
 .fx { position: absolute; inset: 0; width: 100%; height: 100%; pointer-events: none; }
 .cross { stroke: rgba(240,185,11,0.85); stroke-width: 1; vector-effect: non-scaling-stroke; }
 .crosshair { transition: opacity var(--hover) var(--ease); }
@@ -496,8 +496,8 @@ h1 .char { display: inline-block; }
   .en { font-size: 20px; line-height: 24px; }
   .user-line { margin-top: 6px; }
   .phases { margin-top: 10px; }
-  .plot-wrap { height: 104px; min-height: 104px; flex: none; padding-left: 0; padding-right: 0; }
-  .stage { height: 104px; min-height: 104px; margin-top: 0; flex: none; }
+  .plot-wrap { height: 260px; min-height: 260px; flex: none; padding-left: 0; padding-right: 0; }
+  .stage { height: 260px; min-height: 260px; margin-top: 0; flex: none; }
   form { padding-bottom: 64px; }
   html { scroll-padding-bottom: 120px; }
   input, select, button { scroll-margin-bottom: 80px; }

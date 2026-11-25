@@ -155,7 +155,6 @@ export function App() {
   const [copied, setCopied] = useState(false);
   const [launchLine, setLaunchLine] = useState("");
   const [intro, setIntro] = useState(() => !window.matchMedia("(prefers-reduced-motion: reduce)").matches);
-  const [narrow, setNarrow] = useState(window.matchMedia("(max-width: 900px)").matches);
   const initialStatus = useRef<number | null>(null);
   const animStarted = useRef(false);
   const copyTimer = useRef(0);
@@ -164,13 +163,6 @@ export function App() {
   const forceEmpty = params.get("empty") === "1";
   const launcher = (forceEmpty ? "" : params.get("launcher") || demo?.open || "") as Address;
   const rpc = demo?.rpc || "http://127.0.0.1:18545";
-  useEffect(() => {
-    const media = window.matchMedia("(max-width: 900px)");
-    const onChange = () => setNarrow(media.matches);
-    media.addEventListener("change", onChange);
-    return () => media.removeEventListener("change", onChange);
-  }, []);
-
   useEffect(() => {
     fetch("/demo.json")
       .then((r) => (r.ok ? r.json() : null))
@@ -630,7 +622,6 @@ export function App() {
                   settle={snap.status === 1}
                   intro={showIntro}
                   reduced={reduced}
-                  tall={narrow}
                 />
               </div>
             </div>
