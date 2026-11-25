@@ -66,7 +66,7 @@ node agent/cli.mjs identity --launcher 0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a
   "valueBnb": "1",
   "gas": "8000000",
   "chainId": 97,
-  "instruction": "在 BNB Chain 测试网操作。链编号 97。\n预算 1 BNB，最高价 0.00003 BNB/枚。\n动作：出价。"
+  "instruction": "在 BNB Smart Chain 测试网操作。链编号 97。\n先确认这是测试网，再确认身份。币安 Agent ID 或 ERC-8004 有一个即可。两个都没有就停。\n不要改金额，不要多发一笔。先用 baw 预览，确认后再执行。\n预算 1 BNB，最高价 0.00003 BNB/枚。\n动作：出价。"
 }
 ```
 

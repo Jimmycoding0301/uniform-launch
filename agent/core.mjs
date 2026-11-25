@@ -223,8 +223,9 @@ function tx(launcher, functionName, args, value) {
 
 function instruction(kind, launcher, extra) {
   return [
-    "在 BNB Chain 测试网操作。链编号 97。",
-    "先确认测试网，再确认身份。不要改金额，不要多发一笔。",
+    "在 BNB Smart Chain 测试网操作。链编号 97。",
+    "先确认这是测试网，再确认身份。币安 Agent ID 或 ERC-8004 有一个即可。两个都没有就停。",
+    "不要改金额，不要多发一笔。先用 baw 预览，确认后再执行。",
     `合约：${launcher}`,
     extra,
     kind,
