@@ -21,6 +21,12 @@ const after = await desk.evaluate(() => {
 });
 const helpMargin = await desk.evaluate(() => getComputedStyle(document.querySelector(".help")).marginTop);
 assert.equal(helpMargin, "8px", `帮助行间距 ${helpMargin}`);
+const stack = await desk.evaluate(() => {
+  const plot = document.querySelector(".plot-wrap").getBoundingClientRect();
+  const facts = document.querySelector(".facts").getBoundingClientRect();
+  return Math.round(facts.top - plot.bottom);
+});
+assert.ok(stack >= 0, `参数表盖住曲线 ${stack}`);
 assert.ok(before.bottom <= 860, `桌面按钮下沿 ${before.bottom}`);
 assert.ok(before.formBottom <= 900, `左栏下沿 ${before.formBottom}`);
 assert.ok(Math.abs(before.form - after.form) <= 2, `表单高度差 ${Math.abs(before.form - after.form)}`);
