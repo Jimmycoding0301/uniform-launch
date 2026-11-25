@@ -41,4 +41,4 @@ node agent/cli.mjs bid-tx --launcher 0x… --budget 1 --max-price 0.00003 --sour
 
 MCP 用 stdio。方法是 initialize、ping、tools/list、tools/call。工具名：status、simulate_bid、check_identity、build_bid_tx、build_settle_tx、build_claim_tx、build_refund_tx。
 
-带 `--address` 时先看这个地址的余额。不够就停，不生成交易。工具不签名，不广播。测试网身份是替身，防女巫要等主网的币安 Agent ID。
+带 `--address` 时先看这个地址的余额。不够就停，不生成交易。读链超过 8 秒就停，原因是读不到链。工具不签名，不广播。测试网身份是替身，防女巫要等主网的币安 Agent ID。
