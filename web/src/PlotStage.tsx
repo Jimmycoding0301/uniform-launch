@@ -210,6 +210,11 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
   const plot = resting ? ghost : shown;
   const hair = (n: number) => Math.round(n) + 0.5;
   const priceIn = yourPrice != null && clearing != null && yourPrice >= clearing;
+  const reserveLabelY = Math.min(plot.bottom - 4, Math.max(14, plot.reserveY + (plot.clearingY != null && Math.abs(plot.clearingY - plot.reserveY) < 18 ? 14 : -6)));
+  const filledLabelY = Math.min(plot.bottom - 16, (plot.clearingY ?? plot.bottom) + 16);
+  const filledLabelYSafe = vw <= 300 && Math.abs(filledLabelY - reserveLabelY) < 16
+    ? Math.min(plot.bottom - 4, reserveLabelY + 16)
+    : filledLabelY;
   return (
     <div className="stage" ref={stageRef}>
       <svg
@@ -260,7 +265,7 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
           {!failed && !plot.inStroke && plot.stroke && <path className="step" d={plot.stroke} />}
         </g>
         <line className="reserve" x1={hair(plot.left)} x2={hair(plot.right)} y1={hair(plot.reserveY)} y2={hair(plot.reserveY)} />
-        <text className="tick" x={plot.left + 4} y={Math.min(plot.bottom - 4, Math.max(14, plot.reserveY + (plot.clearingY != null && Math.abs(plot.clearingY - plot.reserveY) < 18 ? 14 : -6)))}>
+        <text className="tick" x={plot.left + 4} y={reserveLabelY}>
           保留价 {formatPrice(floor)}
         </text>
         {plot.yourY != null && (
@@ -282,7 +287,7 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
             <text
               className="tick"
               x={(plot.right - (plot.crossX ?? plot.left)) < 96 ? (plot.crossX ?? plot.left) - 10 : (plot.crossX ?? plot.left) + 10}
-              y={Math.min(plot.bottom - 16, (plot.clearingY ?? plot.bottom) + 16)}
+              y={filledLabelYSafe}
               textAnchor={(plot.right - (plot.crossX ?? plot.left)) < 96 ? "end" : "start"}
             >
               成交 {formatBnb(plot.filled)} BNB
