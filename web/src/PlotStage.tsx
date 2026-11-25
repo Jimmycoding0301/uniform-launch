@@ -12,8 +12,6 @@ import {
 } from "./curve";
 import { CURVE_MS, SETTLE_MS } from "./theme";
 
-const VB_W = 640;
-
 type Props = {
   bids: Bid[];
   floor: bigint;
@@ -26,14 +24,31 @@ type Props = {
 };
 
 export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduced, tall }: Props) {
-  const vbH = tall ? 280 : 360;
+  const stageRef = useRef<HTMLDivElement>(null);
+  const [size, setSize] = useState({ w: 0, h: 0 });
+  useLayoutEffect(() => {
+    const el = stageRef.current;
+    if (!el) return;
+    const apply = () => {
+      const w = Math.floor(el.clientWidth);
+      const h = tall ? 260 : Math.floor(el.clientHeight);
+      if (w < 40 || h < 40) return;
+      setSize((prev) => (prev.w === w && prev.h === h ? prev : { w, h }));
+    };
+    apply();
+    const observer = new ResizeObserver(apply);
+    observer.observe(el);
+    return () => observer.disconnect();
+  }, [tall]);
+  const vw = Math.max(size.w, 1);
+  const vh = Math.max(size.h, 1);
   const target = useMemo(
-    () => buildStepPath(bids, VB_W, vbH, floor, clearing, settle && !failed ? 1 : 0),
-    [bids, floor, clearing, settle, failed, vbH],
+    () => buildStepPath(bids, vw, vh, floor, clearing, settle && !failed ? 1 : 0),
+    [bids, floor, clearing, settle, failed, vw, vh],
   );
   const ghost = useMemo(
-    () => buildStepPath(bids, VB_W, vbH, floor, clearing, 0),
-    [bids, floor, clearing, vbH],
+    () => buildStepPath(bids, vw, vh, floor, clearing, 0),
+    [bids, floor, clearing, vw, vh],
   );
   const [shown, setShown] = useState<Plot>(target);
   const [resting, setResting] = useState(settle && !failed);
@@ -99,7 +114,8 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
     if (settle) return;
     const from = shownRef.current;
     if (from.stroke === target.stroke) return;
-    if (reduced || from.pts.length === 0 || intro) {
+    const resized = Math.abs(from.bottom - target.bottom) > 1 || Math.abs(from.right - from.left - (target.right - target.left)) > 1;
+    if (reduced || from.pts.length === 0 || intro || resized) {
       shownRef.current = target;
       setShown(target);
       return;
@@ -184,12 +200,12 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
 
   const plot = resting ? ghost : shown;
   return (
-    <div className="stage">
+    <div className="stage" ref={stageRef}>
       <svg
         ref={svgRef}
         className="plot"
-        viewBox={`0 0 ${VB_W} ${vbH}`}
-        preserveAspectRatio="xMidYMid meet"
+        viewBox={`0 0 ${vw} ${vh}`}
+        preserveAspectRatio="none"
         onPointerMove={onMove}
         onPointerLeave={onLeave}
         role="img"
@@ -218,7 +234,7 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
           </text>
         ))}
         <clipPath id="drawClip">
-          <rect className="draw-rect" x="0" y="0" width={VB_W} height={vbH} />
+          <rect className="draw-rect" x="0" y="0" width={vw} height={vh} />
         </clipPath>
         <g clipPath={intro && !reduced && !resting ? "url(#drawClip)" : undefined}>
           {resting && ghost.fill && <path className="step-fill ghost" d={ghost.fill} fill="url(#fillGold)" />}
@@ -294,8 +310,8 @@ function burst(canvas: HTMLCanvasElement | null, svg: SVGSVGElement | null, plot
   canvas.height = Math.max(1, Math.floor(rect.height * dpr));
   const ctx = canvas.getContext("2d");
   if (!ctx) return;
-  const mapX = (x: number) => (x / VB_W) * rect.width;
-  const mapY = (y: number) => (y / Number(svg.viewBox.baseVal.height || 360)) * rect.height;
+  const mapX = (x: number) => (x / Number(svg.viewBox.baseVal.width || rect.width)) * rect.width;
+  const mapY = (y: number) => (y / Number(svg.viewBox.baseVal.height || rect.height)) * rect.height;
   const goal = { x: mapX(plot.crossX), y: mapY(plot.clearingY) };
   const seeds = plot.pts.length > 0 ? plot.pts : [{ x: plot.left, y: plot.clearingY }];
   const count = Math.min(64, Math.max(24, seeds.length * 6));

@@ -427,7 +427,8 @@ h1 .char { display: inline-block; }
   .en { font-size: 20px; line-height: 24px; }
   .user-line { margin-top: 6px; }
   .phases { margin-top: 10px; }
-  .plot-wrap, .stage { height: 260px; min-height: 260px; flex: none; }
+  .plot-wrap { height: 260px; min-height: 260px; flex: none; padding-left: 0; padding-right: 0; }
+  .stage { height: 260px; min-height: 260px; margin-top: 0; flex: none; }
   .empty-plot { min-height: 280px; height: 280px; }
   .tick { font-size: 12px; }
   .brand-mobile { display: block; order: 1; }

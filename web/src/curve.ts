@@ -51,21 +51,47 @@ export function formatBnb(wei: bigint): string {
   return neg ? `-${body}` : body;
 }
 
+const PRICE_SIG = 3;
+
 export function formatPrice(wei: bigint): string {
   if (wei === 0n) return "0";
   const neg = wei < 0n;
-  const v = neg ? -wei : wei;
-  const whole = v / 10n ** 18n;
-  const frac = (v % 10n ** 18n).toString().padStart(18, "0").replace(/0+$/, "");
-  const body = frac ? `${whole}.${frac}` : `${whole}`;
+  const body = formatSig(neg ? -wei : wei, PRICE_SIG);
   return neg ? `-${body}` : body;
+}
+
+function formatSig(wei: bigint, sig: number): string {
+  const digits = wei.toString();
+  const drop = digits.length - sig;
+  let mant: bigint;
+  let exp: number;
+  if (drop > 0) {
+    const base = 10n ** BigInt(drop);
+    const q = wei / base;
+    const r = wei % base;
+    mant = q + (r >= base / 2n ? 1n : 0n);
+    exp = drop - 18;
+    if (mant.toString().length > sig) {
+      mant /= 10n;
+      exp += 1;
+    }
+  } else {
+    mant = wei;
+    exp = -18;
+  }
+  let m = mant.toString();
+  const trimmed = m.replace(/0+$/, "");
+  exp += m.length - trimmed.length;
+  m = trimmed || "0";
+  if (exp >= 0) return m + "0".repeat(exp);
+  const places = -exp;
+  if (places >= m.length) return `0.${"0".repeat(places - m.length)}${m}`;
+  return `${m.slice(0, m.length - places)}.${m.slice(m.length - places)}`;
 }
 
 export function formatTokens(wei: bigint): string {
   const whole = wei / 10n ** 18n;
-  const frac = (wei % 10n ** 18n).toString().padStart(18, "0").slice(0, 2).replace(/0+$/, "");
-  const grouped = whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-  return frac ? `${grouped}.${frac}` : grouped;
+  return whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
 /** 纵轴用 gwei 的科学计数，避免一长串小数。 */
@@ -94,12 +120,9 @@ export function buildStepPath(
   clearing: bigint | null,
   progress: number,
 ): Plot {
-  const padL = 78;
-  const padR = 36;
-  const padT = 18;
+  const padT = 14;
   const padB = 28;
-  const innerW = width - padL - padR;
-  const innerH = height - padT - padB;
+  const padR = 16;
   const sorted = [...bids].sort((a, b) => (a.maxPrice > b.maxPrice ? -1 : a.maxPrice < b.maxPrice ? 1 : 0));
   const total = sorted.reduce((s, b) => s + b.budget, 0n);
 
@@ -117,6 +140,12 @@ export function buildStepPath(
   let hi = floor > 0n ? floor : 1n;
   for (const g of grouped) if (g.price > hi) hi = g.price;
   if (clearing && clearing > hi) hi = clearing;
+  const priceLabels = [hi, floor, clearing ?? 0n].filter((p) => p > 0n).map((p) => formatPrice(p));
+  const labelW = priceLabels.reduce((w, text) => Math.max(w, Math.ceil(text.length * 7.25)), 28);
+  let padL = 16 + labelW + 10;
+  if (padL + padR > width - 80) padL = Math.max(48, width - padR - 80);
+  const innerW = Math.max(40, width - padL - padR);
+  const innerH = height - padT - padB;
   const lo = floor > 0n ? (floor * 70n) / 100n : 0n;
   const ceil = (hi * 108n) / 100n;
   const yOf = (p: bigint) => {
