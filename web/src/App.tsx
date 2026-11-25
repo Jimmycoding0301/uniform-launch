@@ -786,6 +786,7 @@ export function App() {
                 )}
               </div>
             </div>
+            <div className="col-main">
             <div className="col-chart">
               <div className="chart-head">
                 <div>
@@ -824,6 +825,7 @@ export function App() {
                 <li><span>本场出价</span><span>{snap.bids.length} / 32</span></li>
               </ul>
               <BidTable rows={snap.bids} phase={phase} clearing={clearingNow} />
+            </div>
             </div>
           </div>
         )}

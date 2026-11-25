@@ -77,6 +77,7 @@ const measured = await page.evaluate(() => {
 await browser.close();
 
 assert.ok(measured.stageH >= 200, `绘图区高 ${measured.stageH}px，小于 200`);
+assert.ok(measured.boxW >= 300, `绘图区宽 ${measured.boxW}px，390 屏上过窄`);
 assert.ok(measured.font >= 12, `刻度计算字号 ${measured.font}px，小于 12`);
 assert.ok(Math.abs(measured.boxW - measured.viewW) <= 1, `横向被缩放 ${measured.boxW} vs ${measured.viewW}`);
 assert.ok(Math.abs(measured.boxH - measured.viewH) <= 1, `纵向被缩放 ${measured.boxH} vs ${measured.viewH}`);
