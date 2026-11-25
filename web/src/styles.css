@@ -566,6 +566,7 @@ svg.plot { display: block; touch-action: none; background: var(--bg); }
   font-size: var(--fs-14);
 }
 .demo-bar p { margin: 0; min-width: 0; }
+.demo-bar > div { display: flex; gap: 8px; flex: none; }
 .demo-bar button {
   height: 40px;
   flex: none;
@@ -577,7 +578,21 @@ svg.plot { display: block; touch-action: none; background: var(--bg); }
   font-size: var(--fs-14);
 }
 @media (max-width: 900px) {
-  .demo-bar { left: 0; right: 0; height: 64px; }
+  .demo-bar {
+    left: 0;
+    right: 0;
+    height: 64px;
+    flex-wrap: nowrap;
+    align-items: center;
+    padding: 0 12px;
+  }
+  .demo-bar p {
+    flex: 1 1 auto;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    line-height: 20px;
+  }
 }
 .demo-bar button.next { border-color: var(--accent); color: var(--accent); }
 .demo-bar button:disabled { opacity: 0.4; }

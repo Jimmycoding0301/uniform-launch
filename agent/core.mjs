@@ -164,7 +164,7 @@ export async function simulate(rpc, launcher, budgetText, priceText) {
     if (snap.bids >= 32n) return { ok: false, reason: "名额已满", next: "这一场最多 32 笔。" };
     const phase = phaseOf(snap.status, snap.block, snap.start, snap.end);
     if (phase !== "接单") return { ok: false, reason: "窗口已关", next: "这一场已经不接出价。" };
-    const bids = bookBids(await loadBook(snap.client, launcher));
+    const bids = bookBids(await loadBook(snap.client, addr(launcher)));
     bids.push({ index: BigInt(bids.length), budget, maxPrice });
     const out = settle(snap.floor, bids);
     const mine = out.fills[out.fills.length - 1];
@@ -178,8 +178,16 @@ export async function simulate(rpc, launcher, budgetText, priceText) {
       poolQuote: formatBnb(out.poolQuote),
     };
   } catch (error) {
-    return explain(error);
+    return explainInput(error);
   }
+}
+
+function explainInput(error) {
+  const text = String(error?.message || "");
+  if (text.includes("十进制") || text.includes("小数")) {
+    return { ok: false, reason: text, next: "按 BNB 填写，例如 1 或 0.00003。" };
+  }
+  return explain(error);
 }
 
 export async function identity(rpc, launcher, account, agentId) {
@@ -240,7 +248,7 @@ export async function bidTx(rpc, launcher, budgetText, priceText, sourceIndex, a
     built.instruction = instruction("动作：出价。", launcher, `预算 ${budgetText} BNB，最高价 ${priceText} BNB/枚。`);
     return built;
   } catch (error) {
-    return explain(error);
+    return explainInput(error);
   }
 }
 
