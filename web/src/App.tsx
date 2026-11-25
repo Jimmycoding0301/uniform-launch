@@ -605,7 +605,7 @@ export function App() {
         return;
       }
       if (receipt.status === "reverted") {
-        setHashNote("这笔交易在链上失败了，出价没有进场。按指令重新发一次。");
+        setHashNote("这笔交易在链上失败了。按指令重新发一次。");
         return;
       }
       const bidSelector = keccak256(toBytes("bid(uint256,uint8,uint256)")).slice(0, 10);
