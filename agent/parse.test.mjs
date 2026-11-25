@@ -22,6 +22,8 @@ const offline = await status("http://127.0.0.1:1", "0xdE5F5e380689d23E3fcC3E8c2A
 assert.equal(offline.reason, "读不到链");
 assert.equal(offline.next, "换一个 RPC 地址后重试");
 assert.equal(JSON.stringify(offline).includes("HttpRequestError"), false);
+const blankWho = await identity("http://127.0.0.1:1", "0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a1", "", "1");
+assert.equal(blankWho.reason, "地址不对");
 const badWho = await identity("http://127.0.0.1:1", "0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a1", "nope", "1");
 assert.equal(badWho.reason, "地址不对");
 const badAddr = await status("http://127.0.0.1:1", "nope");
