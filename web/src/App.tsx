@@ -350,6 +350,10 @@ export function App() {
     return () => document.removeEventListener("focusin", onFocus);
   }, []);
   useEffect(() => {
+    if (!hashReceipt && !hashNote) return;
+    document.querySelector(".hash .result-card, .hash .help")?.scrollIntoView({ block: "center" });
+  }, [hashReceipt, hashNote]);
+  useEffect(() => {
     if (!snap || reduced || introOnce.current) return;
     introOnce.current = true;
     window.setTimeout(() => setIntro(false), 1600);
