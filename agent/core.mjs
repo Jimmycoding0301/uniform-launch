@@ -31,7 +31,11 @@ function clientOf(rpc) {
 }
 
 function addr(value) {
-  return getAddress(String(value).toLowerCase());
+  try {
+    return getAddress(String(value).toLowerCase());
+  } catch {
+    throw new Error("地址不对");
+  }
 }
 
 function phaseOf(status, block, start, end) {
@@ -116,7 +120,7 @@ export async function status(rpc, launcher) {
       floorPrice: formatBnb(snap.floor),
       clearingPrice: formatBnb(clearing),
       bidCount: Number(snap.bids),
-      seatsLeft: Number(32n - snap.bids),
+      seatsLeft: Number(snap.bids >= 32n ? 0n : 32n - snap.bids),
       minPoolQuote: formatBnb(snap.minQuote),
       sources: snap.sources.map((item, index) => ({ index, address: item })),
     };
@@ -261,6 +265,10 @@ export async function bidTx(rpc, launcher, budgetText, priceText, sourceIndex, a
   try {
     const budget = parseBnb(budgetText);
     const price = parseBnb(priceText);
+    const sourceText = String(sourceIndex).trim();
+    if (!/^\d+$/.test(sourceText) || Number(sourceText) > 255) {
+      return { ok: false, reason: "来源编号不对", next: "从 0 开始，按身份来源列表选，不能大于 255。" };
+    }
     const id = agentIdOf(agentId);
     if (from) {
       const balance = await clientOf(rpc).getBalance({ address: addr(from) });
@@ -272,7 +280,7 @@ export async function bidTx(rpc, launcher, budgetText, priceText, sourceIndex, a
         };
       }
     }
-    const built = tx(launcher, "bid", [price, Number(sourceIndex), id], budget);
+    const built = tx(launcher, "bid", [price, Number(sourceText), id], budget);
     built.instruction = instruction("动作：出价。", launcher, `预算 ${budgetText} BNB，最高价 ${priceText} BNB/枚。`);
     return built;
   } catch (error) {

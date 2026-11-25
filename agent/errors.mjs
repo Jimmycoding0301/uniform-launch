@@ -26,6 +26,7 @@ export function explain(error) {
   for (const [selector, item] of Object.entries(reasons)) {
     if (text.includes(selector)) return { ok: false, ...item };
   }
+  if (text.includes("地址不对")) return { ok: false, reason: "地址不对", next: "检查合约地址或身份地址。" };
   if (/fetch|network|ECONN|timeout/i.test(text)) {
     return { ok: false, reason: "读不到链", next: "换一个 RPC 地址后重试" };
   }
