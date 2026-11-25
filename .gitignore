@@ -6,3 +6,7 @@ web/dist/
 broadcast/
 .env
 web/public/demo.json
+
+__pycache__/
+*.pyc
+.coverage
