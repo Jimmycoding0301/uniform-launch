@@ -150,6 +150,10 @@ export function buildStepPath(
   if (clearing && clearing > hi) hi = clearing;
   if (clearing && clearing > 0n && clearing < loPrice) loPrice = clearing;
   if (floor > 0n && floor < loPrice) loPrice = floor;
+  if (grouped.length === 0 && floor > 0n) {
+    loPrice = 0n;
+    hi = floor + floor / 2n;
+  }
   const priceLabels = [hi, floor, clearing ?? 0n].filter((p) => p > 0n).map((p) => formatPrice(p));
   const labelW = priceLabels.reduce((w, text) => Math.max(w, Math.ceil(text.length * 7.25)), 28);
   let padL = 16 + labelW + 10;

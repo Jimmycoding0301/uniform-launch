@@ -21,9 +21,10 @@ type Props = {
   intro: boolean;
   reduced: boolean;
   yourPrice: bigint | null;
+  hideEmpty?: boolean;
 };
 
-export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduced, yourPrice }: Props) {
+export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduced, yourPrice, hideEmpty }: Props) {
   const stageRef = useRef<HTMLDivElement>(null);
   const [size, setSize] = useState({ w: 0, h: 0 });
   useLayoutEffect(() => {
@@ -107,7 +108,7 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
   useEffect(() => {
     if (settle) return;
     const from = shownRef.current;
-    if (from.stroke === target.stroke) return;
+    if (from.stroke === target.stroke && from.right === target.right && from.bottom === target.bottom && from.reserveY === target.reserveY) return;
     const resized = Math.abs(from.bottom - target.bottom) > 1 || Math.abs(from.right - from.left - (target.right - target.left)) > 1;
     if (reduced || from.pts.length === 0 || intro || resized) {
       shownRef.current = target;
@@ -297,7 +298,7 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
         <p ref={(node) => { tipLines.current[1] = node; }} />
         <p ref={(node) => { tipLines.current[2] = node; }} />
       </div>
-      {bids.length === 0 && <div className="empty">还没有出价</div>}
+      {bids.length === 0 && !hideEmpty && <div className="empty">还没有出价</div>}
     </div>
   );
 }

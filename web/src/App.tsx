@@ -755,25 +755,26 @@ export function App() {
               <div className="chart-head">
                 <div>
                   <div className="kicker">{failed ? "结果" : phase === "done" ? "开盘价 BNB/枚" : "当前清算价 BNB/枚"}</div>
-                  <div className={clearingNow > 0n && !failed ? "chart-price" : "chart-price dim"}>
-                    {failed ? "没有成交" : clearingNow > 0n ? <Roller text={formatPrice(clearingNow)} /> : "未形成"}
+                  <div className={phase !== "wait" && clearingNow > 0n && !failed ? "chart-price" : "chart-price dim"}>
+                    {failed ? "没有成交" : phase === "wait" ? "未形成" : clearingNow > 0n ? <Roller text={formatPrice(clearingNow)} /> : "未形成"}
                   </div>
                   {failed && <p className="fail-line"><Zh text="未达保留价，出价全额退回。" /></p>}
                 </div>
                 <div className="axis-note" />
               </div>
               <div className="plot-wrap">
-                {phase === "wait" && <div className="empty">接单还没开始，开始区块 {groupFull(snap.start)}。</div>}
                 <PlotStage
-                  bids={snap.bids}
+                  bids={params.get("preview") === "wait" ? [] : snap.bids}
                   floor={snap.floor}
-                  clearing={clearingNow > 0n ? clearingNow : null}
+                  clearing={params.get("preview") === "wait" || failed ? null : clearingNow > 0n ? clearingNow : null}
                   failed={failed}
                   settle={snap.status === 1}
                   intro={showIntro}
                   reduced={reduced}
                   yourPrice={phase === "open" ? priceWei : null}
+                  hideEmpty={phase === "wait"}
                 />
+                {phase === "wait" && <div className="empty">接单还没开始，开始区块 {groupFull(snap.start)}。</div>}
               </div>
             </div>
             <div className="col-bids">

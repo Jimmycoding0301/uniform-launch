@@ -344,6 +344,7 @@ svg.plot { display: block; touch-action: none; background: var(--bg); }
 .page.intro .draw-rect { transform-box: fill-box; transform-origin: left center; animation: draw-x var(--draw) var(--ease) 200ms both; }
 .empty {
   position: absolute;
+  z-index: 1;
   inset: 0;
   display: flex;
   align-items: center;
