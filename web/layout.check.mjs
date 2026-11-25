@@ -40,6 +40,16 @@ const mobile = await phone.evaluate(() => {
   };
 });
 assert.ok(mobile.btnTop >= 0 && mobile.btnBottom <= 844, `手机按钮 ${mobile.btnTop}-${mobile.btnBottom}`);
+const small = await phone.evaluate(() => {
+  const out = [];
+  for (const el of document.querySelectorAll("button, a, input, [role=radio]")) {
+    const box = el.getBoundingClientRect();
+    if (box.width < 1 || box.height < 1) continue;
+    if (box.width < 44 || box.height < 44) out.push((el.id || el.textContent || el.tagName).trim().slice(0, 16));
+  }
+  return out;
+});
+assert.deepEqual(small, [], `手机命中区小于 44：${small.join(", ")}`);
 await phone.evaluate(() => window.scrollTo(0, document.body.scrollHeight));
 await phone.waitForTimeout(200);
 const covered = await phone.evaluate(() => {

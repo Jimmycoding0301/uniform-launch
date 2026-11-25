@@ -46,5 +46,11 @@ fi
 if [ "$NEED" -gt 0 ]; then
   cast rpc anvil_mine "$NEED" --rpc-url "$ANVIL_RPC" >/dev/null
 fi
-echo "PHASE_HEAD $(cast block-number --rpc-url "$ANVIL_RPC")"
+HEAD=$(cast block-number --rpc-url "$ANVIL_RPC")
+CLOSE_START=$((CLOSED_END - 20))
+if [ "$HEAD" -lt "$READY_END" ] || [ "$HEAD" -lt "$CLOSE_START" ] || [ "$HEAD" -ge "$CLOSED_END" ]; then
+  echo "推进之后对不上 head=$HEAD ready_end=$READY_END closed=$CLOSE_START..$CLOSED_END" >&2
+  exit 1
+fi
+echo "PHASE_OK head=$HEAD ready=$READY closed=$CLOSED"
 grep PHASE_ "$LOG"
