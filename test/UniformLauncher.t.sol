@@ -4,7 +4,7 @@ pragma solidity ^0.8.26;
 import {Test} from "forge-std/Test.sol";
 import {LibClone} from "solady/utils/LibClone.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
-import {IPortalTypes} from "src/flap/IPortal.sol";
+import {IPortal, IPortalTypes} from "src/flap/IPortal.sol";
 import {Distribution} from "src/flap/Distribution.sol";
 import {IStrategy} from "src/flap/IStrategy.sol";
 import {LaunchVaultAddresses} from "src/flap/LaunchVaultAddresses.sol";
@@ -12,6 +12,8 @@ import {UniformLauncher, LaunchConfig} from "src/uniform/UniformLauncher.sol";
 import {UniformLauncherFactory} from "src/uniform/UniformLauncherFactory.sol";
 import {UniformVault} from "src/uniform/UniformVault.sol";
 import {UniformVaultFactory} from "src/uniform/UniformVaultFactory.sol";
+import {BinanceAgentIdSource} from "src/uniform/BinanceAgentIdSource.sol";
+import {PermissiveAgentDirectory} from "./PermissiveAgentDirectory.sol";
 
 contract FakeToken {
     mapping(address => uint256) public balanceOf;
@@ -42,17 +44,37 @@ contract FakeToken {
 
 contract MockPortal {
     function SALT_LOCK_FEE() external pure returns (uint256) {
-        return 0.01 ether;
+        return 0.005 ether;
     }
 
     function lockSalt(bytes32, uint8) external payable {}
 
-    function launchTaxTokenV2(IPortalTypes.CreateTaxTokenParams calldata p, Distribution calldata distribution, IPortalTypes.CreatorBuyParams calldata)
+    function launchQuoteConfig(uint8, address) external pure returns (bool, uint256) {
+        return (true, 700 ether);
+    }
+
+    function graduationFloorV2ForLauncher(IPortal.GraduationFloorParams calldata p, address)
         external
-        payable
-        returns (address token, address pool)
+        pure
+        returns (IPortal.GraduationFloorResultV2 memory r)
     {
-        if (keccak256(bytes(p.symbol)) == keccak256("REV")) revert("launch reverted");
+        uint256 usd = p.poolQuote * 700 ether * p.poolToken / p.totalSupply / 1 ether;
+        r.quoteUsdWad = usd;
+        r.createFloorUsdWad = 750 ether;
+        r.floorUsdWad = 1500 ether;
+        r.multiplierBps = 10_000;
+        r.meetsCreateFloor = usd >= 750 ether;
+        r.meetsFloor = usd >= 1500 ether;
+    }
+
+    function launchTaxTokenV2(
+        IPortalTypes.CreateTaxTokenParams calldata p,
+        Distribution calldata distribution,
+        IPortalTypes.CreatorBuyParams calldata
+    ) external payable returns (address token, address pool) {
+        if (keccak256(bytes(p.symbol)) == keccak256("REV")) {
+            revert("launch reverted");
+        }
         if (msg.value != p.poolQuote) revert("value");
         FakeToken t = new FakeToken();
         t.mint(address(this), distribution.amount);
@@ -69,6 +91,7 @@ contract UniformLauncherTest is Test {
     address internal creator = address(0xC0DE0001);
     address internal alice = address(0xC0DE0002);
     address internal bob = address(0xC0DE0003);
+    address[] internal sources;
 
     function setUp() public {
         vm.chainId(97);
@@ -83,21 +106,24 @@ contract UniformLauncherTest is Test {
         vm.deal(alice, 100 ether);
         vm.deal(bob, 100 ether);
         vm.deal(creator, 1 ether);
+        sources = new address[](1);
+        sources[0] = address(new BinanceAgentIdSource(address(new PermissiveAgentDirectory())));
     }
 
-    function _config(string memory symbol, uint256 floor) internal pure returns (LaunchConfig memory c) {
+    function _config(string memory symbol, uint256 floor) internal view returns (LaunchConfig memory c) {
         c.name = "Tongjia";
         c.symbol = symbol;
         c.meta = "bafytest";
         c.salt = bytes32(uint256(1));
         c.floorPrice = floor;
         c.durationBlocks = 200;
+        c.identitySources = sources;
     }
 
     function _new(string memory symbol, uint256 floor) internal returns (UniformLauncher launcher) {
         vm.prank(portal);
         launcher = UniformLauncher(
-            payable(launcherFactory.newLauncher{value: 0.01 ether}(creator, abi.encode(_config(symbol, floor))))
+            payable(launcherFactory.newLauncher{value: 0.005 ether}(creator, abi.encode(_config(symbol, floor))))
         );
     }
 

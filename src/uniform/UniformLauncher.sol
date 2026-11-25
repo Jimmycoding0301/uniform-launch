@@ -9,6 +9,7 @@ import {IPortal, IPortalTypes} from "src/flap/IPortal.sol";
 import {Distribution, DistributionTarget} from "src/flap/Distribution.sol";
 import {IStrategy} from "src/flap/IStrategy.sol";
 import {LaunchExtensionHelper} from "src/flap/LaunchExtensionHelper.sol";
+import {IAgentIdentitySource} from "./IAgentIdentitySource.sol";
 import {UniformSettle} from "./UniformSettle.sol";
 
 string constant TITLE_ZH = unicode"统一价拍卖";
@@ -25,6 +26,7 @@ struct LaunchConfig {
     bytes32 salt;
     uint256 floorPrice;
     uint64 durationBlocks;
+    address[] identitySources;
 }
 
 contract UniformLauncher is LauncherBase, Initializable, IStrategy {
@@ -45,6 +47,11 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
     uint64 public constant MAX_DURATION = 20_000;
     uint16 public constant BUY_TAX_BPS = 300;
     uint16 public constant SELL_TAX_BPS = 300;
+    /// @dev Portal 测试网按 700 美元/BNB 给 V2 地板计价。毕业线是池子报价 1500 美元，只在发射时判断。
+    uint256 public constant BNB_USD_WAD = 700 ether;
+    uint256 public constant GRADUATION_USD_WAD = 1500 ether;
+    /// @dev 加在精确毕业报价上的余量，避免整除后卡在毕业线上。
+    uint256 public constant LAUNCH_MARGIN = 0.05 ether;
 
     enum Status {
         Open,
@@ -59,6 +66,8 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         uint256 tokensOwed;
         uint256 quoteOwed;
         bool pulled;
+        bytes32 sourceId;
+        uint256 agentId;
     }
 
     address public hub;
@@ -81,12 +90,21 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
 
     Bid[] internal _bids;
     mapping(address => uint256) public bidOf;
+    address[] public identitySources;
+    mapping(bytes32 => mapping(uint256 => bool)) private _agentUsed;
 
     bool public launching;
     bool internal distributionInitialized;
     bool internal busy;
 
-    event BidPlaced(address indexed agent, uint256 indexed bidId, uint256 budget, uint256 maxPrice);
+    event BidPlaced(
+        address indexed agent,
+        uint256 indexed bidId,
+        bytes32 indexed sourceId,
+        uint256 agentId,
+        uint256 budget,
+        uint256 maxPrice
+    );
     event AuctionSettled(uint256 clearingPrice, uint256 poolQuote, address token, address pool);
     event AuctionFailed(uint8 reason);
     event Claimed(address indexed agent, uint256 tokens, uint256 quoteRefunded);
@@ -107,6 +125,8 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
     error NothingToRefund();
     error NotCreator();
     error InsufficientGas();
+    error NotAgent();
+    error AgentAlreadyBid();
 
     modifier nonReentrant() {
         if (busy) revert Busy();
@@ -131,6 +151,11 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         if (bytes(c.meta).length == 0 || c.salt == bytes32(0)) revert InvalidConfig();
         if (c.floorPrice == 0 || c.floorPrice > 1e36) revert InvalidConfig();
         if (c.durationBlocks < MIN_DURATION || c.durationBlocks > MAX_DURATION) revert InvalidConfig();
+        if (c.identitySources.length == 0 || c.identitySources.length > 4) revert InvalidConfig();
+        for (uint256 i; i < c.identitySources.length; ++i) {
+            if (c.identitySources[i].code.length == 0) revert InvalidConfig();
+            identitySources.push(c.identitySources[i]);
+        }
 
         hub = hub_;
         creator = creator_;
@@ -170,6 +195,13 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
 
     function softCap() public view returns (uint256) {
         return floorPrice * SELL_AMOUNT / 1e18;
+    }
+
+    /// @notice 入池 BNB 至少要到毕业线，再加 `LAUNCH_MARGIN`。50% 入池时约为 4.3357 BNB。
+    function minPoolQuote() public pure returns (uint256) {
+        uint256 num = GRADUATION_USD_WAD * 1 ether * TOTAL_SUPPLY;
+        uint256 den = BNB_USD_WAD * POOL_AMOUNT;
+        return (num + den - 1) / den + LAUNCH_MARGIN;
     }
 
     function bidCount() external view returns (uint256) {
@@ -231,16 +263,26 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
     function getBids()
         external
         view
-        returns (address[] memory agents, uint256[] memory budgets, uint256[] memory maxPrices)
+        returns (
+            address[] memory agents,
+            uint256[] memory budgets,
+            uint256[] memory maxPrices,
+            bytes32[] memory sourceIds,
+            uint256[] memory agentIds
+        )
     {
         uint256 n = _bids.length;
         agents = new address[](n);
         budgets = new uint256[](n);
         maxPrices = new uint256[](n);
+        sourceIds = new bytes32[](n);
+        agentIds = new uint256[](n);
         for (uint256 i; i < n; ++i) {
             agents[i] = _bids[i].agent;
             budgets[i] = _bids[i].budget;
             maxPrices[i] = _bids[i].maxPrice;
+            sourceIds[i] = _bids[i].sourceId;
+            agentIds[i] = _bids[i].agentId;
         }
     }
 
@@ -256,15 +298,28 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         if (msg.value < MIN_BUDGET || msg.value > MAX_BUDGET) revert BadBudget();
         if (maxPrice < floorPrice) revert BelowFloor();
         if (_bids.length >= MAX_BIDS) revert Full();
+        (bool agentOk, bytes32 sourceId, uint256 agentId) = _identify(msg.sender);
+        if (!agentOk) revert NotAgent();
+        if (_agentUsed[sourceId][agentId]) revert AgentAlreadyBid();
+        _agentUsed[sourceId][agentId] = true;
 
         _bids.push(
-            Bid({agent: msg.sender, budget: msg.value, maxPrice: maxPrice, tokensOwed: 0, quoteOwed: 0, pulled: false})
+            Bid({
+                agent: msg.sender,
+                budget: msg.value,
+                maxPrice: maxPrice,
+                tokensOwed: 0,
+                quoteOwed: 0,
+                pulled: false,
+                sourceId: sourceId,
+                agentId: agentId
+            })
         );
         bidOf[msg.sender] = _bids.length;
         for (uint256 i; i < 8; ++i) {
             if (maxPrice >= (floorPrice << i)) demandBins[i] += msg.value;
         }
-        emit BidPlaced(msg.sender, _bids.length - 1, msg.value, maxPrice);
+        emit BidPlaced(msg.sender, _bids.length - 1, sourceId, agentId, msg.value, maxPrice);
     }
 
     function settle() external nonReentrant {
@@ -273,7 +328,7 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         if (block.number < endBlock) revert Early();
 
         UniformSettle.Outcome memory o = _quote();
-        if (!o.ok || o.poolQuote == 0) {
+        if (!o.ok || o.poolQuote == 0 || o.poolQuote < minPoolQuote() || !_portalAllowsLaunch(o.poolQuote)) {
             status = Status.Failed;
             emit AuctionFailed(1);
             return;
@@ -337,6 +392,42 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         token = token_;
         token_.safeTransferFrom(msg.sender, address(this), amount);
         emit FlapDistributionInitialized(token_, amount);
+    }
+
+    /// @dev 读 Portal 的毕业预检。调用失败或不达标都当不能发射，后面走全额退款。
+    function _portalAllowsLaunch(uint256 quoteIn) internal view returns (bool) {
+        uint256 price = BNB_USD_WAD;
+        try IPortal(hub).launchQuoteConfig(uint8(IPortalTypes.LaunchKind.DIRECT_V2_POOL_TAX), address(0)) returns (
+            bool enabled, uint256 quotePriceUsd
+        ) {
+            if (enabled && quotePriceUsd != 0) price = quotePriceUsd;
+        } catch {}
+        try IPortal(hub)
+            .graduationFloorV2ForLauncher(
+                IPortal.GraduationFloorParams({
+                    quoteToken: address(0),
+                    quotePriceUsd: price,
+                    poolQuote: quoteIn,
+                    poolToken: POOL_AMOUNT,
+                    totalSupply: TOTAL_SUPPLY,
+                    vaultFactory: vaultFactory
+                }),
+                address(this)
+            ) returns (
+            IPortal.GraduationFloorResultV2 memory floor
+        ) {
+            return floor.meetsCreateFloor && floor.meetsFloor;
+        } catch {
+            return false;
+        }
+    }
+
+    function _identify(address account) internal view returns (bool ok, bytes32 sourceId, uint256 agentId) {
+        uint256 n = identitySources.length;
+        for (uint256 i; i < n; ++i) {
+            (bool pass, bytes32 sid, uint256 aid) = IAgentIdentitySource(identitySources[i]).isAgent(account);
+            if (pass && aid != 0) return (true, sid, aid);
+        }
     }
 
     function _quote() internal view returns (UniformSettle.Outcome memory) {

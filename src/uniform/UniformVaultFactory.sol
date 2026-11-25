@@ -72,7 +72,8 @@ contract UniformVaultFactory is DirectLaunchVaultFactoryBase {
     }
 
     function vaultDataSchema() public pure override returns (VaultDataSchema memory schema) {
-        schema.description = "Uniform vault. vaultData is the launching Launcher address. Tax is withdrawable by its creator.";
+        schema.description =
+        "Uniform vault. vaultData is the launching Launcher address. Tax is withdrawable by its creator.";
         schema.fields = new FieldDescriptor[](1);
         schema.fields[0] = FieldDescriptor("launcher", "address", "Launcher that is launching", 0);
     }

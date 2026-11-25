@@ -91,8 +91,9 @@ CCA 技术说明写明：统一价拍卖一般做不到策略无关，仍可能�
 | 税币实现 | `0x7777c57ff7dc441c1715b2e36fa581c48B782222` | 代币地址由 Portal 用这个实现做 CREATE2，必须以 `7777` 结尾 |
 | 测试网 Guardian | `0x00004d58290854c5E9880F4b5B1993c6Ad8b0000` | 只负责升级和急救。主网 Guardian 是另一个地址，不要用错 |
 | AllocationStrategy | `0x000051353ef814E4779B692cb2Bb3A6Cb3710000` | 本项目不用。待售代币回到 Launcher |
-| 测试网 WBNB | `0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd` | 示例 fork 里的地址，买入路径用 |
-| 测试网 V2 Router | `0xc9D63ddCB9549578057EAB6A83a543DdFEE2b8c3` | 示例 fork 里的地址。`dexId = 0` 是否就是它，问 Flap 确认 |
+| 测试网 WBNB | `0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd` | PancakeSwap V2 测试网，`dexId = 0` |
+| 测试网 V2 Factory | `0x6725F303b657a9451d8BA641348b6761A6CC7a17` | PancakeSwap V2 测试网 |
+| 测试网 V2 Router | `0xD99D1c33F9fC3444f8101754aBC46c52416550D1` | Flap 确认 `dexId = 0` 用这个，不再用 `0xc9D63ddCB9549578057EAB6A83a543DdFEE2b8c3` |
 | Portal ProxyAdmin | `0x0000Ed588dfc01749C20bA69b5f8c77d706E0000` | 只在本地 fork 里读它的 `owner()`。活网上不要对它发交易 |
 
 链 ID：EVM 97。示例要求 Portal 版本不低于 `v1.1.2`。
@@ -119,7 +120,7 @@ graduationFloor = 1500 美元 × multiplier × totalSupply / poolToken
 
 测试网的 BNB 美元价以 Portal 上的 `launchQuoteConfig` 为准，不要用 600。文档还写了可以用 `graduationFloorV2` 预检。函数签名以链上 ABI 为准，对不上就不要猜，改问 Flap 要当前测试网的最低 `poolQuote`。
 
-`SALT_LOCK_FEE()` 文档写的是 BNB Chain 上 0.01 BNB，不退。测试网以链上读数为准，写进创建指令，不要写死。
+`SALT_LOCK_FEE()` 在测试网和主网都是 0.005 BNB（`5000000000000000` wei），不退。创建时 `msg.value` 必须等于当时链上读到的这个数。
 
 ### 代理钱包
 
@@ -694,9 +695,9 @@ setVaultFactoryMultiplier(vaultFactory, 10000, true)
 
 请确认三件事：
 
-1. 测试网上 `dexId = 0` 对应的 V2 Router 地址。我们从 Flap 示例 fork 读到的是 `0xc9D63ddCB9549578057EAB6A83a543DdFEE2b8c3`。
+1. 测试网上 `dexId = 0` 对应的 V2 Router。Flap 已确认是 PancakeSwap V2 测试网 `0xD99D1c33F9fC3444f8101754aBC46c52416550D1`。
 2. 当前测试网的最低 `poolQuote`。本项目 50% 供应入池。
-3. 测试网 `SALT_LOCK_FEE()` 的返回值。
+3. 测试网 `SALT_LOCK_FEE()`。Flap 已确认测试网和主网都是 0.005 BNB。
 
 联系人：Jimmy，人在曼谷现场。
 
@@ -722,9 +723,9 @@ setVaultFactoryMultiplier(vaultFactory, 10000, true)
 
 Please confirm:
 
-1. The V2 router used when `dexId = 0` on testnet. The address in the Flap example fork is `0xc9D63ddCB9549578057EAB6A83a543DdFEE2b8c3`.
+1. The V2 router used when `dexId = 0` on testnet. Flap confirmed PancakeSwap V2 testnet `0xD99D1c33F9fC3444f8101754aBC46c52416550D1`.
 2. The current minimum `poolQuote` on testnet. This launch puts 50% of supply in the pool.
-3. The value returned by `SALT_LOCK_FEE()` on testnet.
+3. `SALT_LOCK_FEE()` on testnet. Flap confirmed 0.005 BNB on both testnet and mainnet.
 
 Contact: Jimmy, on site in Bangkok.
 

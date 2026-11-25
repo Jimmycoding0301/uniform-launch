@@ -2,13 +2,15 @@
 pragma solidity ^0.8.26;
 
 import {Test} from "forge-std/Test.sol";
-import {IPortalTypes} from "src/flap/IPortal.sol";
+import {IPortal, IPortalTypes} from "src/flap/IPortal.sol";
 import {Distribution} from "src/flap/Distribution.sol";
 import {IStrategy} from "src/flap/IStrategy.sol";
 import {LaunchVaultAddresses} from "src/flap/LaunchVaultAddresses.sol";
 import {UniformLauncher, LaunchConfig} from "src/uniform/UniformLauncher.sol";
 import {UniformLauncherFactory} from "src/uniform/UniformLauncherFactory.sol";
 import {UniformVaultFactory} from "src/uniform/UniformVaultFactory.sol";
+import {BinanceAgentIdSource} from "src/uniform/BinanceAgentIdSource.sol";
+import {PermissiveAgentDirectory} from "./PermissiveAgentDirectory.sol";
 
 contract FakeToken {
     mapping(address => uint256) public balanceOf;
@@ -39,10 +41,28 @@ contract FakeToken {
 
 contract MockPortal {
     function SALT_LOCK_FEE() external pure returns (uint256) {
-        return 0.01 ether;
+        return 0.005 ether;
     }
 
     function lockSalt(bytes32, uint8) external payable {}
+
+    function launchQuoteConfig(uint8, address) external pure returns (bool, uint256) {
+        return (true, 700 ether);
+    }
+
+    function graduationFloorV2ForLauncher(IPortal.GraduationFloorParams calldata p, address)
+        external
+        pure
+        returns (IPortal.GraduationFloorResultV2 memory r)
+    {
+        uint256 usd = p.poolQuote * 700 ether * p.poolToken / p.totalSupply / 1 ether;
+        r.quoteUsdWad = usd;
+        r.createFloorUsdWad = 750 ether;
+        r.floorUsdWad = 1500 ether;
+        r.multiplierBps = 10_000;
+        r.meetsCreateFloor = usd >= 750 ether;
+        r.meetsFloor = usd >= 1500 ether;
+    }
 
     function launchTaxTokenV2(
         IPortalTypes.CreateTaxTokenParams calldata p,
@@ -76,7 +96,9 @@ contract Handler is Test {
 
     function bid(uint256 actorSeed, uint96 paySeed, uint256 priceSeed) external {
         if (uint8(launcher.status()) != 0) return;
-        if (block.number < launcher.startBlock() || block.number >= launcher.endBlock() - launcher.CLOSE_BUFFER()) return;
+        if (block.number < launcher.startBlock() || block.number >= launcher.endBlock() - launcher.CLOSE_BUFFER()) {
+            return;
+        }
         address who = actors[actorSeed % actors.length];
         if (launcher.bidOf(who) != 0) return;
         uint256 pay = bound(uint256(paySeed), 0.01 ether, 4 ether);
@@ -143,8 +165,11 @@ contract UniformInvariantTest is Test {
         c.salt = bytes32(uint256(9));
         c.floorPrice = 1e13;
         c.durationBlocks = 400;
+        c.identitySources = new address[](1);
+        c.identitySources[0] = address(new BinanceAgentIdSource(address(new PermissiveAgentDirectory())));
         vm.prank(portal);
-        launcher = UniformLauncher(payable(launcherFactory.newLauncher{value: 0.01 ether}(address(this), abi.encode(c))));
+        launcher =
+            UniformLauncher(payable(launcherFactory.newLauncher{value: 0.005 ether}(address(this), abi.encode(c))));
         handler = new Handler(launcher);
         targetContract(address(handler));
         bytes4[] memory selectors = new bytes4[](4);
@@ -169,7 +194,9 @@ contract UniformInvariantTest is Test {
         }
         assertEq(address(launcher).balance + handler.totalOut() + launcher.poolQuote(), handler.totalIn());
         assertTrue(launcher.token() != address(0));
-        assertEq(FakeToken(launcher.token()).balanceOf(address(launcher)) + handler.claimedTokens(), launcher.SELL_AMOUNT());
+        assertEq(
+            FakeToken(launcher.token()).balanceOf(address(launcher)) + handler.claimedTokens(), launcher.SELL_AMOUNT()
+        );
     }
 
     function invariant_statusOnce() public view {

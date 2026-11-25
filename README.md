@@ -27,6 +27,65 @@ Fork 测试只读 BSC 测试网，在本地模拟，不向活网发交易。本�
 
 安全说明在 [docs/security.md](docs/security.md)。
 
+## 发射下限
+
+Portal 按 `poolQuote × 700 × poolToken / totalSupply` 把入池 BNB 折成美元。本项目一半供应进池，所以乘数是 350。
+
+| 条件 | 美元 | 入池 BNB |
+| --- | --- | --- |
+| 能发射，未毕业 | 750 | 2.142857142857142857 |
+| 毕业，只在发射时判断 | 1500 | 4.285714285714285714 |
+| 本合约最低入池 `minPoolQuote()` | 毕业线再加 0.05 | 4.335714285714285715 |
+
+软顶 `softCap = floorPrice × 500000` 是保留价下卖完这一半时最少募到的 BNB。成功结算时入池的 BNB 大约就是实际花掉的报价。`softCap` 低于 `minPoolQuote()` 时，账面即使成交，`settle` 也会预检失败并全额退款，不会把 BNB 打进会 revert 的 `launchTaxTokenV2`。保留价建议至少 `minPoolQuote() / 500000`，约 `0.000008671428571428` BNB/枚。
+
+`dexId = 0` 是 PancakeSwap V2 测试网：Router `0xD99D1c33F9fC3444f8101754aBC46c52416550D1`，Factory `0x6725F303b657a9451d8BA641348b6761A6CC7a17`，WBNB `0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd`。
+
+创建费 `SALT_LOCK_FEE` 是 0.005 BNB，测试网和主网一样。
+
+## 测试网部署
+
+工厂要 Flap 来开权限。先部署两个工厂，把 `launcherFactory` 交给他们。脚本不会自己广播。
+
+```sh
+export DEPLOYER_PRIVATE_KEY=0x...
+forge script script/DeployTestnet.s.sol \
+  --rpc-url https://bsc-testnet-rpc.publicnode.com \
+  --broadcast \
+  --verify
+```
+
+私钥只从 `DEPLOYER_PRIVATE_KEY` 读取，日志不打印它。地址写到 `deployments/bsc-testnet.json`。
+
+验证：
+
+```sh
+forge verify-contract --chain 97 --watch \
+  <vaultFactory> src/uniform/UniformVaultFactory.sol:UniformVaultFactory \
+  --constructor-args $(cast abi-encode "constructor(address)" <launcherFactory>)
+
+forge verify-contract --chain 97 --watch \
+  <launcherFactory> src/uniform/UniformLauncherFactory.sol:UniformLauncherFactory \
+  --constructor-args $(cast abi-encode "constructor(address)" <vaultFactory>)
+```
+
+需要 `ETHERSCAN_API_KEY`。BscScan 的测试网验证走 chain 97。
+
+脚本同时部署一份 ERC-8004 参考注册表和 `Erc8004Source`。官方注册表已经在测试网，但没有从钱包反查 `agentId` 的视图，所以拍卖用的是这份带 `agentIdOf` 的参考实现。创建某一场时，把 `identitySources` 设成当时要接受的来源，创建后不能改。
+
+## ERC-8004 注册表
+
+官方规范：[ERC-8004: Trustless Agents](https://eips.ethereum.org/EIPS/eip-8004)。合约仓库：[erc-8004/erc-8004-contracts](https://github.com/erc-8004/erc-8004-contracts)。地址表：[Contract addresses](https://erc-8004.quicknode.com/docs/contracts)，和 BNB Chain 仓库 [bnb-chain/erc-8004-contracts](https://github.com/bnb-chain/erc-8004-contracts) 一致。
+
+| 网络 | Identity Registry |
+| --- | --- |
+| BNB Chain 主网 | `0x8004A169FB4a3325136EB29fA0ceB6D2e539a432` |
+| BNB Chain 测试网 | `0x8004A818BFB912233c491871b3d84c89A494BD9e` |
+
+2026-11-25 在测试网读过这份合约：`getVersion()` 返回 `2.0.0`，`balanceOf` 可用，`tokenOfOwnerByIndex` 和 `agentIdOf` 都会 revert。规范里的 `agentWallet` 在 NFT 转走时会被清掉。因为不能从地址反查编号，部署脚本另外部署参考实现 `Erc8004Registry`，登记 owner 和 agentWallet，并提供 `agentIdOf`。同一 `agentId` 的 owner 和 agentWallet 只能有一笔出价。
+
+币安 Agent ID 目前没有公开的链上注册表。`BinanceAgentIdSource` 在构造时固定一个只读目录，目录返回 0 就不是代理。没有管理员可以事后往一场拍卖里加来源。
+
 ## 本地页面
 
 ```sh

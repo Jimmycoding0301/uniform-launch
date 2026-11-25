@@ -7,6 +7,8 @@ import {IPortal} from "src/flap/IPortal.sol";
 import {LaunchVaultAddresses} from "src/flap/LaunchVaultAddresses.sol";
 import {UniformLauncher, LaunchConfig} from "src/uniform/UniformLauncher.sol";
 import {UniformLauncherFactory} from "src/uniform/UniformLauncherFactory.sol";
+import {BinanceAgentIdSource} from "src/uniform/BinanceAgentIdSource.sol";
+import {PermissiveAgentDirectory} from "../test/PermissiveAgentDirectory.sol";
 
 contract ShowScript is Script {
     address internal constant TOKEN_IMPL = 0x7777c57ff7dc441c1715b2e36fa581c48B782222;
@@ -26,6 +28,8 @@ contract ShowScript is Script {
         c.floorPrice = 1e13;
         c.durationBlocks = 20_000;
         vm.startBroadcast(creator);
+        c.identitySources = new address[](1);
+        c.identitySources[0] = address(new BinanceAgentIdSource(address(new PermissiveAgentDirectory())));
         UniformLauncher launcher = UniformLauncher(payable(portal.newLauncher{value: fee}(FACTORY, abi.encode(c))));
         vm.stopBroadcast();
         vm.startBroadcast(alice);

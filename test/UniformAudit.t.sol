@@ -4,7 +4,7 @@ pragma solidity ^0.8.26;
 import {Test, console2} from "forge-std/Test.sol";
 import {LibClone} from "solady/utils/LibClone.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
-import {IPortalTypes} from "src/flap/IPortal.sol";
+import {IPortal, IPortalTypes} from "src/flap/IPortal.sol";
 import {Distribution} from "src/flap/Distribution.sol";
 import {IStrategy} from "src/flap/IStrategy.sol";
 import {LaunchVaultAddresses} from "src/flap/LaunchVaultAddresses.sol";
@@ -12,6 +12,8 @@ import {UniformLauncher, LaunchConfig} from "src/uniform/UniformLauncher.sol";
 import {UniformLauncherFactory} from "src/uniform/UniformLauncherFactory.sol";
 import {UniformVault} from "src/uniform/UniformVault.sol";
 import {UniformVaultFactory} from "src/uniform/UniformVaultFactory.sol";
+import {BinanceAgentIdSource} from "src/uniform/BinanceAgentIdSource.sol";
+import {PermissiveAgentDirectory} from "./PermissiveAgentDirectory.sol";
 
 contract AuditToken {
     mapping(address => uint256) public balanceOf;
@@ -44,10 +46,28 @@ contract ReenterPortal {
     bool public bidLanded;
 
     function SALT_LOCK_FEE() external pure returns (uint256) {
-        return 0.01 ether;
+        return 0.005 ether;
     }
 
     function lockSalt(bytes32, uint8) external payable {}
+
+    function launchQuoteConfig(uint8, address) external pure returns (bool, uint256) {
+        return (true, 700 ether);
+    }
+
+    function graduationFloorV2ForLauncher(IPortal.GraduationFloorParams calldata p, address)
+        external
+        pure
+        returns (IPortal.GraduationFloorResultV2 memory r)
+    {
+        uint256 usd = p.poolQuote * 700 ether * p.poolToken / p.totalSupply / 1 ether;
+        r.quoteUsdWad = usd;
+        r.createFloorUsdWad = 750 ether;
+        r.floorUsdWad = 1500 ether;
+        r.multiplierBps = 10_000;
+        r.meetsCreateFloor = usd >= 750 ether;
+        r.meetsFloor = usd >= 1500 ether;
+    }
 
     function launchTaxTokenV2(
         IPortalTypes.CreateTaxTokenParams calldata p,
@@ -145,8 +165,10 @@ contract UniformAuditTest is Test {
         c.salt = bytes32(++saltNonce);
         c.floorPrice = floor;
         c.durationBlocks = 200;
+        c.identitySources = new address[](1);
+        c.identitySources[0] = address(new BinanceAgentIdSource(address(new PermissiveAgentDirectory())));
         vm.prank(portal);
-        launcher = UniformLauncher(payable(launcherFactory.newLauncher{value: 0.01 ether}(creator, abi.encode(c))));
+        launcher = UniformLauncher(payable(launcherFactory.newLauncher{value: 0.005 ether}(creator, abi.encode(c))));
     }
 
     function _bid(UniformLauncher launcher, address who, uint256 pay, uint256 price) internal {
@@ -156,7 +178,7 @@ contract UniformAuditTest is Test {
     }
 
     function _claimAll(UniformLauncher launcher) internal returns (uint256 paid) {
-        (address[] memory agents,,) = launcher.getBids();
+        (address[] memory agents,,,,) = launcher.getBids();
         for (uint256 i; i < agents.length; ++i) {
             uint256 before = agents[i].balance;
             vm.prank(agents[i]);
@@ -164,6 +186,31 @@ contract UniformAuditTest is Test {
                 paid += agents[i].balance - before;
             } catch {}
         }
+    }
+
+    function test_minPoolQuoteClearsGraduation() public {
+        UniformLauncher launcher = _launcher(1e13);
+        uint256 quote = launcher.minPoolQuote();
+        console2.log("MIN_POOL_QUOTE", quote);
+        uint256 usd = quote * 700 ether * launcher.POOL_AMOUNT() / launcher.TOTAL_SUPPLY() / 1 ether;
+        assertGe(usd, 1500 ether);
+        assertGt(quote, 4.285714285714285714 ether);
+        assertLt(quote, 4.5 ether);
+    }
+
+    function test_oneBnbQuoteRefunds() public {
+        UniformLauncher launcher = _launcher(1e12);
+        address who = address(0xA11CE);
+        _bid(launcher, who, 1 ether, 1e16);
+        vm.roll(launcher.endBlock());
+        launcher.settle();
+        assertEq(uint8(launcher.status()), uint8(UniformLauncher.Status.Failed));
+        assertEq(launcher.token(), address(0));
+        uint256 before = who.balance;
+        vm.prank(who);
+        launcher.refund();
+        assertEq(who.balance - before, 1 ether);
+        assertEq(address(launcher).balance, 0);
     }
 
     function test_exactHalfClearsWithNothingLeft() public {

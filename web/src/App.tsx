@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPublicClient, http, type Address } from "viem";
+import { createPublicClient, http, keccak256, toBytes, type Address } from "viem";
 import { formatBnb, formatPrice, formatRemain, formatTokens, parseBnb, tokensFor } from "./curve";
 import { agentLabel } from "./names";
 import { Roller, useReducedMotion, Zh } from "./motion";
 import { PlotStage } from "./PlotStage";
 import { ScriptPage } from "./ScriptPage";
+import { pancakeSwapLink } from "./dex";
 import { ADDR_STAGGER_MS, COLOR_BG, MIN_SETTLE_GAS, RISK_LINE, SETTLE_GAS_LIMIT, SETTLE_MS, SWEEP_MS, USER_LINE } from "./theme";
 
 const ABI = [
@@ -17,13 +18,14 @@ const ABI = [
   { type: "function", name: "token", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
   { type: "function", name: "pool", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
   { type: "function", name: "poolQuote", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "vaultFactory", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
   { type: "function", name: "preview", stateMutability: "view", inputs: [], outputs: [{ type: "bool" }, { type: "uint256" }, { type: "uint256" }] },
   {
     type: "function",
     name: "getBids",
     stateMutability: "view",
     inputs: [],
-    outputs: [{ type: "address[]" }, { type: "uint256[]" }, { type: "uint256[]" }],
+    outputs: [{ type: "address[]" }, { type: "uint256[]" }, { type: "uint256[]" }, { type: "bytes32[]" }, { type: "uint256[]" }],
   },
   {
     type: "function",
@@ -31,6 +33,51 @@ const ABI = [
     stateMutability: "view",
     inputs: [],
     outputs: [{ type: "uint256[]" }, { type: "uint256[]" }, { type: "bool[]" }],
+  },
+] as const;
+
+const PORTAL = "0x000042108465206185A077Edc3F3fd2b49060000" as Address;
+const SELL = 500_000n * 10n ** 18n;
+const SUPPLY = 1_000_000n * 10n ** 18n;
+const PORTAL_ABI = [
+  {
+    type: "function",
+    name: "launchQuoteConfig",
+    stateMutability: "view",
+    inputs: [{ type: "uint8" }, { type: "address" }],
+    outputs: [{ type: "bool" }, { type: "uint256" }],
+  },
+  {
+    type: "function",
+    name: "graduationFloorV2ForLauncher",
+    stateMutability: "view",
+    inputs: [
+      {
+        type: "tuple",
+        components: [
+          { name: "quoteToken", type: "address" },
+          { name: "quotePriceUsd", type: "uint256" },
+          { name: "poolQuote", type: "uint256" },
+          { name: "poolToken", type: "uint256" },
+          { name: "totalSupply", type: "uint256" },
+          { name: "vaultFactory", type: "address" },
+        ],
+      },
+      { type: "address" },
+    ],
+    outputs: [
+      {
+        type: "tuple",
+        components: [
+          { name: "meetsFloor", type: "bool" },
+          { name: "floorUsdWad", type: "uint256" },
+          { name: "quoteUsdWad", type: "uint256" },
+          { name: "multiplierBps", type: "uint16" },
+          { name: "meetsCreateFloor", type: "bool" },
+          { name: "createFloorUsdWad", type: "uint256" },
+        ],
+      },
+    ],
   },
 ] as const;
 
@@ -42,6 +89,7 @@ type Row = {
   tokensOwed: bigint;
   quoteOwed: bigint;
   pulled: boolean;
+  sourceId: `0x${string}`;
 };
 type Snap = {
   status: number;
@@ -53,7 +101,9 @@ type Snap = {
   token: Address;
   pool: Address;
   poolQuote: bigint;
+  vaultFactory: Address;
   previewOk: boolean;
+  previewQuote: bigint;
   previewPrice: bigint;
   bids: Row[];
 };
@@ -82,6 +132,7 @@ export function App() {
   const [showToken, setShowToken] = useState(false);
   const [showPool, setShowPool] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [launchLine, setLaunchLine] = useState("");
   const [intro, setIntro] = useState(() => !window.matchMedia("(prefers-reduced-motion: reduce)").matches);
   const [narrow, setNarrow] = useState(window.matchMedia("(max-width: 900px)").matches);
   const initialStatus = useRef<number | null>(null);
@@ -113,7 +164,7 @@ export function App() {
     const load = async () => {
       try {
         const b = await client.getBlockNumber();
-        const [status, floor, clearing, softCap, start, end, token, pool, poolQuote, preview, got, fills] = await Promise.all([
+        const [status, floor, clearing, softCap, start, end, token, pool, poolQuote, vaultFactory, preview, got, fills] = await Promise.all([
           client.readContract({ address: launcher, abi: ABI, functionName: "status" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "floorPrice" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "clearingPrice" }),
@@ -123,6 +174,7 @@ export function App() {
           client.readContract({ address: launcher, abi: ABI, functionName: "token" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "pool" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "poolQuote" }),
+          client.readContract({ address: launcher, abi: ABI, functionName: "vaultFactory" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "preview" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "getBids" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "getFills" }),
@@ -131,6 +183,7 @@ export function App() {
         const agents = got[0] as Address[];
         const budgets = got[1] as bigint[];
         const prices = got[2] as bigint[];
+        const sourceIds = got[3] as `0x${string}`[];
         const owed = fills[0] as bigint[];
         const quotes = fills[1] as bigint[];
         const pulled = fills[2] as boolean[];
@@ -144,7 +197,9 @@ export function App() {
           token: token as Address,
           pool: pool as Address,
           poolQuote: poolQuote as bigint,
+          vaultFactory: vaultFactory as Address,
           previewOk: preview[0] as boolean,
+          previewQuote: preview[2] as bigint,
           previewPrice: preview[1] as bigint,
           bids: agents.map((agent, i) => ({
             agent,
@@ -153,6 +208,7 @@ export function App() {
             tokensOwed: owed[i] ?? 0n,
             quoteOwed: quotes[i] ?? 0n,
             pulled: Boolean(pulled[i]),
+            sourceId: sourceIds[i] ?? "0x",
           })),
         };
         setBlock((prev) => (prev === b ? prev : (b as bigint)));
@@ -224,6 +280,53 @@ export function App() {
   const raised = snap ? snap.bids.reduce((sum, row) => sum + row.budget, 0n) : 0n;
   const capPct = snap && snap.softCap > 0n ? Math.min(100, Number((raised * 10000n) / snap.softCap) / 100) : 0;
   const remain = snap ? (block >= snap.end ? 0n : snap.end - block) : 0n;
+
+  useEffect(() => {
+    if (!launcher || !snap || phase !== "ready") {
+      setLaunchLine("");
+      return;
+    }
+    const quote = snap.previewOk ? snap.previewQuote : 0n;
+    if (quote === 0n) {
+      setLaunchLine("未达下限将退款");
+      return;
+    }
+    let stop = false;
+    const client = createPublicClient({ transport: http(rpc) });
+    (async () => {
+      try {
+        const config = await client.readContract({
+          address: PORTAL,
+          abi: PORTAL_ABI,
+          functionName: "launchQuoteConfig",
+          args: [0, ZERO],
+        });
+        const price = config[0] && config[1] > 0n ? config[1] : 700n * 10n ** 18n;
+        const floor = await client.readContract({
+          address: PORTAL,
+          abi: PORTAL_ABI,
+          functionName: "graduationFloorV2ForLauncher",
+          args: [
+            {
+              quoteToken: ZERO,
+              quotePriceUsd: price,
+              poolQuote: quote,
+              poolToken: SELL,
+              totalSupply: SUPPLY,
+              vaultFactory: snap.vaultFactory,
+            },
+            launcher,
+          ],
+        });
+        if (!stop) setLaunchLine(floor.meetsCreateFloor && floor.meetsFloor ? "达到发射下限" : "未达下限将退款");
+      } catch {
+        if (!stop) setLaunchLine("未达下限将退款");
+      }
+    })();
+    return () => {
+      stop = true;
+    };
+  }, [launcher, phase, rpc, snap]);
 
   async function copyInstruction() {
     if (!snap || !launcher) return;
@@ -379,6 +482,7 @@ export function App() {
                 {phase === "wait" && <p className="user-line tight"><Zh text="窗口还没开。" /></p>}
                 {phase === "closed" && <p className="user-line tight"><Zh text="已停止接单。" /></p>}
                 {phase === "ready" && <p className="user-line tight"><Zh text="等待结算。gas limit 用 8000000，不要用估算值。" /></p>}
+                {phase === "ready" && launchLine && <p className="user-line tight"><Zh text={launchLine} /></p>}
                 {button && phase !== "open" && (
                   <button className="primary" type="button" disabled={rpcError} onClick={() => void copyInstruction()} aria-live="polite">
                     <span className="btn-stack">
@@ -403,7 +507,7 @@ export function App() {
                     <div className="result-row"><span>开盘价</span><b>{formatPrice(snap.clearing)} BNB/枚</b></div>
                     <div className="result-row"><span>入池 BNB</span><b>{formatBnb(snap.poolQuote)} BNB</b></div>
                     {showToken && snap.token !== ZERO && <Addr label="代币" value={snap.token} />}
-                    {showPool && snap.pool !== ZERO && <Addr label="池子" value={snap.pool} />}
+                    {showPool && snap.pool !== ZERO && <Addr label="池子" value={snap.pool} swap={snap.token !== ZERO ? pancakeSwapLink(snap.token) : ""} />}
                   </div>
                 )}
                 <h2 className="group-title">本场参数</h2>
@@ -501,7 +605,10 @@ function BidTable({ rows, phase, clearing }: { rows: Row[]; phase: string; clear
         return (
           <div className={fresh.has(id) ? "bid fresh" : "bid"} key={row.agent}>
             <i className={mark.dot} />
-            <span className={label.named ? "agent-name" : "agent-addr"}>{label.text}</span>
+            <span className={label.named ? "agent-name" : "agent-addr"}>
+              {label.text}
+              {sourceTag(row.sourceId) && <i className="src-tag">{sourceTag(row.sourceId)}</i>}
+            </span>
             <span>{formatBnb(row.budget)} BNB</span>
             <span>{formatPrice(row.maxPrice)}</span>
             <span className={mark.tone}>{mark.label}</span>
@@ -510,6 +617,16 @@ function BidTable({ rows, phase, clearing }: { rows: Row[]; phase: string; clear
       })}
     </div>
   );
+}
+
+const BINANCE_SOURCE = keccak256(toBytes("binance-agent-id"));
+const ERC8004_SOURCE = keccak256(toBytes("erc-8004"));
+
+function sourceTag(sourceId: string): string {
+  const id = sourceId.toLowerCase();
+  if (id === BINANCE_SOURCE) return "Agent ID";
+  if (id === ERC8004_SOURCE) return "8004";
+  return "";
 }
 
 function rowMark(row: Row, phase: string, clearing: bigint): { label: string; dot: string; tone: string } {
@@ -570,8 +687,9 @@ function groupFull(value: bigint): string {
 function sameSnap(a: Snap, b: Snap) {
   if (a.status !== b.status || a.floor !== b.floor || a.clearing !== b.clearing || a.softCap !== b.softCap) return false;
   if (a.start !== b.start || a.end !== b.end || a.token !== b.token || a.pool !== b.pool || a.poolQuote !== b.poolQuote) return false;
+  if (a.vaultFactory !== b.vaultFactory || a.previewQuote !== b.previewQuote) return false;
   if (a.previewOk !== b.previewOk || a.previewPrice !== b.previewPrice || a.bids.length !== b.bids.length) return false;
-  return a.bids.every((row, i) => row.agent === b.bids[i].agent && row.budget === b.bids[i].budget && row.maxPrice === b.bids[i].maxPrice && row.pulled === b.bids[i].pulled && row.tokensOwed === b.bids[i].tokensOwed);
+    return a.bids.every((row, i) => row.agent === b.bids[i].agent && row.budget === b.bids[i].budget && row.maxPrice === b.bids[i].maxPrice && row.pulled === b.bids[i].pulled && row.tokensOwed === b.bids[i].tokensOwed && row.sourceId === b.bids[i].sourceId);
 }
 
 function Skeleton() {
@@ -597,7 +715,7 @@ function quoteLine(snap: Snap | null, budgetWei: bigint | null, priceWei: bigint
   return `按当前清算价可得约 ${formatTokens(tokensFor(budgetWei, clearing))} 枚。`;
 }
 
-function Addr({ label, value }: { label: string; value: string }) {
+function Addr({ label, value, swap }: { label: string; value: string; swap?: string }) {
   return (
     <div className="addr show">
       <span className="addr-label">{label}</span>
@@ -606,6 +724,11 @@ function Addr({ label, value }: { label: string; value: string }) {
       <a href={`https://testnet.bscscan.com/address/${value}`} target="_blank" rel="noreferrer">
         浏览器
       </a>
+      {swap && (
+        <a href={swap} target="_blank" rel="noreferrer">
+          Pancake
+        </a>
+      )}
     </div>
   );
 }

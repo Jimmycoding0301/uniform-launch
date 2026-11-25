@@ -382,7 +382,22 @@ h1 .char { display: inline-block; }
 .tone-gold { color: #F0B90B; }
 .tone-text { color: #F5F5F5; }
 .tone-mute { color: #9A9AA2; }
-.agent-name { color: #F5F5F5; font-family: "Geist Sans", "WenQuanYi Micro Hei", sans-serif; }
+.agent-name { color: #F5F5F5; font-family: "Geist Sans", "WenQuanYi Micro Hei", sans-serif; white-space: nowrap; }
+.src-tag {
+  margin-left: 6px;
+  padding: 0 4px;
+  border: 1px solid rgba(255,255,255,0.28);
+  border-radius: 0;
+  color: #9A9AA2;
+  font-style: normal;
+  font-size: 11px;
+  line-height: 16px;
+  font-family: "Geist Sans", "WenQuanYi Micro Hei", sans-serif;
+  white-space: nowrap;
+}
+@media (max-width: 480px) {
+  .bid { grid-template-columns: 14px minmax(148px, 1.7fr) 0.62fr 0.78fr 0.42fr; gap: 4px; }
+}
 .agent-addr { color: #9A9AA2; font-family: "Geist Mono", ui-monospace, monospace; }
 .bid.fresh { animation: bid-in 1.2s linear both; }
 @keyframes bid-in {

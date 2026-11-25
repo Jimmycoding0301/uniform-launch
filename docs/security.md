@@ -38,7 +38,7 @@ flowchart LR
   vault -->|withdraw 或 withdrawAll| owner
 ```
 
-成功时，Launcher 先把 `poolQuote` 交给 Portal。每个人后来领走的退款，加上这份 `poolQuote`，不超过本场收进来的预算。代币分配数不超过 500,000 枚。领完之后 Launcher 的 BNB 和代币余额都大于等于 0。除不尽的代币留在 Launcher 里，没有提取函数。
+成功时，Launcher 先问 Portal `graduationFloorV2ForLauncher`。入池 BNB 低于毕业线，或这次调用失败，就进入失败态并全额退款，不调用 `launchTaxTokenV2`。达标之后才把 `poolQuote` 交给 Portal；若发射仍然 revert，同样进入失败态退款。每个人后来领走的退款，加上这份 `poolQuote`，不超过本场收进来的预算。代币分配数不超过 500,000 枚。领完之后 Launcher 的 BNB 和代币余额都大于等于 0。除不尽的代币留在 Launcher 里，没有提取函数。
 
 失败时不调用 Portal。每个出价人拿回自己的预算。
 

@@ -233,4 +233,33 @@ interface IPortal {
 
     /// @notice A LauncherFactory's enabled flag and multiplier in bps.
     function launcherFactoryMultiplier(address factory) external view returns (bool enabled, uint16 multiplierBps);
+
+    /// @notice Quote token USD price used by the V2 floor. `quoteToken` address(0) is native BNB.
+    function launchQuoteConfig(uint8 kind, address quoteToken) external view returns (bool enabled, uint256 quotePriceUsd);
+
+    /// @notice Inputs for the V2 creation and graduation floors.
+    struct GraduationFloorParams {
+        address quoteToken;
+        uint256 quotePriceUsd;
+        uint256 poolQuote;
+        uint256 poolToken;
+        uint256 totalSupply;
+        address vaultFactory;
+    }
+
+    /// @notice Both floors are the USD value of the pool quote, 18 decimals.
+    struct GraduationFloorResultV2 {
+        bool meetsFloor;
+        uint256 floorUsdWad;
+        uint256 quoteUsdWad;
+        uint16 multiplierBps;
+        bool meetsCreateFloor;
+        uint256 createFloorUsdWad;
+    }
+
+    /// @notice Preview a Launcher launch, including that Launcher factory's multiplier.
+    function graduationFloorV2ForLauncher(GraduationFloorParams calldata params, address launcher)
+        external
+        view
+        returns (GraduationFloorResultV2 memory);
 }

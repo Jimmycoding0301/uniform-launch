@@ -8,6 +8,8 @@ import {LaunchVaultAddresses} from "src/flap/LaunchVaultAddresses.sol";
 import {UniformLauncher, LaunchConfig} from "src/uniform/UniformLauncher.sol";
 import {UniformLauncherFactory} from "src/uniform/UniformLauncherFactory.sol";
 import {UniformVaultFactory} from "src/uniform/UniformVaultFactory.sol";
+import {BinanceAgentIdSource} from "src/uniform/BinanceAgentIdSource.sol";
+import {PermissiveAgentDirectory} from "../test/PermissiveAgentDirectory.sol";
 
 interface IProxyAdminLike {
     function owner() external view returns (address);
@@ -77,6 +79,8 @@ contract LocalForkScript is Script {
         c.floorPrice = floor;
         c.durationBlocks = duration;
         vm.startBroadcast(creator);
+        c.identitySources = new address[](1);
+        c.identitySources[0] = address(new BinanceAgentIdSource(address(new PermissiveAgentDirectory())));
         launcher = UniformLauncher(payable(portal.newLauncher{value: fee}(address(factory), abi.encode(c))));
         vm.stopBroadcast();
     }

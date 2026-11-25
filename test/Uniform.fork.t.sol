@@ -10,6 +10,9 @@ import {UniformLauncher, LaunchConfig} from "src/uniform/UniformLauncher.sol";
 import {UniformLauncherFactory} from "src/uniform/UniformLauncherFactory.sol";
 import {UniformVault} from "src/uniform/UniformVault.sol";
 import {UniformVaultFactory} from "src/uniform/UniformVaultFactory.sol";
+import {PancakeV2Testnet} from "src/uniform/PancakeV2Testnet.sol";
+import {BinanceAgentIdSource} from "src/uniform/BinanceAgentIdSource.sol";
+import {PermissiveAgentDirectory} from "./PermissiveAgentDirectory.sol";
 
 interface IProxyAdminLike {
     function owner() external view returns (address);
@@ -37,6 +40,10 @@ interface IRouterSell {
     ) external;
 }
 
+interface IPoolLike {
+    function factory() external view returns (address);
+}
+
 interface IRouterLike {
     function swapExactETHForTokensSupportingFeeOnTransferTokens(
         uint256 amountOutMin,
@@ -48,7 +55,7 @@ interface IRouterLike {
 
 /// @notice 对 BSC 测试网 Portal 的只读分叉。没有 BSC_TESTNET_RPC_URL 就跳过。不向活网发交易。
 contract UniformForkTest is Test {
-    uint256 internal constant PORTAL_FEE_FALLBACK = 0.01 ether;
+    uint256 internal constant PORTAL_FEE_FALLBACK = 0.005 ether;
 
     IPortal internal portal;
     address internal admin;
@@ -60,8 +67,9 @@ contract UniformForkTest is Test {
     address internal trader = address(uint160(0xC0DE0004));
 
     address internal constant TOKEN_IMPL = 0x7777c57ff7dc441c1715b2e36fa581c48B782222;
-    address internal constant WBNB = 0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd;
-    address internal constant ROUTER = 0xc9D63ddCB9549578057EAB6A83a543DdFEE2b8c3;
+    address internal constant WBNB = PancakeV2Testnet.WBNB;
+    address internal constant ROUTER = PancakeV2Testnet.ROUTER;
+    address internal constant FACTORY = PancakeV2Testnet.FACTORY;
 
     uint256 internal saltNonce;
 
@@ -178,6 +186,47 @@ contract UniformForkTest is Test {
         assertLt(used, launcher.MIN_SETTLE_GAS(), "MIN_SETTLE_GAS is below the measured settle");
     }
 
+    function test_oneBnbBelowLaunchFloorRefunds() public {
+        UniformLauncher launcher = _create(1e12, 200, "LOW", bytes32(uint256(88011)));
+        vm.prank(alice);
+        launcher.bid{value: 1 ether}(1e16);
+        vm.roll(launcher.endBlock());
+        IPortal.GraduationFloorResultV2 memory floor = _floor(launcher, 1 ether);
+        assertFalse(floor.meetsCreateFloor);
+        assertLt(1 ether, launcher.minPoolQuote());
+        uint256 before = alice.balance;
+        launcher.settle();
+        assertEq(uint8(launcher.status()), uint8(UniformLauncher.Status.Failed));
+        assertEq(launcher.token(), address(0));
+        vm.prank(alice);
+        launcher.refund();
+        assertEq(alice.balance - before, 1 ether);
+        assertEq(address(launcher).balance, 0);
+    }
+
+    function test_graduationQuoteLaunches() public {
+        UniformLauncher probe = _create(1e13, 200, "PRB", bytes32(uint256(88012)));
+        uint256 quote = probe.minPoolQuote();
+        UniformLauncher launcher = _create(1e12, 200, "OK", bytes32(uint256(88013)));
+        assertGe(quote, 4.285714285714285715 ether);
+        vm.deal(alice, quote);
+        vm.prank(alice);
+        launcher.bid{value: quote}(1e16);
+        vm.roll(launcher.endBlock());
+        IPortal.GraduationFloorResultV2 memory floor = _floor(launcher, quote);
+        assertTrue(floor.meetsCreateFloor);
+        assertTrue(floor.meetsFloor);
+        launcher.settle();
+        assertEq(uint8(launcher.status()), uint8(UniformLauncher.Status.Succeeded));
+        assertTrue(launcher.token() != address(0));
+        assertTrue(launcher.pool() != address(0));
+        assertEq(IPoolLike(launcher.pool()).factory(), FACTORY);
+        assertGe(launcher.poolQuote(), quote - 1);
+        vm.prank(alice);
+        launcher.claim();
+        assertEq(address(launcher).balance, 0);
+    }
+
     function test_disabledFactoryFlag() public {
         UniformLauncher launcher = _create(1e13, 200, "OFF", bytes32(uint256(33)));
         vm.prank(admin);
@@ -232,6 +281,26 @@ contract UniformForkTest is Test {
         ITaxProcessorLike(proc).dispatch();
     }
 
+    function _floor(UniformLauncher launcher, uint256 quoteIn)
+        internal
+        view
+        returns (IPortal.GraduationFloorResultV2 memory)
+    {
+        (bool enabled, uint256 price) = portal.launchQuoteConfig(0, address(0));
+        require(enabled && price != 0, "quote config");
+        return portal.graduationFloorV2ForLauncher(
+            IPortal.GraduationFloorParams({
+                quoteToken: address(0),
+                quotePriceUsd: price,
+                poolQuote: quoteIn,
+                poolToken: launcher.POOL_AMOUNT(),
+                totalSupply: launcher.TOTAL_SUPPLY(),
+                vaultFactory: launcher.vaultFactory()
+            }),
+            address(launcher)
+        );
+    }
+
     function _create(uint256 floor, uint64 duration, string memory symbol, bytes32 seed)
         internal
         returns (UniformLauncher launcher)
@@ -243,6 +312,8 @@ contract UniformForkTest is Test {
         c.salt = _mineSalt(seed);
         c.floorPrice = floor;
         c.durationBlocks = duration;
+        c.identitySources = new address[](1);
+        c.identitySources[0] = address(new BinanceAgentIdSource(address(new PermissiveAgentDirectory())));
         uint256 fee = portal.SALT_LOCK_FEE();
         if (fee == 0) fee = PORTAL_FEE_FALLBACK;
         vm.prank(creator);

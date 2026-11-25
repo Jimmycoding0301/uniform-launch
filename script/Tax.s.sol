@@ -7,6 +7,7 @@ import {IPortal} from "src/flap/IPortal.sol";
 import {LaunchVaultAddresses} from "src/flap/LaunchVaultAddresses.sol";
 import {UniformLauncher} from "src/uniform/UniformLauncher.sol";
 import {UniformVault} from "src/uniform/UniformVault.sol";
+import {PancakeV2Testnet} from "src/uniform/PancakeV2Testnet.sol";
 
 interface ITaxTokenLike {
     function taxProcessor() external view returns (address);
@@ -21,14 +22,17 @@ interface ITaxProcessorLike {
 }
 
 interface IRouterLike {
-    function swapExactETHForTokensSupportingFeeOnTransferTokens(uint256, address[] calldata, address, uint256) external payable;
-    function swapExactTokensForETHSupportingFeeOnTransferTokens(uint256, uint256, address[] calldata, address, uint256) external;
+    function swapExactETHForTokensSupportingFeeOnTransferTokens(uint256, address[] calldata, address, uint256)
+        external
+        payable;
+    function swapExactTokensForETHSupportingFeeOnTransferTokens(uint256, uint256, address[] calldata, address, uint256)
+        external;
 }
 
 contract TaxScript is Script {
     address internal constant LAUNCHER = 0x4F1bF7E3205c9516c09aaA311971E42e50F3aB59;
-    address internal constant WBNB = 0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd;
-    address internal constant ROUTER = 0xc9D63ddCB9549578057EAB6A83a543DdFEE2b8c3;
+    address internal constant WBNB = PancakeV2Testnet.WBNB;
+    address internal constant ROUTER = PancakeV2Testnet.ROUTER;
     address internal trader = address(uint160(0xC0DE0004));
     address internal creator = address(uint160(0xC0DE0001));
 
@@ -45,14 +49,17 @@ contract TaxScript is Script {
         sellPath[0] = token;
         sellPath[1] = WBNB;
         vm.startBroadcast(trader);
-        IRouterLike(ROUTER).swapExactETHForTokensSupportingFeeOnTransferTokens{value: 8 ether}(0, buyPath, trader, block.timestamp + 600);
+        IRouterLike(ROUTER).swapExactETHForTokensSupportingFeeOnTransferTokens{value: 8 ether}(
+            0, buyPath, trader, block.timestamp + 600
+        );
         for (uint256 i; i < 8; ++i) {
             if (_liquid(proc)) break;
             uint256 sellAmt = IERC20(token).balanceOf(trader) * 30 / 100;
             if (sellAmt == 0) break;
             IERC20(token).approve(ROUTER, sellAmt);
             uint256 beforeBal = trader.balance;
-            IRouterLike(ROUTER).swapExactTokensForETHSupportingFeeOnTransferTokens(sellAmt, 0, sellPath, trader, block.timestamp + 600);
+            IRouterLike(ROUTER)
+                .swapExactTokensForETHSupportingFeeOnTransferTokens(sellAmt, 0, sellPath, trader, block.timestamp + 600);
             uint256 proceeds = trader.balance - beforeBal;
             if (proceeds > 0) {
                 IRouterLike(ROUTER).swapExactETHForTokensSupportingFeeOnTransferTokens{value: proceeds * 90 / 100}(
