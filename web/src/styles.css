@@ -596,6 +596,10 @@ svg.plot { display: block; touch-action: none; background: var(--bg); }
     line-height: 20px;
   }
 }
+.page.demo { padding-bottom: 72px; }
+.page.demo .hash-toggle,
+.page.demo #txhash,
+.page.demo .paste { scroll-margin-bottom: 88px; }
 .demo-bar button.next { border-color: var(--accent); color: var(--accent); }
 .demo-bar button:disabled { opacity: 0.4; }
 .slip {

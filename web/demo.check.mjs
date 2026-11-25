@@ -42,5 +42,18 @@ await missing.goto("http://127.0.0.1:4317/?demo=1", { waitUntil: "domcontentload
 await missing.getByText("还没有演示场").first().waitFor();
 await missing.getByText("先跑演示命令").first().waitFor();
 await missing.close();
+const down = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await down.goto("http://127.0.0.1:4317/?demo=1", { waitUntil: "domcontentloaded" });
+await down.getByText("0.00002").first().waitFor({ timeout: 8000 });
+await down.route("**/*", (route) => {
+  if (route.request().url().includes(":18545")) return route.abort();
+  return route.continue();
+});
+await down.locator(".hash-toggle").evaluate((el) => el.scrollIntoView({ block: "center" }));
+await down.getByRole("button", { name: "已发送？贴哈希核对" }).click();
+await down.locator("#txhash").fill(`0x${"ab".repeat(32)}`);
+await down.getByRole("button", { name: "核对", exact: true }).click();
+await down.getByText("读不到链").waitFor({ timeout: 8000 });
+await down.close();
 await browser.close();
 console.log("演示六幕、方向键和退出都通过");

@@ -608,8 +608,14 @@ export function App() {
         limit,
       });
       setHashNote("");
-    } catch {
-      setHashNote("这笔交易对不上当前指令。检查是否发到了链编号 97 的这场合约。");
+    } catch (error) {
+      const err = error as { shortMessage?: string; message?: string };
+      const text = `${err.shortMessage || ""} ${err.message || ""}`;
+      setHashNote(
+        /fetch|HTTP request failed|ECONN|ENOTFOUND|timeout/i.test(text)
+          ? "读不到链。换一个 RPC 地址后重试。"
+          : "这笔交易对不上当前指令。检查是否发到了链编号 97 的这场合约。",
+      );
     } finally {
       setHashBusy(false);
     }
