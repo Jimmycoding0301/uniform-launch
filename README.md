@@ -63,9 +63,9 @@ Addresses are the verified BSC testnet deployments. The factories are not enable
 bash script/demo.sh
 ```
 
-跑完后终端打印页面地址和 `/?demo=1`。演示条有六幕，左右方向键切换，Esc 退出。
+跑完后终端打印页面地址和 `/?demo=1`。演示条有六幕，左右方向键切换，Esc 退出。检查用 `cd web && npm test`、`forge test`、`node agent/edge.test.mjs`、`node script/check-links.mjs`、`node script/check-why.mjs`、`node script/check-evidence.mjs`。
 
-One command starts the local fork and the page, then prints both URLs. `docker-compose.yml` describes the same two processes. Docker was not run in this environment. `script/demo.sh` does not need it.
+One command starts the local fork and the page, then prints both URLs. `docker-compose.yml` describes the same two processes. Docker was not run in this environment. `script/demo.sh` does not need it. The check commands are in the paragraph above.
 
 ## 测试网
 
