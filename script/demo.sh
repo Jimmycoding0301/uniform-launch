@@ -12,12 +12,17 @@ fi
 if [ ! -d web/node_modules ]; then
   (cd web && npm ci)
 fi
-if ! curl -sf -o /dev/null "$WEB"; then
-  (cd web && npm run dev -- --host 0.0.0.0 --port 4317 >/tmp/uniform-web.log 2>&1 &)
+if ! curl -sf --max-time 2 -o /dev/null "$WEB"; then
+  nohup npm --prefix "$ROOT/web" run dev -- --host 0.0.0.0 --port 4317 >/tmp/uniform-web.log 2>&1 &
+  disown || true
   for _ in $(seq 1 30); do
-    curl -sf -o /dev/null "$WEB" && break
+    curl -sf --max-time 2 -o /dev/null "$WEB" && break
     sleep 1
   done
+fi
+if ! curl -sf --max-time 2 -o /dev/null "$WEB"; then
+  echo "页面没有起来。看 /tmp/uniform-web.log" >&2
+  exit 1
 fi
 OPEN=$(node -e 'const d=require("./web/public/demo.json"); process.stdout.write(d.open||"")' 2>/dev/null || true)
 CODE=$(cast code "${OPEN:-0x0000000000000000000000000000000000000000}" --rpc-url "$ANVIL_RPC" 2>/dev/null || true)
