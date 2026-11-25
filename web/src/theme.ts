@@ -15,18 +15,10 @@ export const TOKEN = {
   edge: "var(--edge)",
 } as const;
 
-export const GRID_PX = 64;
-export const CURVE_STROKE_PX = 1.5;
-export const EASE = "cubic-bezier(0.16, 1, 0.3, 1)";
 export const SETTLE_MS = 800;
 export const SWEEP_MS = 600;
-export const DRAW_MS = 900;
 export const CURVE_MS = 400;
-export const HOVER_MS = 140;
-export const STATE_MS = 280;
-export const SEG_MS = 200;
 export const ADDR_STAGGER_MS = 150;
-export const BLOCK_MS = 750;
 export const SETTLE_GAS_LIMIT = 8_000_000;
 export const MIN_SETTLE_GAS = 7_000_000;
 export const COPY_MS = 1600;
