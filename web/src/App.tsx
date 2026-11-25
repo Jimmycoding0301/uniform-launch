@@ -1123,7 +1123,7 @@ function sameSnap(a: Snap, b: Snap) {
   if (a.previewOk !== b.previewOk || a.previewPrice !== b.previewPrice || a.bids.length !== b.bids.length) return false;
   if (a.sources.length !== b.sources.length) return false;
   if (a.sources.some((item, i) => item.sourceId !== b.sources[i].sourceId || item.standIn !== b.sources[i].standIn)) return false;
-  return a.bids.every((row, i) => row.agent === b.bids[i].agent && row.budget === b.bids[i].budget && row.maxPrice === b.bids[i].maxPrice && row.pulled === b.bids[i].pulled && row.tokensOwed === b.bids[i].tokensOwed && row.sourceId === b.bids[i].sourceId);
+  return a.bids.every((row, i) => row.agent === b.bids[i].agent && row.budget === b.bids[i].budget && row.maxPrice === b.bids[i].maxPrice && row.pulled === b.bids[i].pulled && row.tokensOwed === b.bids[i].tokensOwed && row.quoteOwed === b.bids[i].quoteOwed && row.sourceId === b.bids[i].sourceId);
 }
 
 function Skeleton() {
