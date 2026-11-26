@@ -9,6 +9,7 @@
 | 中文一句话 | 一个身份出价一次，所有成交者支付同一价格。达到门槛就通过 Flap 建池，未达门槛则全额退款。 |
 | Tracks | Developer Track — Build on BNB Chain · Flap Track — Build on Pool Launch |
 | Repository | [Public repository](https://github.com/Jimmycoding0301/uniform-launch) |
+| Website | [Public testnet website](https://jimmycoding0301.github.io/uniform-launch/?lang=en) |
 
 ## English description
 
@@ -34,7 +35,7 @@ BSC 公共测试网上，一笔出价以每枚 0.0000089 tBNB 成交。Flap 创�
 
 ## What to show the judges
 
-[Two-minute recording script and judge Q&A](pitch-runbook.md) · [Six-scene preview](../qa/submission/README.md)
+[Editable bilingual pitch deck](../qa/submission/Uniform-Launch-Bangkok-Pitch.pptx) · [Two-minute recording script and judge Q&A](pitch-runbook.md) · [Six-scene preview](https://jimmycoding0301.github.io/uniform-launch/?demo=1&lang=en)
 
 Flap asks teams to show a public BSC Testnet launch through their Factory, share code, explain the launch mechanism, and show their custom Flap UI. [Official Flap brief](https://www.hackquest.io/hackathons/BNB-Bangkok)
 

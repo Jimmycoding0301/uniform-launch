@@ -790,6 +790,13 @@ button.primary:focus-visible { outline: 0; box-shadow: inset 0 0 0 3px var(--tex
 .meter::after { background: repeating-linear-gradient(90deg, transparent 0 calc(5% - 2px), var(--bg) calc(5% - 2px) 5%); }
 .compare-row.uniform .compare-track i { background: repeating-linear-gradient(118deg, var(--accent) 0 8px, var(--accent-ink) 8px 9px); }
 .compare-row .compare-track { height: 10px; }
+.public-gallery { width: 100%; padding-block: 28px; }
+.public-gallery h1 { font-size: var(--fs-36); line-height: 1.1; }
+.public-gallery-nav { display: flex; gap: 8px; flex-wrap: wrap; margin-block: 20px; }
+.public-gallery-nav button { color: var(--text-2); background: var(--surface); border: 1px solid var(--edge); padding: 10px; cursor: pointer; }
+.public-gallery-nav button[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
+.public-gallery img { display: block; width: min(100%, 1160px); height: auto; border: 1px solid var(--edge); }
+.public-gallery .public-launch-links { margin-top: 12px; }
 .demo-bar { border-top-color: var(--edge); }
 .demo-bar .scene-track { display: flex; gap: 3px; }
 .demo-bar .scene-track button {

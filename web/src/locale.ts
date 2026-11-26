@@ -15,9 +15,8 @@ document.documentElement.lang = language === "en" ? "en" : "zh-CN";
 document.title = t("同价发射", "Uniform Launch · One-Price Auctions");
 
 export function localizedHref(path: string): string {
-  if (language === "zh") return path;
-  const url = new URL(path, location.origin);
-  url.searchParams.set("lang", "en");
+  const url = new URL(path.replace(/^\//, ""), new URL(import.meta.env.BASE_URL, location.origin));
+  if (language === "en") url.searchParams.set("lang", "en");
   return url.pathname + url.search + url.hash;
 }
 

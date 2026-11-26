@@ -2,6 +2,8 @@
 
 A buyer chooses a budget and a maximum price. When bidding closes, everyone who fills pays the same price. If the auction meets its funding conditions, Flap issues the token and seeds a PancakeSwap V2 pool in the settlement transaction. Otherwise, every bidder can claim their full bid back.
 
+[Live website in English](https://jimmycoding0301.github.io/uniform-launch/?lang=en) · [中文网站](https://jimmycoding0301.github.io/uniform-launch/?lang=zh) · [Six-scene walkthrough](https://jimmycoding0301.github.io/uniform-launch/?demo=1&lang=en)
+
 **Public BSC Testnet launch, chain 97.** The auction cleared at **0.0000089 tBNB per token**. Flap created a PancakeSwap V2 pool with **500,000 tokens and 4.45 tBNB**. The bidder claimed the other **500,000 tokens**. [Complete public record](docs/marketing-testnet-evidence.md) · [Settlement](https://testnet.bscscan.com/tx/0x5cc2056b689db1a422e5dfbdbd7017a23f86fa9a764effaa6cc82c9c1051ec02) · [Claim](https://testnet.bscscan.com/tx/0x5e1f06bfce8e6ee3dd379c82593ad35330639f169d22fd189493ec7f42f6bbd9)
 
 ## 问题与机制 · Why auction the opening price?
@@ -18,7 +20,7 @@ On a rising bonding curve, buying earlier can get you more tokens for the same b
 | Our custom Flap interface | [Launcher detail component and manifest](flap-ui/launcher-detail/) · [Mini App source for create, bid, settle, claim and refund](flap-ui/mini-app/) · [Flap integration](docs/flap-integration.md) |
 | Open code and mechanism | [Auction contracts](src/uniform/) · [Agent CLI and MCP tools](agent/) · [Short submission brief](docs/hackquest-submission.md) |
 
-[60-second walkthrough](docs/judge-demo.md) · [Six demo screens](qa/submission/README.md) · [Pitch script and judge Q&A](docs/pitch-runbook.md)
+[Bilingual pitch deck](qa/submission/Uniform-Launch-Bangkok-Pitch.pptx) · [60-second walkthrough](docs/judge-demo.md) · [Six demo screens](qa/submission/README.md) · [Pitch script and judge Q&A](docs/pitch-runbook.md)
 
 ## Try the bidding desk
 
