@@ -1,3 +1,4 @@
+import { t } from "./locale";
 export const TESTNET = {
   chainId: 97,
   explorer: "https://testnet.bscscan.com",
@@ -18,10 +19,10 @@ export const TESTNET = {
 } as const;
 
 export const TESTNET_ROWS: { name: string; address: string; standIn?: boolean }[] = [
-  { name: "发射工厂", address: TESTNET.launcherFactory },
-  { name: "金库工厂", address: TESTNET.vaultFactory },
-  { name: "Agent ID 替身", address: TESTNET.agentIdNft, standIn: true },
-  { name: "Agent ID 来源", address: TESTNET.agentIdSource },
-  { name: "ERC-8004 来源", address: TESTNET.erc8004Source },
-  { name: "ERC-8004 注册表", address: TESTNET.erc8004Registry },
+  { name: t("发射工厂", "Launcher factory"), address: TESTNET.launcherFactory },
+  { name: t("金库工厂", "Vault factory"), address: TESTNET.vaultFactory },
+  { name: t("Agent ID 替身", "Agent ID stand-in"), address: TESTNET.agentIdNft, standIn: true },
+  { name: t("Agent ID 来源", "Agent ID source"), address: TESTNET.agentIdSource },
+  { name: t("ERC-8004 来源", "ERC-8004 source"), address: TESTNET.erc8004Source },
+  { name: t("ERC-8004 注册表", "ERC-8004 registry"), address: TESTNET.erc8004Registry },
 ];

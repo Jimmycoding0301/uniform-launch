@@ -1,5 +1,6 @@
 import { useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
 import { demandChart, formatBnb, formatPrice, type Bid } from "./curve";
+import { t } from "./locale";
 
 type Props = {
   bids: Bid[];
@@ -59,12 +60,12 @@ export function PlotStage({ bids, floor, clearing, yourPrice, hideEmpty }: Props
   return (
     <figure className="demand-figure">
       <div className="demand-heading">
-        <span>限价 <b>BNB/枚</b></span><span>节点为报价档位，连线表示趋势</span>
+        <span>{t("限价", "Limit")} <b>{t("BNB/枚", "BNB/token")}</b></span><span>{t("节点为报价档位，连线表示趋势", "Dots mark bid tiers")}</span>
       </div>
       <div className="stage demand-viewport" ref={viewport}>
         {complete && (
           <svg className="plot demand-plot" width={size.w} height={size.h} viewBox={`0 0 ${size.w} ${size.h}`}
-            role="group" aria-label="需求曲线，可用左右键查看报价档" aria-describedby={description} tabIndex={first ? 0 : -1}
+            role="group" aria-label={t("需求曲线，可用左右键查看报价档", "Demand curve. Use the arrow keys to inspect bid tiers.")} aria-describedby={description} tabIndex={first ? 0 : -1}
             onPointerMove={(e) => { if (e.pointerType !== "touch") inspect(e); }} onPointerDown={inspect}
             onPointerLeave={() => select(null)} onFocus={() => select(0)} onBlur={() => select(null)} onKeyDown={onKeyDown}>
             {chart.yTicks.map((tick) => (
@@ -100,18 +101,18 @@ export function PlotStage({ bids, floor, clearing, yourPrice, hideEmpty }: Props
             left: Math.max(4, Math.min(tier.x - 62, size.w - 152)),
             top: Math.max(0, tier.y > 76 ? tier.y - 72 : Math.min(size.h - 72, tier.y + 12)),
           }}>
-            <strong>限价 {formatPrice(tier.price)}</strong>
-            <span>本档 {tier.count} 笔，共 {formatBnb(tier.budget)} BNB</span>
-            <span>累计 {formatBnb(tier.cumulative)} BNB</span>
+            <strong>{t("限价", "Limit")} {formatPrice(tier.price)}</strong>
+            <span>{t(`本档 ${tier.count} 笔，共 ${formatBnb(tier.budget)} BNB`, `Tier total ${formatBnb(tier.budget)} BNB (${tier.count} ${tier.count === 1 ? "bid" : "bids"})`)}</span>
+            <span>{t("累计", "Cumulative")} {formatBnb(tier.cumulative)} BNB</span>
           </div>
         )}
-        {!first && !hideEmpty && <div className="empty">还没有出价</div>}
+        {!first && !hideEmpty && <div className="empty">{t("还没有出价", "No bids yet")}</div>}
       </div>
       <figcaption className="demand-caption" id={description}>
-        <span className="clear-key"><i aria-hidden="true" />过线预算 <b>{point ? `${formatBnb(chart.filled)} BNB` : "—"}</b></span>
-        <span>保留价 <b>{formatPrice(floor)}</b></span>
-        {yourPrice !== null && yourPrice > 0n && <span>你的限价 <b>{formatPrice(yourPrice)}</b></span>}
-        <span className="budget-axis">累计预算（BNB）</span>
+        <span className="clear-key"><i aria-hidden="true" />{t("过线预算 ", "Budget at clearing")}<b>{point ? `${formatBnb(chart.filled)} BNB` : "—"}</b></span>
+        <span>{t("保留价 ", "Reserve ")}<b>{formatPrice(floor)}</b></span>
+        {yourPrice !== null && yourPrice > 0n && <span>{t("你的限价 ", "Your limit ")}<b>{formatPrice(yourPrice)}</b></span>}
+        <span className="budget-axis">{t("累计预算（BNB）", "Cumulative budget (BNB)")}</span>
       </figcaption>
     </figure>
   );
