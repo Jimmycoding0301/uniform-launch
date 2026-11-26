@@ -15,10 +15,14 @@ contract UniformVault is DirectLaunchVaultBase, Initializable {
     address public launcher;
     address public owner;
     bool private locked;
+    address public pendingOwner;
 
     event TaxWithdrawn(address indexed to, uint256 amount);
+    event OwnershipTransferStarted(address indexed previousOwner, address indexed newOwner);
+    event OwnershipTransferred(address indexed previousOwner, address indexed newOwner);
 
     error NotOwner();
+    error NotPendingOwner();
     error ZeroAddress();
     error NothingToWithdraw();
     error AmountTooHigh();
@@ -40,12 +44,29 @@ contract UniformVault is DirectLaunchVaultBase, Initializable {
         taxToken = taxToken_;
         launcher = launcher_;
         owner = owner_;
+        emit OwnershipTransferred(address(0), owner_);
     }
 
     receive() external payable {}
 
     function accrued() public view returns (uint256) {
         return address(this).balance;
+    }
+
+    /// @notice Nominate a new owner. Pass address(0) to cancel a pending nomination.
+    function transferOwnership(address newOwner) external nonReentrant {
+        if (msg.sender != owner) revert NotOwner();
+        pendingOwner = newOwner;
+        emit OwnershipTransferStarted(msg.sender, newOwner);
+    }
+
+    /// @notice The nominee takes ownership of the vault and its existing balance.
+    function acceptOwnership() external nonReentrant {
+        if (pendingOwner == address(0) || msg.sender != pendingOwner) revert NotPendingOwner();
+        address previousOwner = owner;
+        owner = msg.sender;
+        delete pendingOwner;
+        emit OwnershipTransferred(previousOwner, msg.sender);
     }
 
     function withdraw(address to, uint256 amount) external nonReentrant {
@@ -75,7 +96,7 @@ contract UniformVault is DirectLaunchVaultBase, Initializable {
     function vaultUISchema() public pure override returns (VaultUISchema memory schema) {
         schema.vaultType = "UniformVault";
         schema.description = "Holds 100% of the tax. The owner withdraws it. No vote.";
-        schema.methods = new VaultMethodSchema[](4);
+        schema.methods = new VaultMethodSchema[](7);
 
         schema.methods[0].name = "accrued";
         schema.methods[0].description = "BNB currently in the vault.";
@@ -97,5 +118,20 @@ contract UniformVault is DirectLaunchVaultBase, Initializable {
         schema.methods[3].name = "withdrawAll";
         schema.methods[3].description = "Send the full balance to the owner.";
         schema.methods[3].isWriteMethod = true;
+
+        schema.methods[4].name = "pendingOwner";
+        schema.methods[4].description = "Nominee who can accept ownership. Zero means there is no nominee.";
+        schema.methods[4].outputs = new FieldDescriptor[](1);
+        schema.methods[4].outputs[0] = FieldDescriptor("nominee", "address", "Nominated owner", 0);
+
+        schema.methods[5].name = "transferOwnership";
+        schema.methods[5].description = "Owner nominates a successor. Use the zero address to cancel.";
+        schema.methods[5].isWriteMethod = true;
+        schema.methods[5].inputs = new FieldDescriptor[](1);
+        schema.methods[5].inputs[0] = FieldDescriptor("newOwner", "address", "Nominee", 0);
+
+        schema.methods[6].name = "acceptOwnership";
+        schema.methods[6].description = "Nominee accepts control of the vault and its balance.";
+        schema.methods[6].isWriteMethod = true;
     }
 }

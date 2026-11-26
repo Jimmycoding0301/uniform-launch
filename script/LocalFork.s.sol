@@ -1,33 +1,15 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {FixtureLauncherFactory} from "../test/FixtureNamePolicy.sol";
 import {Script, console} from "forge-std/Script.sol";
-import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {IPortal} from "src/flap/IPortal.sol";
 import {LaunchVaultAddresses} from "src/flap/LaunchVaultAddresses.sol";
 import {UniformLauncher, LaunchConfig} from "src/uniform/UniformLauncher.sol";
 import {UniformLauncherFactory} from "src/uniform/UniformLauncherFactory.sol";
-import {UniformVaultFactory} from "src/uniform/UniformVaultFactory.sol";
 import {BinanceAgentIdSource} from "src/uniform/BinanceAgentIdSource.sol";
-import {PancakeV2Testnet} from "src/uniform/PancakeV2Testnet.sol";
 import {PermissiveAgentDirectory} from "../test/PermissiveAgentDirectory.sol";
-
-interface IDemoRouter {
-    function swapExactETHForTokensSupportingFeeOnTransferTokens(uint256, address[] calldata, address, uint256)
-        external
-        payable;
-    function swapExactTokensForETHSupportingFeeOnTransferTokens(uint256, uint256, address[] calldata, address, uint256)
-        external;
-}
-
-interface IDemoTaxToken {
-    function taxProcessor() external view returns (address);
-}
-
-interface IDemoTaxProcessor {
-    function dispatch() external;
-}
 
 interface IProxyAdminLike {
     function owner() external view returns (address);
@@ -109,55 +91,17 @@ contract LocalForkScript is Script {
         console.log("FAIL_END", uint256(failL.endBlock()));
     }
 
-    /// @notice 已发射场上买一次、卖一次，再把税分进金库。不提走。做法和 Tax.s.sol 相同，地址用已解锁的假账户。
-    function seedVault(address launcher) external {
-        address token = UniformLauncher(payable(launcher)).token();
-        if (token == address(0)) revert("no-token");
-        (address vault,) = IPortal(LaunchVaultAddresses.hub()).getLaunchVault(token);
-        if (vault.balance > 0) {
-            console.log("VAULT", vault);
-            console.log("VAULT_ACCRUED", vault.balance);
-            return;
-        }
-        address trader = address(uint160(0xC0DE0004));
-        address[] memory buyPath = new address[](2);
-        buyPath[0] = PancakeV2Testnet.WBNB;
-        buyPath[1] = token;
-        address[] memory sellPath = new address[](2);
-        sellPath[0] = token;
-        sellPath[1] = PancakeV2Testnet.WBNB;
-        vm.startBroadcast(trader);
-        IDemoRouter(PancakeV2Testnet.ROUTER).swapExactETHForTokensSupportingFeeOnTransferTokens{value: 1 ether}(
-            0, buyPath, trader, block.timestamp + 600
-        );
-        uint256 sellAmt = IERC20(token).balanceOf(trader) / 2;
-        IERC20(token).approve(PancakeV2Testnet.ROUTER, sellAmt);
-        IDemoRouter(PancakeV2Testnet.ROUTER).swapExactTokensForETHSupportingFeeOnTransferTokens(
-            sellAmt, 0, sellPath, trader, block.timestamp + 600
-        );
-        IDemoTaxProcessor(IDemoTaxToken(token).taxProcessor()).dispatch();
-        vm.stopBroadcast();
-        console.log("VAULT", vault);
-        console.log("VAULT_ACCRUED", vault.balance);
-        if (vault.balance == 0) revert("vault-still-zero");
-    }
-
     function _boot() internal returns (IPortal portal, UniformLauncherFactory launcherFactory, uint256 fee) {
         portal = IPortal(LaunchVaultAddresses.hub());
         address admin = IProxyAdminLike(PROXY_ADMIN).owner();
-        uint256 nonce = vm.getNonce(creator);
-        address predicted = vm.computeCreateAddress(creator, nonce + 1);
         vm.startBroadcast(creator);
-        UniformVaultFactory vaultFactory = new UniformVaultFactory(predicted);
-        launcherFactory = new UniformLauncherFactory(address(vaultFactory));
+        launcherFactory = new FixtureLauncherFactory(address(0));
         vm.stopBroadcast();
         vm.startBroadcast(admin);
         portal.setLauncherFactoryMultiplier(address(launcherFactory), 10_000, true);
-        portal.setVaultFactoryMultiplier(address(vaultFactory), 10_000, true);
         vm.stopBroadcast();
         fee = portal.SALT_LOCK_FEE();
         console.log("FACTORY_L", address(launcherFactory));
-        console.log("FACTORY_V", address(vaultFactory));
     }
 
     function _create(

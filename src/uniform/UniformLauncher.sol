@@ -2,6 +2,9 @@
 pragma solidity ^0.8.26;
 
 import {Initializable} from "@openzeppelin-contracts-upgradeable/proxy/utils/Initializable.sol";
+import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
+import {IFlapNamePolicy} from "./IFlapNamePolicy.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {LauncherBase} from "src/flap/LauncherBase.sol";
 import {LauncherDescription} from "src/flap/LauncherHelper.sol";
@@ -27,6 +30,7 @@ struct LaunchConfig {
     uint256 floorPrice;
     uint64 durationBlocks;
     address[] identitySources;
+    address[] admittedWallets;
 }
 
 contract UniformLauncher is LauncherBase, Initializable, IStrategy {
@@ -37,20 +41,20 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
     uint256 public constant POOL_AMOUNT = TOTAL_SUPPLY - SELL_AMOUNT;
     uint256 public constant MIN_BUDGET = 0.01 ether;
     uint256 public constant MAX_BUDGET = 100 ether;
-    uint256 public constant MAX_BIDS = 32;
+    uint256 public constant MAX_BIDS = 128;
+    uint256 public constant MAX_PRICE = UniformSettle.MAX_PRICE;
+    address internal constant POOL_TOKEN_IMPLEMENTATION = 0x7777c57ff7dc441c1715b2e36fa581c48B782222;
+    address internal constant MAINNET_NAME_POLICY = 0xfFb69d59f62454f3B8322Bc1a9FCE6E171a5264f;
+    address internal constant TESTNET_NAME_POLICY = 0x5CfbE713d070e87F67D1bc84312B7eB8Fe4F2B5E;
     uint64 public constant CLOSE_BUFFER = 20;
-    /// @notice 进入 settle 后若剩余 gas 低于此值，直接回滚且不改状态。
-    ///         指令里的 gas limit 是 8000000。扣掉基础 gas 后仍高于这条线，
-    ///         也盖得住一次成功发射。32 笔出价在 BSC 测试网分叉上实测 5772154 gas，低于这条线，也低于指令里的 8000000。估算值往往更低，低了就不能把拍卖打成失败。
-    uint256 public constant MIN_SETTLE_GAS = 7_000_000;
+    /// @notice Reject an underfunded settle call before it can change auction state.
+    ///         Clients add 1,000,000 gas for transaction and proxy overhead.
+    uint256 public constant MIN_SETTLE_GAS = 13_000_000;
     uint64 public constant MIN_DURATION = 200;
     uint64 public constant MAX_DURATION = 20_000;
     uint16 public constant BUY_TAX_BPS = 300;
     uint16 public constant SELL_TAX_BPS = 300;
-    /// @dev Portal 测试网按 700 美元/BNB 给 V2 地板计价。毕业线是池子报价 1500 美元，只在发射时判断。
-    uint256 public constant BNB_USD_WAD = 700 ether;
-    uint256 public constant GRADUATION_USD_WAD = 1500 ether;
-    /// @dev 加在精确毕业报价上的余量，避免整除后卡在毕业线上。
+    /// @dev Additional liquidity retained above the Portal's current larger floor.
     uint256 public constant LAUNCH_MARGIN = 0.05 ether;
 
     enum Status {
@@ -97,6 +101,10 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
     bool internal distributionInitialized;
     bool internal busy;
 
+    uint256 public admittedWalletCount;
+    mapping(address => bool) public admittedWallet;
+    uint256 public unallocatedTokens;
+
     event BidPlaced(
         address indexed agent,
         uint256 indexed bidId,
@@ -109,6 +117,7 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
     event AuctionFailed(uint8 reason);
     event Claimed(address indexed agent, uint256 tokens, uint256 quoteRefunded);
     event Refunded(address indexed agent, uint256 amount);
+    event UnallocatedTokensSentToBurnAddress(uint256 amount);
 
     error InvalidConfig();
     error Closed();
@@ -127,6 +136,13 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
     error InsufficientGas();
     error NotAgent();
     error AgentAlreadyBid();
+    error NotAdmitted();
+    error NoUnallocatedTokens();
+    error PortalQuoteUnavailable();
+    error ScamNameOrSymbol();
+    error NameScreenUnavailable();
+    error PriceTooHigh();
+    error OnlySelf();
 
     modifier nonReentrant() {
         if (busy) revert Busy();
@@ -145,16 +161,25 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         initializer
         nonReentrant
     {
-        if (hub_ == address(0) || creator_ == address(0) || vaultFactory_ == address(0)) revert InvalidConfig();
+        if (hub_ == address(0) || creator_ == address(0)) revert InvalidConfig();
         if (bytes(c.name).length == 0 || bytes(c.name).length > 32) revert InvalidConfig();
         if (bytes(c.symbol).length == 0 || bytes(c.symbol).length > 8) revert InvalidConfig();
         if (bytes(c.meta).length == 0 || c.salt == bytes32(0)) revert InvalidConfig();
-        if (c.floorPrice == 0 || c.floorPrice > 1e36) revert InvalidConfig();
+        if (c.floorPrice == 0 || c.floorPrice > MAX_PRICE) revert InvalidConfig();
         if (c.durationBlocks < MIN_DURATION || c.durationBlocks > MAX_DURATION) revert InvalidConfig();
         if (c.identitySources.length == 0 || c.identitySources.length > 4) revert InvalidConfig();
         for (uint256 i; i < c.identitySources.length; ++i) {
             if (c.identitySources[i].code.length == 0) revert InvalidConfig();
             identitySources.push(c.identitySources[i]);
+        }
+        if (c.admittedWallets.length > MAX_BIDS || (block.chainid == 56 && c.admittedWallets.length == 0)) {
+            revert InvalidConfig();
+        }
+        admittedWalletCount = c.admittedWallets.length;
+        for (uint256 i; i < c.admittedWallets.length; ++i) {
+            address wallet = c.admittedWallets[i];
+            if (wallet == address(0) || admittedWallet[wallet]) revert InvalidConfig();
+            admittedWallet[wallet] = true;
         }
 
         hub = hub_;
@@ -168,9 +193,25 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         startBlock = uint64(block.number);
         endBlock = startBlock + c.durationBlocks;
 
+        _screenName(c.name, c.symbol);
         uint256 fee = IPortal(hub_).SALT_LOCK_FEE();
         if (msg.value != fee) revert InvalidConfig();
         IPortal(hub_).lockSalt{value: fee}(c.salt, uint8(IPortalTypes.LaunchKind.DIRECT_V2_POOL_TAX));
+    }
+
+    function _screenName(string calldata name_, string calldata symbol_) private view {
+        address policy = block.chainid == 56 ? MAINNET_NAME_POLICY : TESTNET_NAME_POLICY;
+        (bool success, bytes memory result) =
+            policy.staticcall(abi.encodeCall(IFlapNamePolicy.isScamWord, (name_, symbol_)));
+        if (!success || result.length != 64) revert NameScreenUnavailable();
+        (uint256 nameScam, uint256 symbolScam) = abi.decode(result, (uint256, uint256));
+        if (nameScam > 1 || symbolScam > 1) revert NameScreenUnavailable();
+        if (nameScam != 0 || symbolScam != 0) revert ScamNameOrSymbol();
+    }
+
+    /// @notice Predicted token address, available before settlement.
+    function expectedToken() external view returns (address) {
+        return Clones.predictDeterministicAddress(POOL_TOKEN_IMPLEMENTATION, launchSalt, hub);
     }
 
     receive() external payable {
@@ -185,7 +226,7 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         d.name = name;
         d.symbol = symbol;
         d.quoteToken = address(0);
-        d.targetRaise = softCap();
+        d.targetRaise = FixedPointMathLib.max(softCap(), minPoolQuote());
         d.poolTokenRatio = POOL_AMOUNT * 1e18 / TOTAL_SUPPLY;
         d.titleZh = TITLE_ZH;
         d.titleEn = TITLE_EN;
@@ -197,11 +238,10 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         return floorPrice * SELL_AMOUNT / 1e18;
     }
 
-    /// @notice 入池 BNB 至少要到毕业线，再加 `LAUNCH_MARGIN`。50% 入池时约为 4.3357 BNB。
-    function minPoolQuote() public pure returns (uint256) {
-        uint256 num = GRADUATION_USD_WAD * 1 ether * TOTAL_SUPPLY;
-        uint256 den = BNB_USD_WAD * POOL_AMOUNT;
-        return (num + den - 1) / den + LAUNCH_MARGIN;
+    /// @notice Current Portal floor plus the auction's liquidity margin.
+    function minPoolQuote() public view returns (uint256) {
+        (uint256 price, IPortal.GraduationFloorResultV2 memory floor) = _portalFloor(0);
+        return _minimumQuote(price, floor);
     }
 
     function bidCount() external view returns (uint256) {
@@ -296,14 +336,16 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
     }
 
     /// @notice `sourceIndex` 选择创建时固定的身份来源。`agentId` 由代理自己申报。
-    ///         Agent ID：有 `tokenOfOwnerByIndex` 时填 tokenId，否则填 `uint160(msg.sender)`。
+    ///         Agent ID on mainnet takes the ERC-721 token ID.
     ///         ERC-8004：填官方 Identity Registry 的编号，且本地址是 owner 或 `getAgentWallet`。
     function bid(uint256 maxPrice, uint8 sourceIndex, uint256 agentId) external payable nonReentrant {
         if (status != Status.Open) revert Closed();
         if (block.number < startBlock || block.number >= endBlock - CLOSE_BUFFER) revert Closed();
         if (bidOf[msg.sender] != 0) revert AlreadyBid();
+        if (admittedWalletCount != 0 && !admittedWallet[msg.sender]) revert NotAdmitted();
         if (msg.value < MIN_BUDGET || msg.value > MAX_BUDGET) revert BadBudget();
         if (maxPrice < floorPrice) revert BelowFloor();
+        if (maxPrice > MAX_PRICE) revert PriceTooHigh();
         if (_bids.length >= MAX_BIDS) revert Full();
         if (sourceIndex >= identitySources.length) revert NotAgent();
         (bool agentOk, bytes32 sourceId) =
@@ -336,8 +378,23 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         if (status != Status.Open) revert Closed();
         if (block.number < endBlock) revert Early();
 
-        UniformSettle.Outcome memory o = _quote();
-        if (!o.ok || o.poolQuote == 0 || o.poolQuote < minPoolQuote() || !_portalAllowsLaunch(o.poolQuote)) {
+        UniformSettle.Outcome memory o;
+        try this.settlementQuote() returns (UniformSettle.Outcome memory calculated) {
+            o = calculated;
+        } catch Panic(uint256 code) {
+            // A deterministic arithmetic error cannot improve on a retry.
+            if (code != 0x11 && code != 0x12) {
+                assembly ("memory-safe") {
+                    mstore(0x00, 0x4e487b71)
+                    mstore(0x20, code)
+                    revert(0x1c, 0x24)
+                }
+            }
+            status = Status.Failed;
+            emit AuctionFailed(3);
+            return;
+        }
+        if (!o.ok || o.poolQuote == 0 || !_portalAllowsLaunch(o.poolQuote)) {
             status = Status.Failed;
             emit AuctionFailed(1);
             return;
@@ -403,32 +460,53 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         emit FlapDistributionInitialized(token_, amount);
     }
 
-    /// @dev 读 Portal 的毕业预检。调用失败或不达标都当不能发射，后面走全额退款。
+    function burnUnallocatedTokens() external nonReentrant {
+        uint256 amount = unallocatedTokens;
+        if (status != Status.Succeeded || amount == 0) revert NoUnallocatedTokens();
+        unallocatedTokens = 0;
+        token.safeTransfer(address(0xdEaD), amount);
+        emit UnallocatedTokensSentToBurnAddress(amount);
+    }
+
     function _portalAllowsLaunch(uint256 quoteIn) internal view returns (bool) {
-        uint256 price = BNB_USD_WAD;
-        try IPortal(hub).launchQuoteConfig(uint8(IPortalTypes.LaunchKind.DIRECT_V2_POOL_TAX), address(0)) returns (
-            bool enabled, uint256 quotePriceUsd
-        ) {
-            if (enabled && quotePriceUsd != 0) price = quotePriceUsd;
-        } catch {}
-        try IPortal(hub)
+        (uint256 price, IPortal.GraduationFloorResultV2 memory floor) = _portalFloor(quoteIn);
+        return floor.meetsCreateFloor && floor.meetsFloor && quoteIn >= _minimumQuote(price, floor);
+    }
+
+    function _portalFloor(uint256 quoteIn)
+        internal
+        view
+        returns (uint256 price, IPortal.GraduationFloorResultV2 memory floor)
+    {
+        bool enabled;
+        (enabled, price) = IPortal(hub).launchQuoteConfig(uint8(IPortalTypes.LaunchKind.DIRECT_V2_POOL_TAX), address(0));
+        if (!enabled || price == 0) revert PortalQuoteUnavailable();
+        floor = IPortal(hub)
             .graduationFloorV2ForLauncher(
                 IPortal.GraduationFloorParams({
-                    quoteToken: address(0),
-                    quotePriceUsd: price,
-                    poolQuote: quoteIn,
-                    poolToken: POOL_AMOUNT,
-                    totalSupply: TOTAL_SUPPLY,
-                    vaultFactory: vaultFactory
-                }),
+                quoteToken: address(0),
+                quotePriceUsd: price,
+                poolQuote: quoteIn,
+                poolToken: POOL_AMOUNT,
+                totalSupply: TOTAL_SUPPLY,
+                vaultFactory: vaultFactory
+            }),
                 address(this)
-            ) returns (
-            IPortal.GraduationFloorResultV2 memory floor
-        ) {
-            return floor.meetsCreateFloor && floor.meetsFloor;
-        } catch {
-            return false;
-        }
+            );
+    }
+
+    function _minimumQuote(uint256 price, IPortal.GraduationFloorResultV2 memory floor)
+        internal
+        pure
+        returns (uint256)
+    {
+        uint256 usd = FixedPointMathLib.max(floor.floorUsdWad, floor.createFloorUsdWad);
+        return FixedPointMathLib.fullMulDivUp(usd, 1 ether, price) + LAUNCH_MARGIN;
+    }
+
+    function settlementQuote() external view returns (UniformSettle.Outcome memory) {
+        if (msg.sender != address(this)) revert OnlySelf();
+        return _quote();
     }
 
     function _quote() internal view returns (UniformSettle.Outcome memory) {
@@ -447,10 +525,13 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         token = token_;
         pool = pool_;
         uint256 n = _bids.length;
+        uint256 remaining = SELL_AMOUNT;
         for (uint256 i; i < n; ++i) {
+            remaining -= o.fills[i].tokens;
             _bids[i].tokensOwed = o.fills[i].tokens;
             _bids[i].quoteOwed = o.fills[i].refundQuote;
         }
+        unallocatedTokens = remaining;
         emit AuctionSettled(o.clearingPrice, o.poolQuote, token_, pool_);
     }
 
@@ -479,6 +560,14 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
 
     function _fees() internal view returns (IPortalTypes.FeeConfig[] memory fees) {
         fees = new IPortalTypes.FeeConfig[](1);
+        if (vaultFactory == address(0)) {
+            fees[0] = IPortalTypes.FeeConfig({
+                feeType: IPortalTypes.FeeSlotType.MARKETING,
+                bps: 10_000,
+                configData: abi.encode(IPortalTypes.FeeConfigMarket({marketingAddress: creator}))
+            });
+            return fees;
+        }
         fees[0] = IPortalTypes.FeeConfig({
             feeType: IPortalTypes.FeeSlotType.VAULT,
             bps: 10_000,

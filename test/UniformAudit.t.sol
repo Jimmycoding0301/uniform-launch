@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {FixtureNamePolicy, FixtureLauncherFactory} from "./FixtureNamePolicy.sol";
 import {Test, console2} from "forge-std/Test.sol";
 import {LibClone} from "solady/utils/LibClone.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
@@ -60,13 +61,13 @@ contract ReenterPortal {
         pure
         returns (IPortal.GraduationFloorResultV2 memory r)
     {
-        uint256 usd = p.poolQuote * 700 ether * p.poolToken / p.totalSupply / 1 ether;
+        uint256 usd = p.poolQuote * p.quotePriceUsd / 1 ether;
         r.quoteUsdWad = usd;
-        r.createFloorUsdWad = 750 ether;
-        r.floorUsdWad = 1500 ether;
+        r.createFloorUsdWad = 1500 ether;
+        r.floorUsdWad = 3000 ether;
         r.multiplierBps = 10_000;
-        r.meetsCreateFloor = usd >= 750 ether;
-        r.meetsFloor = usd >= 1500 ether;
+        r.meetsCreateFloor = usd >= 1500 ether;
+        r.meetsFloor = usd >= 3000 ether;
     }
 
     function launchTaxTokenV2(
@@ -149,10 +150,13 @@ contract UniformAuditTest is Test {
         portal = LaunchVaultAddresses.hub();
         vm.etch(portal, address(new ReenterPortal()).code);
         vm.deal(portal, 100 ether);
+        bytes memory screening = address(new FixtureNamePolicy()).code;
+        vm.etch(0x5CfbE713d070e87F67D1bc84312B7eB8Fe4F2B5E, screening);
+        vm.etch(0xfFb69d59f62454f3B8322Bc1a9FCE6E171a5264f, screening);
         uint256 nonce = vm.getNonce(address(this));
         address predicted = vm.computeCreateAddress(address(this), nonce + 1);
         vaultFactory = new UniformVaultFactory(predicted);
-        launcherFactory = new UniformLauncherFactory(address(vaultFactory));
+        launcherFactory = new FixtureLauncherFactory(address(vaultFactory));
         vm.deal(address(this), 10 ether);
         vm.deal(creator, 1 ether);
     }
@@ -371,22 +375,48 @@ contract UniformAuditTest is Test {
         assertEq(address(owner).balance, 1 ether);
     }
 
+    function test_fullBookMarginalFillsAndRefundsConserveQuote() public {
+        UniformLauncher launcher = _launcher(1e13);
+        uint256 cap = launcher.MAX_BIDS();
+        uint256 marginalLimit = 4.01e13;
+        for (uint256 i; i < cap; ++i) {
+            uint256 limit = i < cap / 2 ? marginalLimit : 1e16 + i;
+            _bid(launcher, address(uint160(0x1000 + i)), 0.2 ether, limit);
+        }
+        (bool ok, uint256 price, uint256 quote) = launcher.preview();
+        assertTrue(ok);
+        assertEq(price, marginalLimit);
+        assertApproxEqAbs(quote, 20.05 ether, cap);
+        vm.roll(launcher.endBlock());
+        launcher.settle{gas: launcher.MIN_SETTLE_GAS() + 1_000_000}();
+        assertEq(uint8(launcher.status()), uint8(UniformLauncher.Status.Succeeded));
+        assertEq(launcher.clearingPrice(), price);
+        assertEq(launcher.poolQuote(), quote);
+        (uint256[] memory tokensOwed, uint256[] memory quoteOwed,) = launcher.getFills();
+        for (uint256 i; i < cap; ++i) {
+            assertGt(tokensOwed[i], 0);
+            assertApproxEqAbs(quoteOwed[i], i < cap / 2 ? 0.08671875 ether : 0, 1);
+        }
+        assertEq(_claimAll(launcher) + quote, cap * 0.2 ether);
+        assertEq(address(launcher).balance, 0);
+    }
+
     function test_maxBidsSettleGas() public {
         UniformLauncher launcher = _launcher(1e13);
-        for (uint256 i; i < 32; ++i) {
+        for (uint256 i; i < launcher.MAX_BIDS(); ++i) {
             _bid(launcher, address(uint160(0x1000 + i)), 0.2 ether, 1e16);
         }
-        assertEq(launcher.bidCount(), 32);
+        assertEq(launcher.bidCount(), launcher.MAX_BIDS());
         vm.roll(launcher.endBlock());
         uint256 before = gasleft();
         launcher.settle();
         uint256 used = before - gasleft();
         console2.log("MAX_BIDS_SETTLE_GAS", used);
         assertEq(uint8(launcher.status()), uint8(UniformLauncher.Status.Succeeded));
-        assertLt(used, 8_000_000);
+        assertLt(used, launcher.MIN_SETTLE_GAS() + 1_000_000);
         assertLt(used, launcher.MIN_SETTLE_GAS());
         uint256 paid = _claimAll(launcher);
-        assertLe(paid + launcher.poolQuote(), 32 * 0.2 ether);
+        assertLe(paid + launcher.poolQuote(), launcher.MAX_BIDS() * 0.2 ether);
         assertGe(address(launcher).balance, 0);
     }
 }

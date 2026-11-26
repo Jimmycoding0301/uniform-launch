@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+
 /// @notice 单次统一价格清算。价格单位是每 1e18 代币 wei 需要多少报价 wei。
 ///         全额前缀与边际卡价取较高清算价；价格相同保留全额前缀。
 ///         代币数量向下取整，实付向上取整，退款是预算减去实付。除不尽的代币留在调用方，不送给某一笔出价。
@@ -26,6 +28,7 @@ library UniformSettle {
     }
 
     uint256 internal constant WAD = 1e18;
+    uint256 internal constant MAX_PRICE = 1e36;
 
     error ZeroSupply();
 
@@ -50,11 +53,10 @@ library UniformSettle {
             order[m++] = i;
         }
         if (m == 0) return o;
-        _sort(bids, order, m);
+        order = _sort(bids, order, m);
 
         uint8 kind;
         uint256 winK;
-        uint256 pinPrice;
         uint256 bestP;
 
         uint256 cum;
@@ -69,45 +71,52 @@ library UniformSettle {
             }
         }
 
-        for (uint256 i; i < m; ++i) {
-            uint256 price = bids[order[i]].maxPrice;
-            if (i > 0 && price == bids[order[i - 1]].maxPrice) continue;
-            (bool feasible, uint256 infraTokens) = _pinFeasible(bids, order, m, sellAmount, price);
-            if (!feasible) continue;
-            if (price > bestP) {
-                bestP = price;
-                kind = 2;
-                pinPrice = price;
-                winK = infraTokens;
-            }
+        (uint256 marginalPrice, uint256 marginalEnd) = _findPin(bids, order, m, sellAmount, bestP);
+        if (marginalPrice != 0) {
+            kind = 2;
+            bestP = marginalPrice;
+            winK = marginalEnd;
         }
 
         if (kind == 0) return o;
         o.ok = true;
         o.clearingPrice = bestP;
         if (kind == 1) _fillPrefix(o, bids, order, winK, sellAmount);
-        else _fillPin(o, bids, order, m, sellAmount, pinPrice);
+        else _fillPin(o, bids, order, winK, sellAmount, bestP);
     }
 
-    function _pinFeasible(Bid[] memory bids, uint256[] memory order, uint256 m, uint256 sellAmount, uint256 price)
+    function _findPin(Bid[] memory bids, uint256[] memory order, uint256 count, uint256 sellAmount, uint256 bestP)
         private
         pure
-        returns (bool feasible, uint256 infraTokens)
+        returns (uint256 price, uint256 end)
     {
-        uint256 marginalBudget;
-        for (uint256 i; i < m; ++i) {
-            Bid memory b = bids[order[i]];
-            if (b.maxPrice > price) {
-                infraTokens += b.budget * WAD / price;
-            } else if (b.maxPrice == price) {
-                marginalBudget += b.budget;
+        uint256 eligibleBudget;
+        while (end < count) {
+            uint256 first = end;
+            uint256 candidate = bids[order[first]].maxPrice;
+            // The prefix wins ties. Lower limits cannot improve the current clearing price.
+            if (candidate <= bestP) break;
+
+            uint256 groupBudget;
+            do {
+                groupBudget += bids[order[end++]].budget;
+            } while (end < count && bids[order[end]].maxPrice == candidate);
+            eligibleBudget += groupBudget;
+            // Legacy orders may have higher limits. Their budgets still count for every
+            // lower price. No book admitted by the Launcher can clear above MAX_PRICE.
+            if (candidate > MAX_PRICE) continue;
+            // Per-bid rounding can only increase the remaining cost at this price.
+            if (Math.mulDiv(sellAmount, candidate, WAD) > eligibleBudget) continue;
+
+            uint256 higherTokens;
+            for (uint256 i; i < first; ++i) {
+                higherTokens += bids[order[i]].budget * WAD / candidate;
+            }
+            if (higherTokens < sellAmount && groupBudget >= Math.mulDiv(sellAmount - higherTokens, candidate, WAD)) {
+                return (candidate, end);
             }
         }
-        if (infraTokens >= sellAmount) return (false, 0);
-        uint256 remaining = sellAmount - infraTokens;
-        uint256 cost = remaining * price / WAD;
-        if (marginalBudget < cost || marginalBudget == 0) return (false, 0);
-        return (true, infraTokens);
+        return (0, 0);
     }
 
     function _fillPrefix(Outcome memory o, Bid[] memory bids, uint256[] memory order, uint256 k, uint256 sellAmount)
@@ -120,7 +129,7 @@ library UniformSettle {
         }
         for (uint256 i; i < k; ++i) {
             uint256 pos = order[i];
-            o.fills[pos].tokens = bids[pos].budget * sellAmount / budgetSum;
+            o.fills[pos].tokens = Math.mulDiv(bids[pos].budget, sellAmount, budgetSum);
             o.fills[pos].spend = bids[pos].budget;
             o.fills[pos].refundQuote = 0;
         }
@@ -151,7 +160,7 @@ library UniformSettle {
             if (b.maxPrice > price) {
                 tokens = b.budget * WAD / price;
             } else if (b.maxPrice == price) {
-                tokens = remaining * b.budget / marginalBudget;
+                tokens = Math.mulDiv(remaining, b.budget, marginalBudget);
             } else {
                 continue;
             }
@@ -171,22 +180,31 @@ library UniformSettle {
     /// @dev 向上取整，但不超过这笔预算。代币已经按向下取整算过。
     function _charge(uint256 tokens, uint256 price, uint256 budget) private pure returns (uint256) {
         if (tokens == 0 || price == 0) return 0;
-        uint256 raw = tokens * price;
-        uint256 spend = (raw + WAD - 1) / WAD;
+        uint256 spend = Math.mulDiv(tokens, price, WAD, Math.Rounding.Ceil);
         if (spend > budget) return budget;
         return spend;
     }
 
-    function _sort(Bid[] memory bids, uint256[] memory order, uint256 m) private pure {
-        for (uint256 i = 1; i < m; ++i) {
-            uint256 key = order[i];
-            uint256 j = i;
-            while (j > 0 && _before(bids[key], bids[order[j - 1]])) {
-                order[j] = order[j - 1];
-                --j;
+    function _sort(Bid[] memory bids, uint256[] memory order, uint256 count) private pure returns (uint256[] memory) {
+        if (count < 2) return order;
+        uint256[] memory merged = new uint256[](count);
+        for (uint256 width = 1; width < count; width *= 2) {
+            for (uint256 first; first < count; first += 2 * width) {
+                uint256 middle = first + width < count ? first + width : count;
+                uint256 end = middle + width < count ? middle + width : count;
+                uint256 left = first;
+                uint256 right = middle;
+                for (uint256 i = first; i < end; ++i) {
+                    if (right == end || (left < middle && !_before(bids[order[right]], bids[order[left]]))) {
+                        merged[i] = order[left++];
+                    } else {
+                        merged[i] = order[right++];
+                    }
+                }
             }
-            order[j] = key;
+            (order, merged) = (merged, order);
         }
+        return order;
     }
 
     function _before(Bid memory a, Bid memory b) private pure returns (bool) {

@@ -4,13 +4,12 @@ pragma solidity ^0.8.26;
 import {Script, console2} from "forge-std/Script.sol";
 import {LibString} from "solady/utils/LibString.sol";
 import {UniformLauncherFactory} from "src/uniform/UniformLauncherFactory.sol";
-import {UniformVaultFactory} from "src/uniform/UniformVaultFactory.sol";
+import {IPortal} from "src/flap/IPortal.sol";
+import {LaunchVaultAddresses} from "src/flap/LaunchVaultAddresses.sol";
 import {AgentIdentityAddresses} from "src/uniform/AgentIdentityAddresses.sol";
-import {AgentIdStandIn} from "src/uniform/AgentIdStandIn.sol";
 import {BinanceAgentIdSource} from "src/uniform/BinanceAgentIdSource.sol";
-import {Erc8004Source} from "src/uniform/Erc8004Source.sol";
 
-/// @notice 按 chainId 部署两个工厂和身份适配器。
+/// @notice 按 chainId 部署 MARKETING 版 Launcher Factory 和身份适配器。
 ///         56：Agent ID 与 ERC-8004 都指向官方合约。
 ///         97：ERC-8004 指向官方 Identity Registry。Agent ID 真合约不在这条链上时，部署只含 balanceOf 的替身。
 ///         私钥只从环境变量 DEPLOYER_PRIVATE_KEY 读取，任何日志都不打印它。
@@ -29,30 +28,12 @@ contract DeployTestnet is Script {
         }
 
         vm.startBroadcast(key);
-        uint256 nonce = vm.getNonce(deployer);
-        address predictedLauncher = vm.computeCreateAddress(deployer, nonce + 1);
-        UniformVaultFactory vaultFactory = new UniformVaultFactory(predictedLauncher);
-        UniformLauncherFactory launcherFactory = new UniformLauncherFactory(address(vaultFactory));
+        UniformLauncherFactory launcherFactory = new UniformLauncherFactory(address(0));
 
-        address agentNft;
-        bool standIn;
-        if (chainId == 56) {
-            agentNft = AgentIdentityAddresses.AGENT_ID_MAINNET;
-            standIn = false;
-        } else if (AgentIdentityAddresses.AGENT_ID_MAINNET.code.length > 0) {
-            agentNft = AgentIdentityAddresses.AGENT_ID_MAINNET;
-            standIn = false;
-        } else {
-            agentNft = address(new AgentIdStandIn());
-            standIn = true;
-        }
-        BinanceAgentIdSource agentIdSource = new BinanceAgentIdSource(agentNft);
-        Erc8004Source erc8004Source = new Erc8004Source(erc8004Registry);
-        vm.stopBroadcast();
-
-        require(address(launcherFactory) == predictedLauncher, "launcher factory nonce");
-        require(agentIdSource.standIn() == standIn, "stand-in flag");
-        require(address(erc8004Source.registry()) == erc8004Registry, "8004 registry");
+        address agentIdSource = launcherFactory.agentIdSource();
+        address erc8004Source = launcherFactory.erc8004Source();
+        address agentNft = address(BinanceAgentIdSource(agentIdSource).nft());
+        bool standIn = BinanceAgentIdSource(agentIdSource).standIn();
 
         string memory json = string.concat(
             "{\n",
@@ -63,8 +44,9 @@ contract DeployTestnet is Script {
             LibString.toHexStringChecksummed(deployer),
             '",\n',
             '  "vaultFactory": "',
-            LibString.toHexStringChecksummed(address(vaultFactory)),
+            LibString.toHexStringChecksummed(address(0)),
             '",\n',
+            '  "taxRoute": "marketing",\n',
             '  "launcherFactory": "',
             LibString.toHexStringChecksummed(address(launcherFactory)),
             '",\n',
@@ -83,13 +65,15 @@ contract DeployTestnet is Script {
             '  "erc8004Source": "',
             LibString.toHexStringChecksummed(address(erc8004Source)),
             '",\n',
-            '  "saltLockFeeWei": "5000000000000000"\n',
+            '  "saltLockFeeWei": "',
+            vm.toString(IPortal(LaunchVaultAddresses.hub()).SALT_LOCK_FEE()),
+            '"\n',
             "}\n"
         );
-        string memory out = chainId == 56 ? "deployments/bsc-mainnet.json" : "deployments/bsc-testnet.json";
+        string memory out =
+            chainId == 56 ? "deployments/bsc-mainnet-release.json" : "deployments/bsc-testnet-release.json";
         vm.writeFile(out, json);
         console2.log("chainId", chainId);
-        console2.log("vaultFactory", address(vaultFactory));
         console2.log("launcherFactory", address(launcherFactory));
         console2.log("agentIdNft", agentNft);
         console2.log("agentIdStandIn", standIn);

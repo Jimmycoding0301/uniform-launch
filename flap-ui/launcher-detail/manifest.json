@@ -4,18 +4,44 @@
   "artifactId": "uniform-launcher-detail",
   "name": "同价发射",
   "chainId": 97,
-  "factoryAddress": "0xe82642ac5c3b3b4b7d4cdeaf6a251dc0bb7acefd",
+  "factoryAddress": "0x5a995c7ee958a631fdd151c9582604d347d7799a",
   "configContract": "launcher-detail/v1",
-  "surfaces": ["launcher-ui"],
+  "surfaces": [
+    "launcher-ui"
+  ],
   "entry": "Component.tsx",
   "reads": {
-    "statusCode": { "functionName": "statusCode", "returns": "uint256" },
-    "bidCount": { "functionName": "bidCount", "returns": "uint256" },
-    "clearingPrice": { "functionName": "clearingPrice", "returns": "uint256" },
-    "floorPrice": { "functionName": "floorPrice", "returns": "uint256" },
-    "endBlock": { "functionName": "endBlock", "returns": "uint256" },
-    "poolQuote": { "functionName": "poolQuote", "returns": "uint256" },
-    "token": { "functionName": "token", "returns": "address" },
-    "pool": { "functionName": "pool", "returns": "address" }
+    "statusCode": {
+      "functionName": "statusCode",
+      "returns": "uint256"
+    },
+    "bidCount": {
+      "functionName": "bidCount",
+      "returns": "uint256"
+    },
+    "clearingPrice": {
+      "functionName": "clearingPrice",
+      "returns": "uint256"
+    },
+    "floorPrice": {
+      "functionName": "floorPrice",
+      "returns": "uint256"
+    },
+    "endBlock": {
+      "functionName": "endBlock",
+      "returns": "uint256"
+    },
+    "poolQuote": {
+      "functionName": "poolQuote",
+      "returns": "uint256"
+    },
+    "token": {
+      "functionName": "token",
+      "returns": "address"
+    },
+    "minPoolQuote": {
+      "functionName": "minPoolQuote",
+      "returns": "uint256"
+    }
   }
 }

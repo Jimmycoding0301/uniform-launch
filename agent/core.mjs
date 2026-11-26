@@ -1,7 +1,7 @@
 import { createPublicClient, encodeFunctionData, getAddress, http, keccak256, toBytes } from "viem";
 import { launcherAbi } from "./abi.mjs";
 import { explain } from "./errors.mjs";
-import { SELL_AMOUNT, settle } from "../shared/settle.mjs";
+import { SELL_AMOUNT, MAX_PRICE, settle } from "../shared/settle.mjs";
 
 const WAD = 10n ** 18n;
 export const CHAIN_ID = 97;
@@ -56,7 +56,7 @@ function sourceName(id) {
 async function read(rpc, launcher) {
   const client = clientOf(rpc);
   const address = addr(launcher);
-  const [block, status, bids, floor, clearing, start, end, poolQuote, token, pool, minQuote, preview, sourceCount] =
+  const [block, status, bids, floor, clearing, start, end, poolQuote, token, pool, minQuote, preview, sourceCount, maxBids, minSettleGas, admittedWalletCount] =
     await Promise.all([
       client.getBlockNumber(),
       client.readContract({ address, abi: launcherAbi, functionName: "statusCode" }),
@@ -68,9 +68,12 @@ async function read(rpc, launcher) {
       client.readContract({ address, abi: launcherAbi, functionName: "poolQuote" }),
       client.readContract({ address, abi: launcherAbi, functionName: "token" }),
       client.readContract({ address, abi: launcherAbi, functionName: "pool" }),
-      client.readContract({ address, abi: launcherAbi, functionName: "minPoolQuote" }).catch(() => 4335714285714285715n),
+      client.readContract({ address, abi: launcherAbi, functionName: "minPoolQuote" }).catch(() => null),
       client.readContract({ address, abi: launcherAbi, functionName: "preview" }),
       client.readContract({ address, abi: launcherAbi, functionName: "identitySourceCount" }).catch(() => 0n),
+      client.readContract({ address, abi: launcherAbi, functionName: "MAX_BIDS" }),
+      client.readContract({ address, abi: launcherAbi, functionName: "MIN_SETTLE_GAS" }),
+      client.readContract({ address, abi: launcherAbi, functionName: "admittedWalletCount" }).catch(() => 0n),
     ]);
   const sources = [];
   const count = typeof sourceCount === "bigint" ? sourceCount : 0n;
@@ -100,6 +103,9 @@ async function read(rpc, launcher) {
     token,
     pool,
     minQuote,
+    maxBids: admittedWalletCount || maxBids,
+    admittedWalletCount,
+    minSettleGas,
     previewOk: preview[0],
     previewPrice: preview[1],
     previewQuote: preview[2],
@@ -120,8 +126,8 @@ export async function status(rpc, launcher) {
       floorPrice: formatBnb(snap.floor),
       clearingPrice: formatBnb(clearing),
       bidCount: Number(snap.bids),
-      seatsLeft: Number(snap.bids >= 32n ? 0n : 32n - snap.bids),
-      minPoolQuote: formatBnb(snap.minQuote),
+      seatsLeft: Number(snap.bids >= snap.maxBids ? 0n : snap.maxBids - snap.bids),
+      minPoolQuote: snap.minQuote === null ? null : formatBnb(snap.minQuote),
       sources: snap.sources.map((item, index) => ({ index, address: item })),
     };
   } catch (error) {
@@ -164,8 +170,9 @@ export async function simulate(rpc, launcher, budgetText, priceText) {
     if (budget < WAD / 100n || budget > 100n * WAD) {
       return { ok: false, reason: "预算不在范围内", next: "单笔 0.01 到 100 BNB。" };
     }
+    if (maxPrice > MAX_PRICE) return { ok: false, reason: "限价超过合约上限", next: "请降低最高价。" };
     if (maxPrice < snap.floor) return { ok: false, reason: "低于保留价，这笔不会入场", next: "把最高价提到保留价以上。" };
-    if (snap.bids >= 32n) return { ok: false, reason: "名额已满", next: "这一场最多 32 笔。" };
+    if (snap.bids >= snap.maxBids) return { ok: false, reason: "名额已满", next: `这一场最多 ${snap.maxBids} 笔。` };
     const phase = phaseOf(snap.status, snap.block, snap.start, snap.end);
     if (phase !== "接单") return { ok: false, reason: "窗口已关", next: "这一场已经不接出价。" };
     const bids = bookBids(await loadBook(snap.client, addr(launcher)));
@@ -178,7 +185,7 @@ export async function simulate(rpc, launcher, budgetText, priceText) {
       tokens: (mine.tokens / WAD).toString(),
       spend: formatBnb(mine.spend),
       refund: formatBnb(mine.refund),
-      meetsMinPool: out.ok && out.poolQuote >= snap.minQuote,
+      meetsMinPool: snap.minQuote === null ? null : out.ok && out.poolQuote >= snap.minQuote,
       poolQuote: formatBnb(out.poolQuote),
     };
   } catch (error) {
@@ -192,7 +199,7 @@ function explainInput(error) {
     return { ok: false, reason: text, next: "按 BNB 填写，例如 1 或 0.00003。" };
   }
   if (text.includes("身份编号")) {
-    return { ok: false, reason: "身份编号要用整数", next: "Agent ID 填地址对应的整数，ERC-8004 填登记编号。" };
+    return { ok: false, reason: "身份编号要用整数", next: "正式 Agent ID 填 NFT token ID，ERC-8004 填登记编号。测试网替身使用钱包地址编号。" };
   }
   return explain(error);
 }
@@ -212,6 +219,9 @@ export async function identity(rpc, launcher, account, agentId) {
     const id = agentIdOf(agentId);
     const who = addr(account);
     const snap = await read(rpc, launcher);
+    if (snap.admittedWalletCount && !await snap.client.readContract({
+      address: addr(launcher), abi: launcherAbi, functionName: "admittedWallet", args: [who],
+    })) return { ok: false, reason: "不在本场名单", next: "核对该场拍卖登记的钱包。", results: [] };
     const results = [];
     for (let i = 0; i < snap.sources.length; i++) {
       const source = snap.sources[i];
@@ -235,7 +245,7 @@ export async function identity(rpc, launcher, account, agentId) {
   }
 }
 
-function tx(launcher, functionName, args, value) {
+function tx(launcher, functionName, args, value, gas = GAS) {
   const data = encodeFunctionData({ abi: launcherAbi, functionName, args });
   return {
     ok: true,
@@ -243,7 +253,7 @@ function tx(launcher, functionName, args, value) {
     value: value.toString(),
     valueBnb: formatBnb(value),
     data,
-    gas: GAS.toString(),
+    gas: gas.toString(),
     chainId: CHAIN_ID,
   };
 }
@@ -266,6 +276,7 @@ export async function bidTx(rpc, launcher, budgetText, priceText, sourceIndex, a
   try {
     const budget = parseBnb(budgetText);
     const price = parseBnb(priceText);
+    if (price > MAX_PRICE) return { ok: false, reason: "限价超过合约上限", next: "请降低最高价。" };
     const sourceText = String(sourceIndex).trim();
     if (!/^\d+$/.test(sourceText) || Number(sourceText) > 255) {
       return { ok: false, reason: "来源编号不对", next: "从 0 开始，按身份来源列表选，不能大于 255。" };
@@ -294,8 +305,8 @@ export async function settleTx(rpc, launcher) {
     const snap = await read(rpc, launcher);
     const phase = phaseOf(snap.status, snap.block, snap.start, snap.end);
     if (phase !== "待结算") return { ok: false, reason: "还没到结算", next: "等结束区块过了再结算。" };
-    const built = tx(launcher, "settle", [], 0n);
-    built.instruction = instruction("动作：结算。燃料上限 8000000，不要用估算值。", launcher, "金额 0。");
+    const built = tx(launcher, "settle", [], 0n, snap.minSettleGas + 1_000_000n);
+    built.instruction = instruction(`动作：结算。燃料上限 ${built.gas}，不要用估算值。`, launcher, "金额 0。");
     return built;
   } catch (error) {
     return explain(error);

@@ -1,6 +1,6 @@
 # 60 秒评审演示 · One-minute judge walkthrough
 
-运行 `bash script/demo.sh`，在它打印的页面地址后打开 `/?demo=1&scene=3`。第 3 幕在本机分叉的九笔出价上加入你的模拟单。另开两个标签页，准备展示 BSC 公共测试网的真实交易。[发射回执 / Settlement](https://testnet.bscscan.com/tx/0x56d87f21c4dbd55227d9e619986555f150c7da5ddec5db663b201a9b9985ae20) · [领取回执 / Claim](https://testnet.bscscan.com/tx/0x732353fc11a666984971d62c5b7a0016d76775145823938bf515ef776354f27f)
+运行 `bash script/demo.sh`，在它打印的页面地址后打开 `/?demo=1&scene=3`。第 3 幕在本机分叉的九笔出价上加入你的模拟单。另开两个标签页，准备展示 BSC 公共测试网的真实交易。[发射回执 / Settlement](https://testnet.bscscan.com/tx/0x5cc2056b689db1a422e5dfbdbd7017a23f86fa9a764effaa6cc82c9c1051ec02) · [领取回执 / Claim](https://testnet.bscscan.com/tx/0x5e1f06bfce8e6ee3dd379c82593ad35330639f169d22fd189493ec7f42f6bbd9)
 
 提前载入两个回执。开表时选一种语言，每到标记秒先操作，再念同一行。说完停在结果上，等下个提示。 / Preload both receipts. Choose one language, act on each cue, then speak. Hold the result until the next cue.
 
@@ -21,7 +21,7 @@
 | 00:00 | 开第 1 幕，指向出价簿。“九笔预算共 15.7 BNB。我们把它们放进同一个窗口清算。每个身份只能出一笔，所有成交者付同一个价。” / “Nine bids add up to 15.7 BNB. We clear them together. Each identity bids once, and every winning bidder pays the same price.” |
 | 00:20 | 点第 2 幕，指预算、最高价和复制按钮。“这两格决定我愿意花多少、每枚最多付多少。我把指令复制给代理先预览。” / “These fields set my budget and the most I’ll pay per token. I copy the instruction to my agent for a preview.” |
 | 00:40 | 点第 3 幕，以 60 秒稿的前三句演示两档限价。00:40 填预算 `1`，00:48 填 `0.00003`，01:02 改为 `0.000015`。 / Use the first three lines above at 00:40, 00:48 and 01:02. |
-| 01:15 | 点第 4 幕，指入池额和金库。“这是分叉上的成功场。40 BNB 成功入池，后续买卖产生的税款已进入金库。” / “This successful local auction put 40 BNB into the pool. Fees from the subsequent trades reached the vault.” |
+| 01:15 | 点第 4 幕，指入池额和交易税。“本机演练中 40 BNB 入池。项目侧交易税由 Flap 直接付给创建者。” / “The local rehearsal put 40 BNB into the pool. Flap routes the project trading tax to the creator.” |
 | 01:32 | 点第 5 幕，指退款回执。“这里三笔共 3 BNB，入池门槛约 4.34。整场没有成交，三位出价人都能领回全部预算。” / “Three bids total 3 BNB against a minimum of about 4.34. The auction has no fills. All three bidders can recover their budgets.” |
 | 01:48 | 点第 6 幕，指单价比。“同一组出价，同价成交的首笔与末笔单价之比是 1。常数乘积曲线的模拟结果约为 1.78。” / “For the same bids, the first and last uniform fills have the same unit price. In the constant-product simulation it’s about 1.78.” |
 | 02:05 | 切到公共测试网发射回执，念 60 秒稿的 00:35 一句。 / Open the public settlement receipt and use the 00:35 line above. |

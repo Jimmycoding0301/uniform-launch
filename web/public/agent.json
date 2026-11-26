@@ -2,34 +2,34 @@
   "chainId": 97,
   "rpcDefault": "https://bsc-testnet-rpc.publicnode.com",
   "contracts": {
-    "launcherFactory": "0xE82642aC5c3B3B4b7D4cDeaf6a251Dc0BB7AcEfd",
-    "vaultFactory": "0x2EF7a93b2fE4FBF520D5210b3ea39a72E5133dc6",
-    "agentIdSource": "0xe4f7B9aBA67FEDAbF9B9a151C604466D448DAb09",
-    "erc8004Source": "0x0526f00B99e952cE55F1b7BDaf9E6Ae42b42cf22",
+    "launcherFactory": "0x5A995C7ee958a631FDD151C9582604d347D7799A",
+    "agentIdSource": "0x5aBdA470ed6A8dad942F6ff125b172c4274A7d32",
+    "erc8004Source": "0x55fa503668E5c32A8FB49aBcF3FD1CCCA0e6AF2D",
     "erc8004Registry": "0x8004A818BFB912233c491871b3d84c89A494BD9e",
     "portal": "0x000042108465206185A077Edc3F3fd2b49060000"
   },
   "limits": {
     "minBudgetWei": "10000000000000000",
     "maxBudgetWei": "100000000000000000000",
-    "maxBids": 32,
+    "maxBids": 128,
     "closeBufferBlocks": 20,
     "sellAmountWei": "500000000000000000000000",
-    "minSettleGas": "7000000",
-    "gasLimit": "8000000",
-    "minPoolQuoteWei": "4335714285714285715"
+    "minSettleGas": "13000000",
+    "gasLimit": "14000000"
   },
   "functions": {
     "bid": "bid(uint256,uint8,uint256)",
     "settle": "settle()",
     "claim": "claim()",
-    "refund": "refund()"
+    "refund": "refund()",
+    "minPoolQuote": "minPoolQuote()"
   },
   "errors": {
     "Closed": "窗口已关",
     "Early": "还没到结算",
     "AlreadyBid": "这个地址已经出过价",
     "BadBudget": "预算不在范围内",
+    "PriceTooHigh": "限价超过合约上限",
     "BelowFloor": "低于保留价，这笔不会入场",
     "Full": "名额已满",
     "NotAgent": "身份不过",

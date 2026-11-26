@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {FixtureLauncherFactory} from "../test/FixtureNamePolicy.sol";
 import {Script, console} from "forge-std/Script.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {IPortal} from "src/flap/IPortal.sol";
@@ -30,12 +31,12 @@ contract IdentityShot is Script {
     function run() external {
         IPortal portal = IPortal(LaunchVaultAddresses.hub());
         address admin = IProxyAdminLike(PROXY_ADMIN).owner();
+        vm.startBroadcast(creator);
         uint256 nonce = vm.getNonce(creator);
         address predicted = vm.computeCreateAddress(creator, nonce + 1);
 
-        vm.startBroadcast(creator);
         UniformVaultFactory vaultFactory = new UniformVaultFactory(predicted);
-        UniformLauncherFactory launcherFactory = new UniformLauncherFactory(address(vaultFactory));
+        UniformLauncherFactory launcherFactory = new FixtureLauncherFactory(address(vaultFactory));
         AgentIdStandIn standIn = new AgentIdStandIn();
         BinanceAgentIdSource binance = new BinanceAgentIdSource(address(standIn));
         Erc8004Source erc8004 = new Erc8004Source(AgentIdentityAddresses.ERC8004_TESTNET);

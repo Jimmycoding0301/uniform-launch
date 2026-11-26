@@ -9,7 +9,7 @@ export function parseBnb(input: string): bigint | null {
   if (!/^\d+(\.\d+)?$/.test(s)) return null;
   const [whole, frac = ""] = s.split(".");
   if (frac.length > 18) return null;
-  if (whole.length > 8) return null;
+  if (whole.length > 19) return null;
   const padded = (frac + "0".repeat(18)).slice(0, 18);
   return BigInt(whole) * 10n ** 18n + BigInt(padded);
 }

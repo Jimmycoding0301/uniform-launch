@@ -1,6 +1,77 @@
 export const launcherAbi = [
   {
     "type": "function",
+    "name": "MAX_BIDS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MAX_PRICE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "MIN_SETTLE_GAS",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "admittedWallet",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "admittedWalletCount",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "bid",
     "inputs": [
       {
@@ -64,6 +135,19 @@ export const launcherAbi = [
         "name": "",
         "type": "uint64",
         "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "expectedToken",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -157,7 +241,7 @@ export const launcherAbi = [
         "internalType": "uint256"
       }
     ],
-    "stateMutability": "pure"
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -336,6 +420,21 @@ export const launcherAbi = [
   },
   {
     "type": "error",
+    "name": "NameScreenUnavailable",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NoUnallocatedTokens",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotAdmitted",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "NotAgent",
     "inputs": []
   },
@@ -383,7 +482,27 @@ export const launcherAbi = [
   },
   {
     "type": "error",
+    "name": "OnlySelf",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PortalQuoteUnavailable",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PriceTooHigh",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "RefundUnavailable",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ScamNameOrSymbol",
     "inputs": []
   },
   {

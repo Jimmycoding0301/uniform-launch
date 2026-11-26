@@ -23,11 +23,12 @@ for (const path of files(src)) {
 }
 assert.deepEqual(bare, [], `裸色值：${bare.join(", ")}`);
 
-const deployed = JSON.parse(readFileSync(join(root, "../deployments/bsc-testnet.json"), "utf8"));
+const deployed = JSON.parse(readFileSync(join(root, "../deployments/bsc-testnet-marketing.json"), "utf8"));
 const networks = readFileSync(join(src, "networks.ts"), "utf8");
-for (const key of ["vaultFactory", "launcherFactory", "agentIdNft", "agentIdSource", "erc8004Registry", "erc8004Source"]) {
+for (const key of ["launcherFactory", "agentIdNft", "agentIdSource", "erc8004Registry", "erc8004Source"]) {
   assert.ok(networks.includes(deployed[key]), `${key} 与部署文件不一致`);
 }
+assert.ok(networks.includes(deployed.publicAuction.launcher), "测试网拍卖地址与部署文件不一致");
 assert.equal(deployed.chainId, 97);
 assert.equal(deployed.agentIdStandIn, true);
 assert.equal(deployed.saltLockFeeWei, "5000000000000000");

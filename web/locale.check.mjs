@@ -10,7 +10,7 @@ try {
     reducedMotion: "reduce",
   });
   const page = await context.newPage();
-  const labels = ["Bids and clearing price", "Set a bid limit", "Simulate your bid", "Launch and vault", "Below target, full refund", "Compare launch prices"];
+  const labels = ["Bids and clearing price", "Set a bid limit", "Simulate your bid", "Launch and trading tax", "Below target, full refund", "Compare launch prices"];
   await page.goto(`${demoOrigin}/?demo=1`);
   assert.equal(await page.locator("html").getAttribute("lang"), "zh-CN");
   await page.getByRole("button", { name: "下一幕" }).click();
@@ -40,7 +40,7 @@ try {
   await page.getByRole("link", { name: "Receipts", exact: true }).click();
   await page.getByRole("heading", { name: "Public testnet launch" }).waitFor();
   assert.equal(new URL(page.url()).searchParams.get("lang"), "en");
-  const auction = await page.getByRole("link", { name: /View settled auction/ }).getAttribute("href");
+  const auction = await page.getByRole("link", { name: /View public auction/ }).getAttribute("href");
   assert.equal(new URL(auction, demoOrigin).searchParams.get("lang"), "en");
   await page.getByRole("link", { name: "切换到中文" }).click();
   await page.getByRole("heading", { name: "公开测试网发射" }).waitFor();

@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {FixtureNamePolicy, FixtureLauncherFactory} from "./FixtureNamePolicy.sol";
 import {Test} from "forge-std/Test.sol";
 import {IPortal, IPortalTypes} from "src/flap/IPortal.sol";
 import {Distribution} from "src/flap/Distribution.sol";
@@ -55,13 +56,13 @@ contract MockPortal {
         pure
         returns (IPortal.GraduationFloorResultV2 memory r)
     {
-        uint256 usd = p.poolQuote * 700 ether * p.poolToken / p.totalSupply / 1 ether;
+        uint256 usd = p.poolQuote * p.quotePriceUsd / 1 ether;
         r.quoteUsdWad = usd;
-        r.createFloorUsdWad = 750 ether;
-        r.floorUsdWad = 1500 ether;
+        r.createFloorUsdWad = 1500 ether;
+        r.floorUsdWad = 3000 ether;
         r.multiplierBps = 10_000;
-        r.meetsCreateFloor = usd >= 750 ether;
-        r.meetsFloor = usd >= 1500 ether;
+        r.meetsCreateFloor = usd >= 1500 ether;
+        r.meetsFloor = usd >= 3000 ether;
     }
 
     function launchTaxTokenV2(
@@ -154,10 +155,13 @@ contract UniformInvariantTest is Test {
         vm.etch(portal, address(new MockPortal()).code);
         vm.deal(portal, 5 ether);
         vm.deal(address(this), 5 ether);
+        bytes memory screening = address(new FixtureNamePolicy()).code;
+        vm.etch(0x5CfbE713d070e87F67D1bc84312B7eB8Fe4F2B5E, screening);
+        vm.etch(0xfFb69d59f62454f3B8322Bc1a9FCE6E171a5264f, screening);
         uint256 nonce = vm.getNonce(address(this));
         address predicted = vm.computeCreateAddress(address(this), nonce + 1);
         UniformVaultFactory vaultFactory = new UniformVaultFactory(predicted);
-        UniformLauncherFactory launcherFactory = new UniformLauncherFactory(address(vaultFactory));
+        UniformLauncherFactory launcherFactory = new FixtureLauncherFactory(address(vaultFactory));
         LaunchConfig memory c;
         c.name = "Tongjia";
         c.symbol = "INV";

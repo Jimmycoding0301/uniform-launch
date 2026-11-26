@@ -1,4 +1,5 @@
 const WAD = 10n ** 18n;
+export const MAX_PRICE = 10n ** 36n;
 export const SELL_AMOUNT = 500_000n * WAD;
 
 function before(a, b) {

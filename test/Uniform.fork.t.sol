@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {FixtureLauncherFactory} from "./FixtureNamePolicy.sol";
 import {Test, console2} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
@@ -12,6 +13,7 @@ import {UniformVault} from "src/uniform/UniformVault.sol";
 import {UniformVaultFactory} from "src/uniform/UniformVaultFactory.sol";
 import {PancakeV2Testnet} from "src/uniform/PancakeV2Testnet.sol";
 import {AgentIdentityAddresses} from "src/uniform/AgentIdentityAddresses.sol";
+import {IAgentIdentitySource} from "src/uniform/IAgentIdentitySource.sol";
 import {BinanceAgentIdSource} from "src/uniform/BinanceAgentIdSource.sol";
 import {Erc8004Source} from "src/uniform/Erc8004Source.sol";
 import {PermissiveAgentDirectory} from "./PermissiveAgentDirectory.sol";
@@ -64,6 +66,12 @@ interface IRouterLike {
 }
 
 /// @notice 对 BSC 测试网 Portal 的只读分叉。没有 BSC_TESTNET_RPC_URL 就跳过。不向活网发交易。
+contract ForkRosterIdentity is IAgentIdentitySource {
+    function verify(address account, uint256 id) external pure returns (bool, bytes32) {
+        return (id == uint160(account), keccak256("fork-roster-fixture"));
+    }
+}
+
 abstract contract ForkBase is Test {
     uint256 internal constant PORTAL_FEE_FALLBACK = 0.005 ether;
 
@@ -91,6 +99,10 @@ abstract contract ForkBase is Test {
         }
         vm.createSelectFork(rpc);
         require(block.chainid == 97, "rpc is not chain 97");
+        _deployFixtureFactories();
+    }
+
+    function _deployFixtureFactories() internal {
         portal = IPortal(LaunchVaultAddresses.hub());
         admin = IProxyAdminLike(0x0000Ed588dfc01749C20bA69b5f8c77d706E0000).owner();
         vm.deal(creator, 50 ether);
@@ -101,13 +113,19 @@ abstract contract ForkBase is Test {
         uint256 nonce = vm.getNonce(address(this));
         address predicted = vm.computeCreateAddress(address(this), nonce + 1);
         vaultFactory = new UniformVaultFactory(predicted);
-        launcherFactory = new UniformLauncherFactory(address(vaultFactory));
+        launcherFactory = new FixtureLauncherFactory(address(vaultFactory));
 
         vm.startPrank(admin);
         portal.setCreationPaused(true);
         portal.setLauncherFactoryMultiplier(address(launcherFactory), 10_000, true);
         portal.setVaultFactoryMultiplier(address(vaultFactory), 10_000, true);
         vm.stopPrank();
+    }
+
+    function _useMarketingFactory() internal {
+        launcherFactory = new FixtureLauncherFactory(address(0));
+        vm.prank(admin);
+        portal.setLauncherFactoryMultiplier(address(launcherFactory), 10_000, true);
     }
 
     function _taxLiquidated(address proc) internal view returns (bool) {
@@ -213,13 +231,10 @@ abstract contract ForkBase is Test {
         return _launch(floor, duration, symbol, seed, sources);
     }
 
-    function _launch(
-        uint256 floor,
-        uint64 duration,
-        string memory symbol,
-        bytes32 seed,
-        address[] memory sources
-    ) internal returns (UniformLauncher launcher) {
+    function _launch(uint256 floor, uint64 duration, string memory symbol, bytes32 seed, address[] memory sources)
+        internal
+        returns (UniformLauncher launcher)
+    {
         LaunchConfig memory c;
         c.name = "Tongjia";
         c.symbol = symbol;
@@ -303,6 +318,80 @@ contract UniformForkTest is ForkBase {
         assertEq(address(vault).balance, 0);
     }
 
+    function test_certifiedFactoryScreensAndResolvesOnRealPortal() public {
+        UniformLauncherFactory strictFactory = new UniformLauncherFactory(address(0));
+        vm.prank(admin);
+        portal.setLauncherFactoryMultiplier(address(strictFactory), 10_000, true);
+        LaunchConfig memory c;
+        c.name = "USDT";
+        c.symbol = "TJ";
+        c.meta = "bafkreig4y5nwb4izyilbbmiydumvkld446d4k7j4ohg3x3q2lfel3fo4yq";
+        c.salt = _mineSalt("real-screen");
+        c.floorPrice = 1e13;
+        c.durationBlocks = 200;
+        c.identitySources = new address[](1);
+        c.identitySources[0] = strictFactory.agentIdSource();
+        c.admittedWallets = new address[](1);
+        c.admittedWallets[0] = alice;
+        uint256 fee = portal.SALT_LOCK_FEE();
+
+        vm.prank(creator);
+        vm.expectRevert(UniformLauncher.ScamNameOrSymbol.selector);
+        portal.newLauncher{value: fee}(address(strictFactory), abi.encode(c));
+        c.name = "Tongjia";
+        c.symbol = "BNB";
+        vm.prank(creator);
+        vm.expectRevert(UniformLauncher.ScamNameOrSymbol.selector);
+        portal.newLauncher{value: fee}(address(strictFactory), abi.encode(c));
+        c.symbol = "TJ";
+
+        vm.prank(creator);
+        address deployed = portal.newLauncher{value: fee}(address(strictFactory), abi.encode(c));
+        assertEq(strictFactory.resolveLauncher(deployed), deployed);
+        vm.expectRevert(abi.encodeWithSelector(UniformLauncherFactory.UnrecognizedLauncher.selector, address(1)));
+        strictFactory.resolveLauncher(address(1));
+        UniformLauncher launcher = UniformLauncher(payable(deployed));
+        address expected = launcher.expectedToken();
+        assertEq(uint16(uint160(expected)), 0x7777);
+        assertEq(launcher.token(), address(0));
+
+        vm.startPrank(alice);
+        (bool registered,) = 0x89c60E8E5aF13508900152e5FEE149bf5708d8a0.call(abi.encodeWithSignature("claim()"));
+        assertTrue(registered);
+        launcher.bid{value: 8 ether}(1e16, 0, uint160(alice));
+        vm.stopPrank();
+        vm.roll(launcher.endBlock());
+        launcher.settle();
+        assertEq(launcher.statusCode(), uint8(UniformLauncher.Status.Succeeded));
+        assertEq(launcher.token(), expected);
+        vm.prank(alice);
+        launcher.claim();
+        assertEq(IERC20(expected).balanceOf(alice), launcher.SELL_AMOUNT());
+    }
+
+    function test_marketingLaunchPaysCreatorDirectly() public {
+        _useMarketingFactory();
+        UniformLauncher launcher = _create(1e13, 200, "MARK", bytes32(uint256(77001)));
+        vm.prank(alice);
+        launcher.bid{value: 40 ether}(1e16, 0, uint160(alice));
+        vm.roll(launcher.endBlock());
+        launcher.settle();
+        assertEq(launcher.statusCode(), uint8(UniformLauncher.Status.Succeeded));
+        assertEq(launcher.poolQuote(), 40 ether);
+        assertEq(launcher.vaultFactory(), address(0));
+        (address vault, address factory) = portal.getLaunchVault(launcher.token());
+        assertEq(vault, address(0));
+        assertEq(factory, address(0));
+
+        vm.prank(alice);
+        launcher.claim();
+        assertEq(IERC20(launcher.token()).balanceOf(alice), launcher.SELL_AMOUNT());
+        uint256 quoteBefore = creator.balance;
+        _generateTaxAndDispatch(launcher.token());
+        assertGt(creator.balance - quoteBefore, 0, "creator must receive native quote");
+        console2.log("MARKETING_QUOTE_RECEIVED_WEI", creator.balance - quoteBefore);
+    }
+
     function test_failedAuctionRefundsWithoutToken() public {
         UniformLauncher launcher = _create(1 ether, 200, "FAIL", bytes32(uint256(22)));
         vm.prank(alice);
@@ -336,21 +425,29 @@ contract UniformForkTest is ForkBase {
     }
 
     function test_maxBidsSettleGas() public {
+        _useMarketingFactory();
         UniformLauncher launcher = _create(1e13, 200, "GAS", bytes32(uint256(88001)));
-        for (uint256 i; i < 32; ++i) {
+        uint256 cap = launcher.MAX_BIDS();
+        for (uint256 i; i < cap; ++i) {
             address who = address(uint160(0x2000 + i));
             vm.deal(who, 1 ether);
             vm.prank(who);
-            launcher.bid{value: 0.2 ether}(1e16, 0, uint160(who));
+            // Ascending, distinct limits exercise the sort's worst case.
+            launcher.bid{value: 0.2 ether}(1e16 + i, 0, uint160(who));
         }
+        assertEq(launcher.bidCount(), cap);
         vm.roll(launcher.endBlock());
+        uint256 gasLimit = launcher.MIN_SETTLE_GAS() + 1_000_000;
         uint256 before = gasleft();
-        launcher.settle();
+        launcher.settle{gas: gasLimit}();
         uint256 used = before - gasleft();
         console2.log("FORK_MAX_BIDS_SETTLE_GAS", used);
         assertEq(uint8(launcher.status()), uint8(UniformLauncher.Status.Succeeded));
-        assertLt(used, 8_000_000, "8_000_000 gas limit cannot cover settle");
-        assertLt(used, launcher.MIN_SETTLE_GAS(), "MIN_SETTLE_GAS is below the measured settle");
+        assertEq(launcher.poolQuote(), cap * 0.2 ether);
+        assertLt(used, launcher.MIN_SETTLE_GAS(), "insufficient settlement headroom");
+        vm.prank(address(uint160(0x2000 + cap - 1)));
+        launcher.claim();
+        assertGt(IERC20(launcher.token()).balanceOf(address(uint160(0x2000 + cap - 1))), 0);
     }
 
     function test_oneBnbBelowLaunchFloorRefunds() public {
@@ -444,24 +541,69 @@ contract UniformForkTest is ForkBase {
         moved.bid{value: 1 ether}(1e16, 0, id);
     }
 
-    function test_mainnetAgentIdUsesBalanceAndUint160() public {
+    function test_mainnetAgentIdUsesErc721TokenId() public {
         string memory rpc = vm.envOr("BSC_MAINNET_RPC_URL", string(""));
         if (bytes(rpc).length == 0) vm.skip(true);
         vm.createSelectFork(rpc);
-        address holder = 0x140405955366853d230b65058EF7dD36b68375c2;
+        require(block.chainid == 56, "rpc is not chain 56");
         address nft = AgentIdentityAddresses.AGENT_ID_MAINNET;
+        uint256 tokenId = 104002828386997649420395351585592461494903418918889421288987047757668155772984;
+        (bool readOwner, bytes memory ownerData) = nft.staticcall(abi.encodeWithSignature("ownerOf(uint256)", tokenId));
+        require(readOwner, "known Agent ID missing");
+        address holder = abi.decode(ownerData, (address));
         BinanceAgentIdSource src = new BinanceAgentIdSource(nft);
-        assertFalse(src.standIn());
-        (bool enumerated,) =
-            nft.staticcall(abi.encodeWithSignature("tokenOfOwnerByIndex(address,uint256)", holder, uint256(0)));
-        assertFalse(enumerated);
-        (bool ok, bytes32 sourceId) = src.verify(holder, uint160(holder));
+        (bool ok, bytes32 sourceId) = src.verify(holder, tokenId);
         assertTrue(ok);
         assertEq(sourceId, keccak256("binance-agent-id"));
-        (bool wrong,) = src.verify(holder, 1);
+        (bool wrong,) = src.verify(holder, uint160(holder));
         assertFalse(wrong);
-        (bool stranger,) = src.verify(address(0xBEEF), uint160(address(0xBEEF)));
-        assertFalse(stranger);
+    }
+
+    function test_mainnetFork128BidsWithLocalFactoryApproval() public {
+        string memory rpc = vm.envOr("BSC_MAINNET_RPC_URL", string(""));
+        if (bytes(rpc).length == 0) vm.skip(true);
+        vm.createSelectFork(rpc);
+        require(block.chainid == 56, "rpc is not chain 56");
+        _deployFixtureFactories();
+        _useMarketingFactory();
+
+        LaunchConfig memory c;
+        c.name = "Uniform Fork";
+        c.symbol = "UF128";
+        c.meta = "bafkreig4y5nwb4izyilbbmiydumvkld446d4k7j4ohg3x3q2lfel3fo4yq";
+        c.salt = _mineSalt("mainnet-128");
+        c.floorPrice = 1e13;
+        c.durationBlocks = 200;
+        c.identitySources = new address[](1);
+        c.identitySources[0] = address(new ForkRosterIdentity());
+        c.admittedWallets = new address[](128);
+        for (uint256 i; i < 128; ++i) {
+            c.admittedWallets[i] = address(uint160(0x2000 + i));
+        }
+
+        vm.prank(creator);
+        UniformLauncher launcher = UniformLauncher(
+            payable(portal.newLauncher{value: portal.SALT_LOCK_FEE()}(address(launcherFactory), abi.encode(c)))
+        );
+        for (uint256 i; i < c.admittedWallets.length; ++i) {
+            address wallet = c.admittedWallets[i];
+            vm.deal(wallet, 1 ether);
+            vm.prank(wallet);
+            launcher.bid{value: 0.2 ether}(1e16 + i, 0, uint160(wallet));
+        }
+        vm.roll(launcher.endBlock());
+        uint256 gasLimit = launcher.MIN_SETTLE_GAS() + 1_000_000;
+        uint256 before = gasleft();
+        launcher.settle{gas: gasLimit}();
+        uint256 used = before - gasleft();
+        console2.log("MAINNET_FORK_128_SETTLE_GAS", used);
+        assertEq(launcher.statusCode(), uint8(UniformLauncher.Status.Succeeded));
+        assertEq(launcher.poolQuote(), 25.6 ether);
+        assertLt(used, launcher.MIN_SETTLE_GAS());
+        address finalBidder = c.admittedWallets[127];
+        vm.prank(finalBidder);
+        launcher.claim();
+        assertGt(IERC20(launcher.token()).balanceOf(finalBidder), 0);
     }
 
     function test_disabledFactoryFlag() public {
@@ -479,5 +621,4 @@ contract UniformForkTest is ForkBase {
         // 当前测试网 Portal 在工厂被关闭后仍完成发射，不回滚。
         assertEq(uint8(launcher.status()), uint8(UniformLauncher.Status.Succeeded));
     }
-
 }

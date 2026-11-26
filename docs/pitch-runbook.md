@@ -1,22 +1,26 @@
 # Uniform Launch · One-Price Auctions
 
+## Current MARKETING release
+
+For the new public auction, say: “On a successful launch, Flap routes the configured project trading tax directly to the creator. This testnet auction accepts verified identities without a wallet roster; the mainnet contract requires a roster.” [Current public receipts](marketing-testnet-evidence.md)
+
 ## Two-minute submission video
 
-Use the English column as the voiceover. The Chinese columns direct the screen capture and give the meaning of each line. Start each shot at the marked second and hold the result until the next cut. These timings belong to this recording. [English subtitles](video-subtitles.en.srt) · [Five-slide deck](../qa/submission/Uniform-Launch-BNB-Bangkok.pptx) · [Offline cue clock](../qa/submission/presenter-clock.html)
+Use the English column as the voiceover. The Chinese columns direct the screen capture and give the meaning of each line. Start each shot at the marked second and hold the result until the next cut. Hold each result until the next cue.
 
-The Flap brief asks for the Factory, a complete BSC Testnet launch, a custom Flap-template launch UI, evidence for an included Vault, source code and an explanation of the mechanism. The same public contracts and the agent CLI and MCP tools support the Developer Track entry. [Official event brief](https://www.hackquest.io/hackathons/BNB-Bangkok) · [Submission code](https://github.com/Jimmycoding0301/uniform-launch)
+The Flap brief asks for the Factory, a complete BSC Testnet launch, a custom Flap-template launch UI, source code and an explanation of the mechanism. The same public contracts and the agent CLI and MCP tools support the Developer Track entry. [Official event brief](https://www.hackquest.io/hackathons/BNB-Bangkok) · [Submission code](https://github.com/Jimmycoding0301/uniform-launch)
 
 ### Preload the five public receipts
 
 | Video cue | Public BSC Testnet receipt | Point to |
 | --- | --- | --- |
-| 00:18 | [Register test identity](https://testnet.bscscan.com/tx/0x4df7fbf222c358de87017d42267aabf006c525abdc505634369b1c6cfc78b2d0) | Testnet Agent ID stand-in. Block 144,923,523. |
-| 00:24 | [Factory creates Launcher](https://testnet.bscscan.com/tx/0x5be4952fc75b9d2aec691ae0288eed53ee922e53552fce9812da24c1410ab93c) | UniformLauncherCreated. Block 144,924,369. |
-| 00:28 | [Submit the only bid](https://testnet.bscscan.com/tx/0xac2f7be859199de2d0fc11c57fcdf59308b5f856b5928afa75aaecde40dafa01) | 4.45 tBNB, limit 0.000009 tBNB per token. Block 144,924,882. |
-| 01:18 | [Settle and launch](https://testnet.bscscan.com/tx/0x56d87f21c4dbd55227d9e619986555f150c7da5ddec5db663b201a9b9985ae20) | Clearing price 0.0000089 tBNB. Pair reserves 500,000 UNIFORM and 4.45 WBNB. Block 144,926,064. |
-| 01:34 | [Claim tokens](https://testnet.bscscan.com/tx/0x732353fc11a666984971d62c5b7a0016d76775145823938bf515ef776354f27f) | Transfer of 500,000 UNIFORM to the bidder. Block 144,927,029. |
+| 00:18 | [Deploy Launcher Factory](https://testnet.bscscan.com/tx/0xe751bc11de1d8f43952c732e0d304ab1be500507d36109086c207ed340498773) | MARKETING Factory. Block 145,037,925. |
+| 00:24 | [Factory creates Launcher](https://testnet.bscscan.com/tx/0x45c339b0d4a62da600714bd411f1d7ab966b51907a5b61379f2b09e4b362bb41) | UniformLauncherCreated. Block 145,038,938. |
+| 00:28 | [Submit the only bid](https://testnet.bscscan.com/tx/0xad339052f8b9e34197476bfd1defffd126373c7b87af77fd74ad0a5a5e4b8ed9) | 4.45 tBNB, limit 0.000009 tBNB per token. Block 145,038,962. |
+| 01:18 | [Settle and launch](https://testnet.bscscan.com/tx/0x5cc2056b689db1a422e5dfbdbd7017a23f86fa9a764effaa6cc82c9c1051ec02) | Clearing price 0.0000089 tBNB. Pair reserves 500,000 UNIFORM and 4.45 WBNB. Block 145,040,241. |
+| 01:34 | [Claim tokens](https://testnet.bscscan.com/tx/0x5e1f06bfce8e6ee3dd379c82593ad35330639f169d22fd189493ec7f42f6bbd9) | Transfer of 500,000 UNIFORM to the bidder. Block 145,040,258. |
 
-For the interactive shot, run `DEMO_WEB_PORT=4417 bash script/demo.sh` in the submitted checkout and open `/?demo=1&scene=3&lang=en` at the printed address. Both price buttons set the budget to one BNB. Switch languages from the header while keeping the current scene. Preload the five receipts, the Flap UI and the submission code. Offline, use the two outcomes printed on slide 3, the saved public transaction record and the fork Vault record. [Public record and contract addresses](public-testnet-evidence.md) · [Local-fork screenshots](../qa/submission/README.md) · [Custom Flap component](../flap-ui/launcher-detail) · [Fork Vault receipts](e2e-evidence.md)
+For the interactive shot, run `DEMO_WEB_PORT=4417 bash script/demo.sh` in the submitted checkout and open `/?demo=1&scene=3&lang=en` at the printed address. Both price buttons set the budget to one BNB. Switch languages from the header while keeping the current scene. Preload the five receipts, the Flap UI and the submission code. Offline, use the two comparison screenshots and the saved public transaction record. [Public record and contract addresses](marketing-testnet-evidence.md) · [Local-fork screenshots](../qa/submission/README.md) · [Custom Flap component](../flap-ui/launcher-detail)
 
 The fixed-price example posts 0.00002 BNB per token in advance. Both 2.5 BNB orders have enough allocation and receive 125,000 tokens. The simulated bonding curve gives the earlier founder wallet about 181,000 and the next wallet about 153,000. The auction independently clears at 0.00002 from the bids and fills both for 125,000. Among these three launch methods, it combines a price set by demand with one unit price for every fill. The founder and buyer are hypothetical roles for bids 2 and 3 of the local nine-bid book. [Nine-bid inputs and curve parameters](https://github.com/Jimmycoding0301/uniform-launch/blob/7ca35931639b23c678ae57f6e03213864ce3841a/web/public/why.json)
 
@@ -43,8 +47,8 @@ The fixed-price example posts 0.00002 BNB per token in advance. Both 2.5 BNB ord
 | 01:29 | 指 Pair 的初始储备。 | with half a million UNIFORM and 4.45 test BNB. | 池内是 50 万枚 UNIFORM 和 4.45 枚 WBNB。 |
 | 01:34 | 打开第五笔领取回执，指 Transfer 金额。 | Here is the fifth transaction. The bidder claimed the other half million tokens. | 出价者实际领取另外五十万枚。 |
 | 01:41 | 第 5 页，展示自制 Flap 界面。 | We built the Launcher interface using Flap’s template. | 用 Flap 的模板做了 Launcher 详情界面。 |
-| 01:45 | 指公网 Vault 地址。 | The public launch linked the Vault. | 公网发射已关联金库。 |
-| 01:48 | 展示分叉 Vault 的收税和提取记录。 | On a separate fork, trading fees reached it and the owner withdrew them. | 分叉上验证税费进入金库并由 owner 提取。 |
+| 01:45 | 指向交易税。 | Flap routes the project trading tax to the creator. | 项目侧交易税经 Flap 直接给创建者。 |
+| 01:48 | 看拍卖的领取回执。 | The bidder claimed half of the supply at the uniform price. | 出价者以统一价领取一半总供应量。 |
 | 01:55 | 停在 GitHub 提交分支。 | Our code is public for both the Flap and Developer tracks. | 两个赛道共用这份公开代码。 |
 | 02:00 | 停表。 | | |
 
@@ -59,7 +63,7 @@ The fixed-price example posts 0.00002 BNB per token in advance. Both 2.5 BNB ord
 | 00:28 | Select the lower limit and show the refund. | Full refund. My agent prepares the bid. I sign. | 低限价全退。代理准备交易，我来确认。 |
 | 00:35 | Return to deck, advance to slide 4 and open settlement. | Our public testnet launch seeded the pool with four point four five test BNB. | 这场公共测试网发射有 4.45 枚测试币入池。 |
 | 00:44 | Open the claim tab. | The bidder claimed half a million UNIFORM. | 出价者已领取五十万枚 UNIFORM。 |
-| 00:52 | Return to deck, advance to slide 5 and close. | Built on Flap. Vault fees and withdrawal tested on a fork. Thank you. | 分叉已验证 Vault 收税和提款。谢谢。 |
+| 00:52 | Return to deck, advance to slide 5 and close. | Built on Flap. Project trading tax goes to the creator. Thank you. | 项目侧交易税由创建者收取。谢谢。 |
 | 01:00 | Stop. | | |
 
 ## Judge Q&A
@@ -79,8 +83,8 @@ Give one answer, then pause. The Chinese column is a cue for the presenter.
 | What did you actually launch? | On public BSC Testnet, one bid funded a 4.45 tBNB pool. The bidder claimed 500,000 tokens. The multi-bid example is a local simulation. | 公网单笔发射、领取；九笔案例是本地试算。 |
 | What happens below the pool minimum? | Every bidder can claim a full refund. In our fork example, three bids total three BNB against a minimum of about four point three four. | 整场失败，三位出价者可分别领取全额退款。 |
 | What did you build on Flap? | Our Factory creates an auction Launcher. We built its detail UI from Flap’s template. During settlement, the Portal launches the token into PancakeSwap. | 工厂、拍卖 Launcher、自制模板界面、Portal 建池。 |
-| Who gets trading fees, and how did you test that? | The public launch linked the Vault. On a fork, fees from trades reached it. The owner withdrew the full balance. | 公网挂接 Vault，分叉实测税款到账和全提。 |
+| Who gets trading fees, and how did you test that? | Flap’s MARKETING slot routes the project trading tax to the creator. We verified payout on a local fork. | Flap 的 MARKETING 槽把项目侧交易税付给创建者，分叉已验证到账。 |
 | Does the launch happen by itself at the deadline? | Anyone can call settle after the window closes. If the auction qualifies, that transaction triggers issuance and creates the pool through Flap. | 到期后需有人调用 settle，一次交易内完成发币和建池。 |
 | Where can we inspect or run what you built? | Our public submission branch includes the contracts, the Flap UI, the agent CLI and MCP server, and a command to reproduce the demo. | 公开提交分支包含合约、Flap 前端、代理工具及复现命令。 |
 
-[Shared code for Flap and Developer](https://github.com/Jimmycoding0301/uniform-launch) · [Factory and public transactions](public-testnet-evidence.md) · [Vault buy, sell and withdrawal evidence](e2e-evidence.md) · [Flap UI and checker](flap-integration.md)
+[Shared code for Flap and Developer](https://github.com/Jimmycoding0301/uniform-launch) · [Factory and public transactions](marketing-testnet-evidence.md) · [Flap UI and checker](flap-integration.md)

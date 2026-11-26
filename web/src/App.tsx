@@ -7,14 +7,17 @@ import { Roller, useReducedMotion, Zh } from "./motion";
 import { PlotStage } from "./PlotStage";
 import { pancakeSwapLink } from "./dex";
 // @ts-expect-error 共享模拟器是普通 JavaScript，返回值在调用处收窄。
-import { settle as settleBids } from "../../shared/settle.mjs";
-import { ADDR_STAGGER_MS, COPY_MS, MIN_SETTLE_GAS, RISK_LINE, SETTLE_GAS_LIMIT, SETTLE_MS, SWEEP_MS, USER_LINE } from "./theme";
+import { MAX_PRICE, settle as settleBids } from "../../shared/settle.mjs";
+import { ADDR_STAGGER_MS, COPY_MS, RISK_LINE, SETTLE_MS, SWEEP_MS, USER_LINE } from "./theme";
 import { ReceiptPanel } from "./ReceiptPanel";
 import type { Action, Intent, Tracking } from "./receipts";
 import { TESTNET, TESTNET_ROWS } from "./networks";
 import { FundingProgress, PriceComparison, SettlementSummary, SimulationSummary, type Comparison } from "./AuctionFigures";
 
 const ABI = [
+  { type: "function", name: "admittedWalletCount", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "MAX_BIDS", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "MIN_SETTLE_GAS", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "status", stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
   { type: "function", name: "floorPrice", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "clearingPrice", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
@@ -26,6 +29,7 @@ const ABI = [
   { type: "function", name: "pool", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
   { type: "function", name: "poolQuote", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "vaultFactory", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
+  { type: "function", name: "creator", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
   { type: "function", name: "preview", stateMutability: "view", inputs: [], outputs: [{ type: "bool" }, { type: "uint256" }, { type: "uint256" }] },
   {
     type: "function",
@@ -118,7 +122,7 @@ const SCENES = [
   t("接单与清算价", "Bids and clearing price"),
   t("填写限价委托", "Set a bid limit"),
   t("模拟本笔出价", "Simulate your bid"),
-  t("发射与金库", "Launch and vault"),
+  t("发射与交易税", "Launch and trading tax"),
   t("未达门槛，全额退款", "Below target, full refund"),
   t("对照两种发行价格", "Compare launch prices"),
 ];
@@ -133,6 +137,9 @@ type Row = {
 };
 type SourceInfo = { sourceId: `0x${string}`; standIn: boolean };
 type Snap = {
+  maxBids: number;
+  rostered: boolean;
+  minSettleGas: bigint;
   status: number;
   floor: bigint;
   clearing: bigint;
@@ -144,6 +151,7 @@ type Snap = {
   pool: Address;
   poolQuote: bigint;
   vaultFactory: Address;
+  marketingRecipient: Address | null;
   previewOk: boolean;
   previewQuote: bigint;
   previewPrice: bigint;
@@ -152,6 +160,13 @@ type Snap = {
 };
 
 const ZERO = "0x0000000000000000000000000000000000000000";
+const trustedTestnetFactories = new Set<string>([
+  TESTNET.launcherFactory.toLowerCase(),
+]);
+const marketingFactory = import.meta.env.VITE_MARKETING_LAUNCHER_FACTORY?.trim().toLowerCase();
+if (marketingFactory && marketingFactory !== ZERO && isAddress(marketingFactory)) {
+  trustedTestnetFactories.add(marketingFactory);
+}
 const PHASES = [
   { id: "wait", label: t("未开始", "Pending") },
   { id: "open", label: t("接单", "Open") },
@@ -265,6 +280,7 @@ export function App() {
     let verifiedNetwork = false;
     let timer = 0;
     let cachedSources: SourceInfo[] | undefined;
+    let marketingRecipient: Address | null = null;
     async function readSources() {
       if (cachedSources) return cachedSources;
       try {
@@ -315,14 +331,14 @@ export function App() {
             address: PORTAL, abi: parseAbi(["function getLauncher(address) view returns (address)"]),
             functionName: "getLauncher", args: [launcher],
           });
-          if (factory.toLowerCase() !== TESTNET.launcherFactory.toLowerCase()) {
+          if (!trustedTestnetFactories.has(factory.toLowerCase())) {
             if (!stop) setRpcNote(t("这个地址不属于同价发射的测试网工厂。", "This address is not an auction from the Uniform Launch testnet factory."));
             dead = true;
             return;
           }
           verifiedNetwork = true;
         }
-        const [b, status, floor, clearing, softCap, minPoolQuote, start, end, token, pool, poolQuote, vaultFactory, preview, fills, got, sources] = await Promise.all([
+        const [b, status, floor, clearing, softCap, minPoolQuote, start, end, token, pool, poolQuote, vaultFactory, preview, fills, got, sources, maxBids, minSettleGas, admittedWalletCount] = await Promise.all([
           client.getBlockNumber(),
           client.readContract({ address: launcher, abi: ABI, functionName: "status" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "floorPrice" }),
@@ -339,7 +355,13 @@ export function App() {
           client.readContract({ address: launcher, abi: ABI, functionName: "getFills" }),
           readBids(),
           readSources(),
+          client.readContract({ address: launcher, abi: ABI, functionName: "MAX_BIDS" }),
+          client.readContract({ address: launcher, abi: ABI, functionName: "MIN_SETTLE_GAS" }),
+          client.readContract({ address: launcher, abi: ABI, functionName: "admittedWalletCount" }).catch(() => 0n),
         ]);
+        if (vaultFactory === ZERO && !marketingRecipient) {
+          marketingRecipient = await client.readContract({ address: launcher, abi: ABI, functionName: "creator" }).catch(() => null);
+        }
         if (stop) return;
         const agents = got[0] as Address[];
         const budgets = got[1] as bigint[];
@@ -349,6 +371,9 @@ export function App() {
         const quotes = fills[1] as bigint[];
         const pulled = fills[2] as boolean[];
         const next: Snap = {
+          maxBids: Number(admittedWalletCount || maxBids),
+          rostered: admittedWalletCount > 0n,
+          minSettleGas,
           status: Number(status),
           floor: floor as bigint,
           clearing: clearing as bigint,
@@ -360,6 +385,7 @@ export function App() {
           pool: pool as Address,
           poolQuote: poolQuote as bigint,
           vaultFactory: vaultFactory as Address,
+          marketingRecipient,
           previewOk: preview[0] as boolean,
           previewQuote: preview[2] as bigint,
           previewPrice: preview[1] as bigint,
@@ -484,7 +510,7 @@ export function App() {
   const priceWei = parseBnb(maxPrice);
   const sim = useMemo(() => {
     if (!demoOn || scene !== 2 || !snap || budgetWei == null || priceWei == null ||
-        budgetWei < 10n ** 16n || budgetWei > 100n * 10n ** 18n || priceWei < snap.floor || snap.bids.length >= 32) return null;
+        budgetWei < 10n ** 16n || budgetWei > 100n * 10n ** 18n || priceWei < snap.floor || priceWei > MAX_PRICE || snap.bids.length >= snap.maxBids) return null;
     const rows = snap.bids.map((row, index) => ({ index: BigInt(index), budget: row.budget, maxPrice: row.maxPrice }));
     rows.push({ index: BigInt(rows.length), budget: budgetWei, maxPrice: priceWei });
     return settleBids(500_000n * 10n ** 18n, snap.floor, rows) as {
@@ -500,7 +526,7 @@ export function App() {
     snap !== null &&
     budgetWei >= 10n ** 16n &&
     budgetWei <= 100n * 10n ** 18n &&
-    priceWei >= snap.floor;
+    priceWei >= snap.floor && priceWei <= MAX_PRICE;
   const button =
     phase === "open" ? t("复制出价指令", "Copy bid instruction") : phase === "ready" ? t("复制结算指令", "Copy settlement instruction") : phase === "failed" ? t("复制退款指令", "Copy refund instruction") : phase === "done" ? t("复制领取指令", "Copy claim instruction") : "";
 
@@ -563,7 +589,7 @@ export function App() {
   }, [launcher, phase, rpc, snap]);
 
   useEffect(() => {
-    if (!snap || snap.status !== 1 || snap.token === ZERO) {
+    if (!snap || snap.vaultFactory === ZERO || snap.status !== 1 || snap.token === ZERO) {
       setVault("");
       return;
     }
@@ -614,22 +640,23 @@ export function App() {
     if (!snap || !draft || previewing || claimNotice || (publicTestnet && (!isAddress(sender.trim(), { strict: false }) || !block))) return;
     const picked = snap?.sources[sourceIndex];
     const sourceName = sourceTag(picked?.sourceId ?? "") || t(`来源 ${sourceIndex}`, `Source ${sourceIndex}`);
-    const autoAgent = !picked || sourceTag(picked.sourceId) !== "8004";
+    const autoAgent = !picked || (sourceTag(picked.sourceId) === "Agent ID" && picked.standIn);
     const agentLine = autoAgent
       ? t("按钱包地址自动识别。合约能调用 tokenOfOwnerByIndex 时用 tokenId，否则用 uint160(你的地址)，把这个数作为第三参。", "Derive the third argument from the wallet. Use tokenId if tokenOfOwnerByIndex is supported, otherwise use uint160(wallet address).")
       : /^\d+$/.test(agentIdInput.trim())
         ? agentIdInput.trim()
-        : t("（你在 ERC-8004 登记的编号）", "(your registered ERC-8004 ID)");
+        : t("（链上身份 token ID）", "(your on-chain identity token ID)");
+    const settlementGasLimit = snap ? snap.minSettleGas + 1_000_000n : null;
     const action =
       phase === "open" || !snap
         ? t(
-          `data: bid(uint256,uint8,uint256)\n- maxPrice wei: ${priceWei}\n- 最高价：${priceWei ? formatPrice(priceWei) : ""} BNB/枚\n- sourceIndex: ${sourceIndex}\n- 来源：${sourceName}\n- agentId: ${agentLine}\n- agentId 说明：Agent ID 不用手填，按上面的规则从钱包地址得出。8004 填官方 Identity Registry 的编号，并且这个钱包必须是 ownerOf(agentId) 或 getAgentWallet(agentId)。同一来源的同一个 agentId 只能出一笔。\n- value wei: ${budgetWei}\n- 预算：${budget} BNB`,
-          `data: bid(uint256,uint8,uint256)\n- maxPrice wei: ${priceWei}\n- Limit: ${priceWei ? formatPrice(priceWei) : ""} BNB/token\n- sourceIndex: ${sourceIndex}\n- Source: ${sourceName}\n- agentId: ${agentLine}\n- Agent ID: derive the ID from the wallet as specified above. For ERC-8004, use the official Identity Registry ID. This wallet must be ownerOf(agentId) or getAgentWallet(agentId). Each ID can bid once per source.\n- value wei: ${budgetWei}\n- Budget: ${budget} BNB`,
+          `data: bid(uint256,uint8,uint256)\n- maxPrice wei: ${priceWei}\n- 最高价：${priceWei ? formatPrice(priceWei) : ""} BNB/枚\n- sourceIndex: ${sourceIndex}\n- 来源：${sourceName}\n- agentId: ${agentLine}\n- agentId 说明：真实 Agent ID 使用 NFT token ID，测试网替身按上面的规则确认。8004 填官方 Identity Registry 的编号，并且这个钱包必须是 ownerOf(agentId) 或 getAgentWallet(agentId)。同一来源的同一个 agentId 只能出一笔。\n- value wei: ${budgetWei}\n- 预算：${budget} BNB`,
+          `data: bid(uint256,uint8,uint256)\n- maxPrice wei: ${priceWei}\n- Limit: ${priceWei ? formatPrice(priceWei) : ""} BNB/token\n- sourceIndex: ${sourceIndex}\n- Source: ${sourceName}\n- agentId: ${agentLine}\n- Use the NFT token ID for a real Agent ID. For a testnet stand-in, verify the ID as described above. For ERC-8004, use the official Identity Registry ID. This wallet must be ownerOf(agentId) or getAgentWallet(agentId). Each ID can bid once per source.\n- value wei: ${budgetWei}\n- Budget: ${budget} BNB`,
         )
         : phase === "ready"
           ? t(
-            `data: settle()\n- value wei: 0\n- gas limit: ${SETTLE_GAS_LIMIT}\n\ngas limit 固定为 ${SETTLE_GAS_LIMIT}，不要用节点估算值。估算往往只有一两百万。进入 settle 时如果剩余 gas 低于 ${MIN_SETTLE_GAS}，合约直接回滚，这场拍卖保持开放，不会被记成失败。${SETTLE_GAS_LIMIT} 扣掉基础 gas 后仍高于这条线，也够一次发射。`,
-            `data: settle()\n- value wei: 0\n- gas limit: ${SETTLE_GAS_LIMIT}\n\nUse the fixed gas limit of ${SETTLE_GAS_LIMIT}. Node estimates can be only one or two million. If less than ${MIN_SETTLE_GAS} gas remains on entry, settle reverts and the auction stays open. The fixed limit covers the launch and its minimum gas threshold.`,
+            `data: settle()\n- value wei: 0\n- gas limit: ${settlementGasLimit}\n\n请使用该场的 gas limit。进入 settle 时如果剩余 gas 低于 ${snap.minSettleGas}，合约会回滚，拍卖状态保持开放。`,
+            `data: settle()\n- value wei: 0\n- gas limit: ${settlementGasLimit}\n\nUse the gas limit for this auction. If less than ${snap.minSettleGas} gas remains on entry, settle reverts and the auction stays open.`,
           )
           : phase === "failed"
             ? "data: refund()\n- value wei: 0"
@@ -680,6 +707,8 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
   }
 
   const failed = phase === "failed";
+  const marketing = snap?.vaultFactory === ZERO;
+  const sceneLabels = SCENES;
   const estimate = quoteLine(snap, budgetWei, priceWei, clearingNow);
 
   const budgetNote = noteBudget(budget);
@@ -704,6 +733,7 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
           </nav>
         </div>
         <span className="top-meta">
+          {snap?.rostered && <span className="meta-line">{t("名单场", "Wallet roster required")}</span>}
           {snap?.sources.some((item) => item.standIn) ? <span className="meta-line"><Zh text={t("测试网 Agent ID 为替身", "Testnet Agent ID is a stand-in")} /></span> : null}
           <span className="meta-line network-label">{localFork ? <Zh text={t("本地分叉，不是测试网", "Local fork")} /> : t("BSC 测试网", "BSC Testnet")}</span>
           {block > 0n && <span className="meta-line">{t("区块 ", "Block ")}{groupFull(block)}</span>}
@@ -809,8 +839,8 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
                         <div className="result-row"><span>{t("入池 BNB", "Pool funding")}</span><b>{formatBnb(snap.poolQuote)} BNB</b></div>
                         {showToken && snap.token !== ZERO && <Addr label={t("代币", "Token")} value={snap.token} local={!!localFork} />}
                         {showPool && snap.pool !== ZERO && <Addr label={t("池子", "Pool")} value={snap.pool} local={!!localFork} swap={snap.token !== ZERO && !localFork ? pancakeSwapLink(snap.token) : ""} />}
-                        {vault && vault !== ZERO && <Addr label={t("金库", "Vault")} value={vault} local={!!localFork} />}
-                        {vaultBal !== null && <div className="result-row"><span>{t("金库余额", "Vault balance")}</span><b>{formatBnb4(vaultBal)} BNB</b></div>}
+                        {!marketing && vault && vault !== ZERO && <Addr label={t("金库", "Vault")} value={vault} local={!!localFork} />}
+                        {!marketing && vaultBal !== null && <div className="result-row"><span>{t("金库余额", "Vault balance")}</span><b>{formatBnb4(vaultBal)} BNB</b></div>}
                       </div>
                     ) : (
                       <>
@@ -856,9 +886,9 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
                       ))}
                     </div>
                     <label htmlFor="agent">{t("代理编号", "Agent ID")}</label>
-                    {sourceTag(snap.sources[sourceIndex]?.sourceId ?? "") === "8004" ? (
+                    {snap.sources[sourceIndex] && !snap.sources[sourceIndex].standIn ? (
                       <div className={phase === "open" ? "window" : "window ro"}>
-                        <input id="agent" required={publicTestnet && phase === "open"} maxLength={78} value={agentIdInput} readOnly={phase !== "open"} inputMode="numeric" autoComplete="off" spellCheck={false} placeholder={t("你在 ERC-8004 登记的编号", "Your registered ERC-8004 ID")} onChange={(e) => setAgentIdInput(e.target.value.replace(/[^\d]/g, ""))} />
+                        <input id="agent" required={publicTestnet && phase === "open"} maxLength={78} value={agentIdInput} readOnly={phase !== "open"} inputMode="numeric" autoComplete="off" spellCheck={false} placeholder={t("链上身份 token ID", "On-chain identity token ID")} onChange={(e) => setAgentIdInput(e.target.value.replace(/[^\d]/g, ""))} />
                       </div>
                     ) : (
                       <p className="id-lock" id="agent">{t("按钱包地址自动识别", "Detected from wallet address")}<i>{t("只读", "Read only")}</i></p>
@@ -868,8 +898,8 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
                     )}
                   </div>
                   <div className="action">
-                    {phase === "open" && snap.bids.length >= 32 ? (
-                      <div className="notice">{t("本场出价已满 32 笔，不再接新单。", "All 32 bid slots are filled.")}</div>
+                    {phase === "open" && snap.bids.length >= snap.maxBids ? (
+                      <div className="notice">{t(`本场出价已满 ${snap.maxBids} 笔。`, `All ${snap.maxBids} bid slots are filled.`)}</div>
                     ) : phase === "wait" ? (
                       <div className="notice">{t("开始后可以复制出价指令。", "Bid instructions become available when bidding opens.")}</div>
                     ) : phase === "closed" ? (
@@ -881,7 +911,7 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
                         <span>{copied ? t("已复制", "Copied") : button}</span>
                       </button>
                     ) : null}
-                    {phase === "open" && snap.bids.length < 32 && <p className="risk"><Zh text={RISK_LINE} /></p>}
+                    {phase === "open" && snap.bids.length < snap.maxBids && <p className="risk"><Zh text={RISK_LINE} /></p>}
                     {phase === "ready" && <p className="help"><Zh text={t("结算要用的燃料上限已写在指令里，照指令发。", "The settlement instruction includes the required gas limit.")} /></p>}
                   </div>
                 </form>
@@ -899,7 +929,7 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
               {demoOn && scene === 5 ? (
                 <PriceComparison data={why} />
               ) : demoOn && scene === 3 && phase === "done" ? (
-                <SettlementSummary price={snap.clearing} proceeds={snap.poolQuote} vault={vaultBal} />
+                <SettlementSummary price={snap.clearing} proceeds={snap.poolQuote} />
               ) : failed ? (
                 <FundingProgress raised={raised} eligible={snap.previewOk ? snap.previewQuote : 0n} minimum={snap.minPoolQuote} />
               ) : (
@@ -940,12 +970,16 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
               )}
             </div>
             <div className="col-bids">
-              <div className="ledger-heading"><h2>{t("出价簿", "Bid book")}</h2><span>{snap.bids.length} {t("/ 32 笔", "/ 32 bids")}</span></div>
+              <div className="ledger-heading"><h2>{t("出价簿", "Bid book")}</h2><span>{snap.bids.length} {t(`/ ${snap.maxBids} 笔`, `/ ${snap.maxBids} bids`)}</span></div>
               <ul className="facts">
                 <li><span>{t("出售", "For sale")}</span><span>{t("500,000 枚", "500,000 tokens")}</span></li>
                 <li><span>{t("入池代币", "Pool tokens")}</span><span>{t("500,000 枚", "500,000 tokens")}</span></li>
                 <li><span>{t("买入税 / 卖出税", "Buy / sell tax")}</span><span>3% / 3%</span></li>
+                {marketing && <li><span>{t("税款分配", "Tax allocation")}</span><span>{t("100% 付给创建者用于营销", "100% to the creator for marketing")}</span></li>}
               </ul>
+              {phase === "done" && marketing && snap.marketingRecipient && snap.marketingRecipient !== ZERO && (
+                <Addr label={t("营销收款人", "Marketing recipient")} value={snap.marketingRecipient} local={localFork} />
+              )}
               <BidTable rows={snap.bids} phase={phase} clearing={clearingNow} />
             </div>
             </div>
@@ -955,11 +989,11 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
       {demoOn && (
         <nav className="demo-bar" aria-label={t("演示导航", "Demo navigation")}>
           <div className="scene-track" role="group" aria-label={t("跳转到演示场景", "Jump to a demo scene")}>
-            {SCENES.map((text, index) => <button type="button" key={text} aria-label={t(`第 ${index + 1} 幕，${text}`, `Scene ${index + 1}: ${text}`)}
+            {sceneLabels.map((text, index) => <button type="button" key={index} aria-label={t(`第 ${index + 1} 幕，${text}`, `Scene ${index + 1}: ${text}`)}
               aria-current={scene === index ? "step" : undefined} className={scene === index ? "on" : ""} disabled={demoState === "missing"}
               onClick={() => setScene(index)}>{String(index + 1).padStart(2, "0")}</button>)}
           </div>
-          <p aria-live="polite">{demoState === "missing" ? t("还没有演示场。先跑演示命令。", "Run the demo setup to create the auctions.") : t(`第 ${scene + 1} / ${SCENES.length} 幕 ${SCENES[scene]}`, `${scene + 1} / ${SCENES.length}  ${SCENES[scene]}`)}</p>
+          <p aria-live="polite">{demoState === "missing" ? t("还没有演示场。先跑演示命令。", "Run the demo setup to create the auctions.") : t(`第 ${scene + 1} / ${SCENES.length} 幕 ${sceneLabels[scene]}`, `${scene + 1} / ${SCENES.length}  ${sceneLabels[scene]}`)}</p>
           <div>
             <button type="button" onClick={() => setScene((n) => Math.max(0, n - 1))} disabled={demoState === "missing" || scene === 0}>{t("上一幕", "Back")}</button>
             <button type="button" className="next" onClick={() => setScene((n) => Math.min(SCENES.length - 1, n + 1))} disabled={demoState === "missing" || scene === SCENES.length - 1}>{t("下一幕", "Next")}</button>
@@ -978,10 +1012,12 @@ function TestnetBoard() {
       <section className="public-launch" aria-labelledby="public-launch-title">
         <h1 id="public-launch-title">{t("公开测试网发射", "Public testnet launch")}</h1>
         <p className="public-launch-amount">4.45 <span>tBNB</span></p>
-        <p className="public-launch-caption">{t("实际入池，区块 144,926,064", "Added to the pool at block 144,926,064")}</p>
-        <p>{t("出价者已领取 500,000 UNIFORM。", "The bidder claimed 500,000 UNIFORM.")}</p>
-        <a className="public-launch-primary" href={localizedHref(`/?network=testnet&launcher=${launch.launcher}`)}>{t("查看已结算拍卖 ", "View settled auction ")}<span aria-hidden="true">↗</span></a>
+        <p className="public-launch-caption">{t("实际入池，区块 145,040,241", "Added to the pool at block 145,040,241")}</p>
+        <p>{t("出价者已领取 500,000 枚。", "The bidder claimed 500,000 tokens.")}</p>
+        <a className="public-launch-primary" href={localizedHref(`/?network=testnet&launcher=${launch.launcher}`)}>{t("查看公开拍卖 ", "View public auction ")}<span aria-hidden="true">↗</span></a>
         <div className="public-launch-links">
+          <a href={`${TESTNET.explorer}/tx/${launch.createTx}`} target="_blank" rel="noreferrer">{t("BscScan 创建回执 ↗", "Creation receipt ↗")}</a>
+          <a href={`${TESTNET.explorer}/tx/${launch.bidTx}`} target="_blank" rel="noreferrer">{t("BscScan 出价回执 ↗", "Bid receipt ↗")}</a>
           <a href={`${TESTNET.explorer}/tx/${launch.settlementTx}`} target="_blank" rel="noreferrer">{t("BscScan 发射回执 ↗", "Launch receipt ↗")}</a>
           <a href={`${TESTNET.explorer}/tx/${launch.claimTx}`} target="_blank" rel="noreferrer">{t("BscScan 领取回执 ↗", "Claim receipt ↗")}</a>
         </div>
@@ -1150,6 +1186,7 @@ function notePrice(raw: string, floor: bigint): { error: boolean; text: string; 
   if (!raw.trim()) return { error: false, text: t(`不能低于保留价 ${formatPrice(floor)}。`, `Minimum order price: ${formatPrice(floor)}.`), wei: "" };
   const value = parseBnb(raw);
   if (value === null) return { error: true, text: t("用十进制数字，例如 0.00003。", "Enter a decimal price, e.g. 0.00003."), wei: "" };
+  if (value > MAX_PRICE) return { error: true, text: t("限价超过合约允许范围。", "Limit exceeds the contract cap."), wei: "" };
   if (value < floor) return { error: true, text: t("低于保留价，这笔不会入场。", "Below reserve. This bid cannot enter."), wei: "" };
   return { error: false, text: t(`不能低于保留价 ${formatPrice(floor)}。`, `Minimum order price: ${formatPrice(floor)}.`), wei: groupFull(value) };
 }
@@ -1159,9 +1196,10 @@ function groupFull(value: bigint): string {
 }
 
 function sameSnap(a: Snap, b: Snap) {
+  if (a.maxBids !== b.maxBids || a.rostered !== b.rostered || a.minSettleGas !== b.minSettleGas) return false;
   if (a.status !== b.status || a.floor !== b.floor || a.clearing !== b.clearing || a.softCap !== b.softCap || a.minPoolQuote !== b.minPoolQuote) return false;
   if (a.start !== b.start || a.end !== b.end || a.token !== b.token || a.pool !== b.pool || a.poolQuote !== b.poolQuote) return false;
-  if (a.vaultFactory !== b.vaultFactory || a.previewQuote !== b.previewQuote) return false;
+  if (a.vaultFactory !== b.vaultFactory || a.marketingRecipient !== b.marketingRecipient || a.previewQuote !== b.previewQuote) return false;
   if (a.previewOk !== b.previewOk || a.previewPrice !== b.previewPrice || a.bids.length !== b.bids.length) return false;
   if (a.sources.length !== b.sources.length) return false;
   if (a.sources.some((item, i) => item.sourceId !== b.sources[i].sourceId || item.standIn !== b.sources[i].standIn)) return false;
@@ -1185,6 +1223,7 @@ function Skeleton() {
 function quoteLine(snap: Snap | null, budgetWei: bigint | null, priceWei: bigint | null, clearing: bigint) {
   if (!snap) return "";
   if (budgetWei === null || priceWei === null) return t("按 BNB 填写预算和最高价。", "Enter your budget and limit in BNB.");
+  if (priceWei > MAX_PRICE) return t("限价超过合约允许范围。", "Limit exceeds the contract cap.");
   if (priceWei < snap.floor) return t("低于保留价，这笔不会入场。", "Below reserve. This bid cannot enter.");
   if (clearing === 0n) return t("清算价未形成。", "No clearing price yet.");
   if (priceWei < clearing) return t("低于当前清算价，按现价不会成交。", "Below the current clearing price. No fill at this price.");

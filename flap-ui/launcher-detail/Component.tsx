@@ -1,4 +1,4 @@
-import type { CSSProperties } from "react";
+import { useState, type CSSProperties } from "react";
 
 type Value = string | number | null | undefined;
 
@@ -10,7 +10,7 @@ type Snapshot = {
   endBlock?: Value;
   poolQuote?: Value;
   token?: string | null;
-  pool?: string | null;
+  minPoolQuote?: Value;
 };
 
 type LauncherProps = {
@@ -87,18 +87,16 @@ const note: CSSProperties = {
   lineHeight: "20px",
 };
 
-const pre: CSSProperties = {
-  margin: "10px 0 0",
-  padding: "12px 14px",
-  border: "1px solid #303236",
-  color: "#E0E4DE",
-  background: "#141616",
-  fontFamily: "ui-monospace, monospace",
-  fontSize: 12,
-  lineHeight: "19px",
-  whiteSpace: "pre-wrap",
-  overflowWrap: "anywhere",
-  textAlign: "left",
+const actionStyle: CSSProperties = {
+  marginTop: 16,
+  minHeight: 44,
+  width: "100%",
+  border: 0,
+  background: "#91F85B",
+  color: "#070808",
+  fontWeight: 650,
+  borderRadius: 4,
+  cursor: "pointer",
 };
 
 function asBig(raw: Value): bigint | null {
@@ -146,7 +144,8 @@ function Row({ name, text }: { name: string; text: string }) {
   );
 }
 
-export function Launcher({ context, messages }: LauncherProps) {
+export function Launcher({ context, messages, host }: LauncherProps) {
+  const [redirectFailed, setRedirectFailed] = useState(false);
   const snap = context.snapshot;
   if (context.launcherAddress == null || snap == null) {
     return (
@@ -158,13 +157,9 @@ export function Launcher({ context, messages }: LauncherProps) {
   const status = asBig(snap.statusCode);
   const phase = status === 1n ? messages.launched : status === 2n ? messages.failed : messages.open;
   const token = shownAddress(snap.token);
-  const pool = shownAddress(snap.pool);
-  const template = status === 2n
-    ? `${messages.refundTemplate}\n${context.launcherAddress}\n${messages.chain}\n${messages.refundAction}`
-    : status === 1n
-      ? `${messages.claimTemplate || messages.bidTemplate}\n${context.launcherAddress}\n${messages.chain}\n${messages.claimAction || messages.bidAction}`
-      : `${messages.bidTemplate}\n${context.launcherAddress}\n${messages.chain}\n${messages.bidAction}`;
-  const heading = status === 2n ? messages.refund : status === 1n ? messages.claim : messages.agent;
+  const address = context.launcherAddress;
+  const canOpen = host.redirect && /^0x[0-9a-fA-F]{40}$/.test(address);
+  const action = status === 2n ? messages.refund : status === 1n ? messages.claim : messages.openApp;
   return (
     <section style={card}>
       <header style={header}>
@@ -175,17 +170,23 @@ export function Launcher({ context, messages }: LauncherProps) {
         </p>
       </header>
       <dl style={{ margin: 0, borderTop: "1px solid #303236" }}>
-        <Row name={messages.bids} text={`${formatInt(snap.bidCount)} / 32`} />
+        <Row name={messages.bids} text={formatInt(snap.bidCount)} />
         <Row name={messages.clearing} text={formatBnb(snap.clearingPrice, "price")} />
         <Row name={messages.floor} text={formatBnb(snap.floorPrice, "price")} />
         <Row name={messages.end} text={formatInt(snap.endBlock)} />
         <Row name={messages.poolQuote} text={formatBnb(snap.poolQuote)} />
         <Row name={messages.token} text={token || messages.none} />
-        <Row name={messages.pool} text={pool || messages.none} />
+        <Row name={messages.poolMinimum} text={formatBnb(snap.minPoolQuote) || messages.none} />
       </dl>
-      <h3 style={{ margin: "18px 0 0", fontSize: 15, lineHeight: "21px" }}>{heading}</h3>
-      <p style={note}>{messages.agentBody}</p>
-      <pre style={pre}>{template}</pre>
+      {canOpen && (
+        <button type="button" style={actionStyle}
+          onClick={() => setRedirectFailed(host.redirect?.(`/apps/uniform-launch/launcher/${address}`) !== true)}>
+          {action}
+        </button>
+      )}
+      <p style={note} role={redirectFailed ? "status" : undefined}>
+        {redirectFailed ? messages.linkUnavailable : messages.appNote}
+      </p>
     </section>
   );
 }
