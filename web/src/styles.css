@@ -559,7 +559,7 @@ button.primary:hover:not(:disabled) { box-shadow: 0 0 0 3px var(--accent-a24); }
 .simulation dt, .scale-values small { display: block; color: var(--muted); font-size: 12px; }
 .simulation dd { margin: 2px 0 0; font: 500 14px/18px var(--font-mono); }
 .simulation p { margin: 0; }
-.page[data-scene="3"] .plot-wrap, .page[data-scene="3"] .stage { height: clamp(170px, 18vh, 220px); }
+.page[data-scene="3"] .plot-wrap { height: clamp(170px, 18vh, 220px); }
 .funding-result, .comparison { padding: 10px 0 18px; color: var(--text); }
 .funding-result h2, .comparison h2 { margin: 7px 0 5px; font-size: 48px; font-weight: 500; line-height: 1.08; letter-spacing: -.065em; }
 .funding-result p, .comparison p { color: var(--text-2); margin: 8px 0; font-size: 14px; }
@@ -641,7 +641,7 @@ button.primary:hover:not(:disabled) { box-shadow: 0 0 0 3px var(--accent-a24); }
   .market-note small, .market-note > div { display: inline-flex; flex-wrap: wrap; }
   .market-note > div { column-gap: 4px; }
   .plot-wrap, .stage { height: 236px; }
-  .page[data-scene="3"] .plot-wrap, .page[data-scene="3"] .stage { height: 220px; }
+  .page[data-scene="3"] .plot-wrap { height: 220px; }
   .bids { max-height: none; overflow: visible; }
   .bid { gap: 3px; grid-template-columns: 3px minmax(72px, 1.32fr) 1fr .94fr .7fr; height: 38px; }
   .src-tag { display: none; }
@@ -677,7 +677,7 @@ button.primary:hover:not(:disabled) { box-shadow: 0 0 0 3px var(--accent-a24); }
 .simulation { border: 0; margin: 0; padding: 0; }
 .preview-head { display: flex; align-items: center; justify-content: space-between; gap: 16px; }
 .preview-head dl { justify-content: flex-end; }
-.page[data-scene="3"] .plot-wrap, .page[data-scene="3"] .stage { height: clamp(190px, 23vh, 250px); }
+.page[data-scene="3"] .plot-wrap { height: clamp(190px, 23vh, 250px); }
 @media (min-width: 901px) {
   .auction-head { min-height: 92px; padding: 10px 0; }
   .auction-head h1 { font-size: 48px; line-height: 48px; }
@@ -695,7 +695,7 @@ button.primary:hover:not(:disabled) { box-shadow: 0 0 0 3px var(--accent-a24); }
   .settlement-flow p { grid-column: 1 / -1; }
   .preview-head { display: block; padding: 0 4px; }
   .preview-head dl { justify-content: flex-start; margin: 8px 0; }
-  .page[data-scene="3"] .plot-wrap, .page[data-scene="3"] .stage { height: 220px; }
+  .page[data-scene="3"] .plot-wrap { height: 220px; }
 }
 
 /* The workbench uses Flap's dotted market surface, clipped tabs and mono readouts. */

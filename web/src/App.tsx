@@ -503,6 +503,12 @@ export function App() {
   const button =
     phase === "open" ? "复制出价指令" : phase === "ready" ? "复制结算指令" : phase === "failed" ? "复制退款指令" : phase === "done" ? "复制领取指令" : "";
 
+  const settledBids = publicTestnet && phase === "done" && snap ? snap.bids : [];
+  const signer = sender.trim().toLowerCase();
+  const signerClaimed = settledBids.some((bid) => bid.pulled && bid.agent.toLowerCase() === signer);
+  const allClaimed = settledBids.length > 0 && settledBids.every((bid) => bid.pulled);
+  const claimNotice = signerClaimed ? "这个地址已领取。" : allClaimed ? "本场出价均已领取。" : "";
+
   const raised = snap ? snap.bids.reduce((sum, row) => sum + row.budget, 0n) : 0n;
   const poolSetsTarget = snap?.minPoolQuote != null && snap.minPoolQuote > snap.softCap;
   const targetRaise = poolSetsTarget ? snap.minPoolQuote! : snap?.softCap ?? 0n;
@@ -604,7 +610,7 @@ export function App() {
     source: sourceIndex, id: ercSource && agentIdInput ? BigInt(agentIdInput).toString() : "",
   } : null;
   async function copyInstruction() {
-    if (!snap || !draft || previewing || (publicTestnet && (!isAddress(sender.trim(), { strict: false }) || !block))) return;
+    if (!snap || !draft || previewing || claimNotice || (publicTestnet && (!isAddress(sender.trim(), { strict: false }) || !block))) return;
     const picked = snap?.sources[sourceIndex];
     const sourceName = picked ? sourceTag(picked.sourceId) || `来源 ${sourceIndex}` : `来源 ${sourceIndex}`;
     const autoAgent = !picked || sourceTag(picked.sourceId) !== "8004";
@@ -845,6 +851,8 @@ export function App() {
                       <div className="notice">开始后可以复制出价指令。</div>
                     ) : phase === "closed" ? (
                       <div className="notice">已停止接单，等待结算。</div>
+                    ) : claimNotice ? (
+                      <div className="notice" role="status">{claimNotice}</div>
                     ) : button ? (
                       <button className="primary" type="submit" aria-live="polite" disabled={previewing}>
                         <span>{copied ? "已复制" : button}</span>
@@ -854,7 +862,7 @@ export function App() {
                     {phase === "ready" && <p className="help"><Zh text="结算要用的燃料上限已写在指令里，照指令发。" /></p>}
                   </div>
                 </form>
-                {copyFail && (
+                {copyFail && !claimNotice && (
                   <>
                     <p className="help bad"><i className="mark" />没复制上。长按下面的指令全选复制。</p>
                     <textarea className="paste" readOnly value={copyFail} />

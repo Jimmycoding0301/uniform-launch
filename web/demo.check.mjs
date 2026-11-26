@@ -2,6 +2,21 @@ import { demoOrigin } from "./demo-origin.mjs";
 import assert from "node:assert/strict";
 import { openBrowser } from "./test-browser.mjs";
 
+async function assertVisibleBudgetAxis(page) {
+  await page.waitForFunction(() => {
+    const chart = document.querySelector(".demand-plot");
+    return chart?.querySelector(".x-tick") && chart.viewBox.baseVal.height === chart.parentElement.clientHeight;
+  });
+  const bounds = await page.evaluate(() => ({
+    tickBottom: Math.max(...Array.from(document.querySelectorAll(".x-tick"), (tick) => tick.getBoundingClientRect().bottom)),
+    captionTop: document.querySelector(".demand-caption").getBoundingClientRect().top,
+    captionBottom: document.querySelector(".demand-caption").getBoundingClientRect().bottom,
+    cardBottom: document.querySelector(".col-chart").getBoundingClientRect().bottom,
+  }));
+  assert.ok(bounds.tickBottom <= bounds.captionTop, "横轴刻度应位于图例上方");
+  assert.ok(bounds.captionBottom <= bounds.cardBottom, "图例应完整显示在卡片内");
+}
+
 const browser = await openBrowser();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 await page.goto(`${demoOrigin}/?demo=1`, { waitUntil: "domcontentloaded" });
@@ -22,6 +37,7 @@ await page.waitForFunction(() => {
 }, undefined, { timeout: 3000 });
 await page.getByRole("button", { name: "下一幕" }).click();
 await expectScene(3, "入池");
+await assertVisibleBudgetAxis(page);
 const presets = page.getByRole("group", { name: "以 1 BNB 预算试算限价" });
 await page.locator("#budget").fill("2");
 for (const [price, tokens, spend, refund] of [
@@ -77,6 +93,7 @@ const shared = await browser.newPage({ viewport: { width: 390, height: 844 } });
 await shared.goto(`${demoOrigin}/?demo=1&scene=3`, { waitUntil: "domcontentloaded" });
 await shared.getByRole("group", { name: "以 1 BNB 预算试算限价" }).waitFor();
 await shared.getByText("第 3 / 6 幕").waitFor();
+await assertVisibleBudgetAxis(shared);
 assert.equal(await shared.evaluate(() => document.documentElement.scrollWidth), 390);
 await shared.goto(`${demoOrigin}/?demo=1&scene=7`, { waitUntil: "domcontentloaded" });
 await shared.getByText("第 1 / 6 幕").waitFor();
