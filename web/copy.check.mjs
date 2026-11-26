@@ -35,7 +35,7 @@ for (const path of pages) {
   }
   const words = await page.evaluate(() => {
     const root = document.body.cloneNode(true);
-    root.querySelectorAll(".bid, textarea, .paste, .roller").forEach((node) => node.remove());
+    root.querySelectorAll(".bid, textarea, .paste, .roller, .language-switch").forEach((node) => node.remove());
     root.querySelectorAll("svg text, .scene-track button").forEach((node) => {
       node.textContent = `${node.textContent}\n`;
     });

@@ -880,3 +880,17 @@ button.primary:focus-visible { outline: 0; box-shadow: inset 0 0 0 3px var(--tex
   .preview-metrics dl { column-gap: 10px; }
   .preview-market { padding-left: 12px; }
 }
+
+.mast-links .language-switch {
+  display: inline-flex; align-items: center; justify-content: center; min-height: 44px; min-width: 34px;
+  padding-inline: 7px; border-left: 1px solid var(--rule-strong); text-decoration: none; color: var(--text-2);
+}
+.mast-links .language-switch:hover { color: var(--accent); }
+@media (max-width: 600px) {
+  .mast-links:has(.language-switch) { gap: 6px; padding-left: 6px; }
+  .mast-links .language-switch { padding-inline: 4px; min-width: 44px; }
+}
+@media (max-width: 390px) {
+  .mast-brand { gap: 6px; }
+  .mast-brand b { font-size: 14px; }
+}
