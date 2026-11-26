@@ -23,7 +23,7 @@
 | 00:40 | 点第 3 幕，以 60 秒稿的前三句演示两档限价。00:40 填预算 `1`，00:48 填 `0.00003`，01:02 改为 `0.000015`。 / Use the first three lines above at 00:40, 00:48 and 01:02. |
 | 01:15 | 点第 4 幕，指入池额和金库。“这是分叉上的成功场。40 BNB 成功入池，后续买卖产生的税款已进入金库。” / “This successful local auction put 40 BNB into the pool. Fees from the subsequent trades reached the vault.” |
 | 01:32 | 点第 5 幕，指退款回执。“这里三笔共 3 BNB，入池门槛约 4.34。整场没有成交，三位出价人都能领回全部预算。” / “Three bids total 3 BNB against a minimum of about 4.34. The auction has no fills. All three bidders can recover their budgets.” |
-| 01:48 | 点第 6 幕，指单价比。“同一组出价，同价成交的最高价和最低价之比是 1。常数乘积曲线的模拟结果约为 1.78。” / “For the same bids, the highest and lowest uniform fill prices have a ratio of one. In the constant-product simulation it’s about 1.78.” |
+| 01:48 | 点第 6 幕，指单价比。“同一组出价，同价成交的首笔与末笔单价之比是 1。常数乘积曲线的模拟结果约为 1.78。” / “For the same bids, the first and last uniform fills have the same unit price. In the constant-product simulation it’s about 1.78.” |
 | 02:05 | 切到公共测试网发射回执，念 60 秒稿的 00:35 一句。 / Open the public settlement receipt and use the 00:35 line above. |
 | 02:19 | 切到领取回执，念 00:46 一句后停在转账记录。 / Open the claim receipt, use the 00:46 line and hold on the transfer. |
 | 02:30 | 停止 / Stop. |
