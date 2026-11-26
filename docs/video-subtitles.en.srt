@@ -1,17 +1,17 @@
 1
-00:00:00,000 --> 00:00:06,000
-Why should the second buyer pay more for
-the same token?
+00:00:00,000 --> 00:00:05,000
+Suppose the founder bids just before you.
+Same budget.
 
 2
-00:00:06,000 --> 00:00:12,000
-With Uniform Launch, each identity bids
-once. Winners pay one price.
+00:00:05,000 --> 00:00:12,000
+On the curve, they get more tokens.
+Here, you both get 125,000.
 
 3
 00:00:12,000 --> 00:00:18,000
-On public BSC Testnet, our bidder
-registered a stand-in Agent ID.
+Each identity bids once. Our public testnet
+bidder used a stand-in Agent ID.
 
 4
 00:00:18,000 --> 00:00:22,000

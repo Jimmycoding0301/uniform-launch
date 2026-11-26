@@ -12,7 +12,7 @@
 
 ## English description
 
-On a first-come token launch, the next buyer can pay more simply because someone bought first. Uniform Launch gives bidders a window to submit a BNB budget and a maximum price per token. Each wallet and each identifier from a configured identity source can bid once. When the window closes, all winning bids pay one clearing price. If the auction falls short of its launch conditions, every bidder can reclaim their full budget.
+Suppose a founder bids just before you and both budgets are 2.5 BNB. In our nine-bid simulation, a bonding curve gives the earlier wallet about 181,000 tokens and the next about 153,000. Uniform Launch fills both for 125,000 tokens each. The two wallets illustrate a founder and a buyer. [Simulation inputs](../web/public/why.json) Uniform Launch gives bidders a window to submit a BNB budget and a maximum price per token. Each wallet and each identifier from a configured identity source can bid once. When the window closes, all winning bids pay one clearing price. If the auction falls short of its launch conditions, every bidder can reclaim their full budget.
 
 We built a Solidity Launcher Factory, a launch interface using Flap’s template, and a CLI and MCP server that let an agent preview a bid and prepare an unsigned transaction. We support Binance Agent ID and ERC-8004 identity sources. Our public testnet auction used a stand-in for Binance Agent ID.
 
@@ -20,7 +20,7 @@ On BSC Testnet one bid cleared at 0.0000089 tBNB per token. Flap opened a Pancak
 
 ## 中文备用简介
 
-在先到先得的发行中，买入顺序会改变价格。同价发射把出价放进同一个窗口。参与者填写预算和每枚代币能接受的最高价，每个钱包和所选身份源中的每个身份各限一次。窗口关闭后，所有成交者支付同一个清算价。整场未达到发射条件，每位出价者都可领回全部预算。
+假设项目方在你前面一笔出价，两人的预算都是 2.5 BNB。在九笔出价的本地模拟里，曲线给两人约 18.1 万和 15.3 万枚，同价拍卖则各给 12.5 万枚。两个身份是示例设定。[模拟数据](../web/public/why.json)同价发射把出价放进同一个窗口。参与者填写预算和每枚代币能接受的最高价，每个钱包和所选身份源中的每个身份各限一次。窗口关闭后，所有成交者支付同一个清算价。整场未达到发射条件，每位出价者都可领回全部预算。
 
 我们实现了 Solidity 发射工厂、基于 Flap 模板的发射界面，以及供代理试算、生成未签名交易的 CLI 和 MCP 服务。协议支持 Binance Agent ID 与 ERC-8004 身份源，本次公共测试网发射采用 Agent ID 替身。
 
