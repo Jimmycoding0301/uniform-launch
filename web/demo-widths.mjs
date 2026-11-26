@@ -1,3 +1,4 @@
+import { demoOrigin } from "./demo-origin.mjs";
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
 
@@ -5,7 +6,7 @@ const browser = await chromium.launch();
 const notes = [];
 for (const width of [390, 375, 320]) {
   const page = await browser.newPage({ viewport: { width, height: 844 } });
-  await page.goto("http://127.0.0.1:4317/?demo=1", { waitUntil: "domcontentloaded" });
+  await page.goto(`${demoOrigin}/?demo=1`, { waitUntil: "domcontentloaded" });
   await page.waitForSelector(".demo-bar");
   await page.waitForSelector("button.primary");
   for (let scene = 1; scene <= 6; scene++) {

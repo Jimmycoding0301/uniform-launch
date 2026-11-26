@@ -1,3 +1,4 @@
+import { demoOrigin } from "./demo-origin.mjs";
 import assert from "node:assert/strict";
 import { inflateSync } from "node:zlib";
 import { chromium } from "playwright";
@@ -53,7 +54,7 @@ function pngRows(buf) {
   return { width, height, rows, bpp };
 }
 
-const url = process.env.CHART_URL ?? "http://127.0.0.1:4317/";
+const url = process.env.CHART_URL ?? `${demoOrigin}/`;
 
 const browser = await chromium.launch();
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
