@@ -1,7 +1,9 @@
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
+import { demoBook } from "./demo-book.mjs";
 
-const base = process.env.CHART_URL ?? "http://127.0.0.1:4317/?launcher=0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a1";
+const book = await demoBook();
+const base = process.env.CHART_URL ?? `http://127.0.0.1:4317/?launcher=${book.open}`;
 const browser = await chromium.launch();
 
 const desk = await browser.newPage({ viewport: { width: 1440, height: 900 } });
@@ -12,7 +14,9 @@ const before = await desk.evaluate(() => {
   const btn = document.querySelector("button.primary").getBoundingClientRect();
   return { form: form.height, top: btn.top, bottom: btn.bottom, formBottom: form.bottom };
 });
-await desk.getByRole("radio", { name: "8004" }).click();
+const erc8004 = desk.getByRole("radio", { name: "8004" });
+if (await erc8004.count()) await erc8004.click();
+else await desk.getByRole("radio", { name: "Agent ID" }).click();
 await desk.waitForTimeout(250);
 const after = await desk.evaluate(() => {
   const form = document.querySelector(".col-form").getBoundingClientRect();
@@ -81,7 +85,7 @@ const covered = await phone.evaluate(() => {
 });
 assert.deepEqual(covered, [], `被挡住的出价行：${covered.join(" | ")}`);
 const reduced = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" });
-await reduced.goto("http://127.0.0.1:4317/?launcher=0xE20f0043F32E2E38d3F3d76Ec48Cfcdb0FdC4806", { waitUntil: "domcontentloaded" });
+await reduced.goto(`http://127.0.0.1:4317/?launcher=${book.launched}`, { waitUntil: "domcontentloaded" });
 await reduced.waitForSelector(".uniform-rect");
 await reduced.waitForTimeout(300);
 const running = await reduced.evaluate(() => document.getAnimations().filter((item) => item.playState === "running").length);

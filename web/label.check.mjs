@@ -77,12 +77,14 @@ for (const [width, height] of [[920, 288], [358, 260], [343, 220]]) {
 console.log("生成的出价标注都不出图、不重叠");
 
 const { chromium } = await import("playwright");
+const { demoBook } = await import("./demo-book.mjs");
+const book = await demoBook();
 const browser = await chromium.launch();
 const pages = [
-  ["1440", 1440, 900, "http://127.0.0.1:4317/?launcher=0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a1"],
-  ["390", 390, 844, "http://127.0.0.1:4317/?launcher=0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a1"],
-  ["done", 1440, 900, "http://127.0.0.1:4317/?launcher=0xE20f0043F32E2E38d3F3d76Ec48Cfcdb0FdC4806"],
-  ["failed", 1440, 900, "http://127.0.0.1:4317/?launcher=0x6f10Eb8eD5c3B033a9EAB172544A4a86420eb128"],
+  ["1440", 1440, 900, `http://127.0.0.1:4317/?launcher=${book.open}`],
+  ["390", 390, 844, `http://127.0.0.1:4317/?launcher=${book.open}`],
+  ["done", 1440, 900, `http://127.0.0.1:4317/?launcher=${book.launched}`],
+  ["failed", 1440, 900, `http://127.0.0.1:4317/?launcher=${book.failed}`],
 ];
 for (const [name, width, height, url] of pages) {
   const page = await browser.newPage({ viewport: { width, height } });

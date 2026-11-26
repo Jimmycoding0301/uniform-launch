@@ -49,8 +49,9 @@ export function formatBnb(wei: bigint): string {
   const neg = wei < 0n;
   const v = neg ? -wei : wei;
   const whole = v / 10n ** 18n;
+  const grouped = whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
   const frac = (v % 10n ** 18n).toString().padStart(18, "0").slice(0, 4).replace(/0+$/, "");
-  const body = frac ? `${whole}.${frac}` : `${whole}`;
+  const body = frac ? `${grouped}.${frac}` : grouped;
   return neg ? `-${body}` : body;
 }
 

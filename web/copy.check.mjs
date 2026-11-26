@@ -1,15 +1,17 @@
 import assert from "node:assert/strict";
 import { chromium } from "playwright";
+import { demoBook } from "./demo-book.mjs";
 
+const book = await demoBook();
 const allow = new Set(["uniform", "launch", "agent", "id", "erc", "bnb", "chain", "flap", "vault", "bscscan", "pancakeswap", "binance"]);
 const base = process.env.CHART_URL || "http://127.0.0.1:4317";
 const pages = [
-  "/?launcher=0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a1",
-  "/?launcher=0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a1&preview=wait",
-  "/?launcher=0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a1&preview=closed",
-  "/?launcher=0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a1&preview=ready",
-  "/?launcher=0x6f10Eb8eD5c3B033a9EAB172544A4a86420eb128",
-  "/?launcher=0xE20f0043F32E2E38d3F3d76Ec48Cfcdb0FdC4806",
+  `/?launcher=${book.open}`,
+  `/?launcher=${book.open}&preview=wait`,
+  `/?launcher=${book.open}&preview=closed`,
+  `/?launcher=${book.open}&preview=ready`,
+  `/?launcher=${book.failed}`,
+  `/?launcher=${book.launched}`,
   "/?network=testnet",
   "/?launcher=0x0000000000000000000000000000000000000000",
   "/?view=script",
@@ -23,6 +25,9 @@ for (const path of pages) {
   const words = await page.evaluate(() => {
     const root = document.body.cloneNode(true);
     root.querySelectorAll(".bid, textarea, .paste, .roller").forEach((node) => node.remove());
+    root.querySelectorAll("svg text").forEach((node) => {
+      node.textContent = `${node.textContent}\n`;
+    });
     return root.innerText;
   });
   const phrases = ["pancakeswap", "bscscan", "uniform launch", "agent id", "erc-8004", "bnb chain", "flap vault", "binance", "uniform", "launch", "agent", "flap", "vault", "chain", "bnb", "erc", "id"];
