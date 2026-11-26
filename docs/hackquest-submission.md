@@ -8,7 +8,7 @@
 | English one-liner | One bid per identity. One price for every winner. A BNB Chain auction that launches through Flap or lets everyone reclaim their bid. |
 | 中文一句话 | 一个身份出价一次，所有成交者支付同一价格。达到门槛就通过 Flap 建池，未达门槛则全额退款。 |
 | Tracks | Developer Track — Build on BNB Chain · Flap Track — Build on Pool Launch |
-| Repository | `<FINAL_PUBLIC_REPOSITORY_VERSION_URL>` |
+| Repository | [Complete submission branch](https://github.com/Jimmycoding0301/uniform-launch/tree/codex/bangkok-submission) |
 
 ## English description
 
@@ -26,25 +26,22 @@ On BSC Testnet one bid cleared at 0.0000089 tBNB per token. Flap opened a Pancak
 
 BSC 公共测试网上，一笔出价以每枚 0.0000089 tBNB 成交。Flap 创建的 PancakeSwap V2 池获得 500,000 枚 UNIFORM 和 4.45 tBNB，出价者已领取另外 500,000 枚。Flap 在同笔发射中登记了 Vault。另一次本机分叉演练验证了交易税到账和所有者等额提取。交互演示另用九笔出价展示不同限价的结果。
 
-## Evidence links for the form
+## What to show the judges
+
+Flap asks teams to show a public BSC Testnet launch through their Factory, share code, explain the launch mechanism, and show their custom Flap UI. Projects that include a Vault should demonstrate how it works. [Official Flap brief](https://www.hackquest.io/hackathons/BNB-Bangkok)
 
 | What to open | What to verify |
 | --- | --- |
+| [Verified Launcher Factory](https://testnet.bscscan.com/address/0xE82642aC5c3B3B4b7D4cDeaf6a251Dc0BB7AcEfd#code) · [Launcher creation](https://testnet.bscscan.com/tx/0x5be4952fc75b9d2aec691ae0288eed53ee922e53552fce9812da24c1410ab93c) | The Factory emitted `UniformLauncherCreated` for this auction. Each bidder specified a budget and price limit. All winning allocations clear at the same price. |
 | [BSC Testnet settlement](https://testnet.bscscan.com/tx/0x56d87f21c4dbd55227d9e619986555f150c7da5ddec5db663b201a9b9985ae20) | Block 144,926,064. The pool's first reserves were 500,000 UNIFORM and 4.45 WBNB. |
 | [BSC Testnet claim](https://testnet.bscscan.com/tx/0x732353fc11a666984971d62c5b7a0016d76775145823938bf515ef776354f27f) | Block 144,927,029. The transfer delivers 500,000 UNIFORM to the bidder. |
 | [Public launch record and contracts](https://github.com/Jimmycoding0301/uniform-launch/blob/55d363cb7873094ea48a5f7bbaae37f9d837f115/docs/public-testnet-evidence.md) | Factory creation, identity, bid, settlement and claim receipts, token, pair and Vault addresses. |
-| [Flap runtime UI](../flap-ui/launcher-detail) · [Vault rehearsal](e2e-evidence.md) | The custom Flap component and the fork results for tax distribution and owner withdrawal. |
+| [Custom Flap template UI](../flap-ui/launcher-detail) · [Official source checker results](flap-integration.md) | The Launcher detail component displays auction state through Flap's runtime. The manifest pins its Factory and chain. |
+| [Public Vault address](https://testnet.bscscan.com/address/0x18942571eE5E5642837326C2Fe18510270fEEEce) · [Vault rehearsal](e2e-evidence.md) | Flap registered the Vault on public testnet. Local-fork trades deposited 0.027516256919450703 tBNB in the rehearsal Vault. Its owner withdrew the same amount. |
 
-## 60-second demo
+## Optional interactive walkthrough
 
-From the submitted checkout with submodules and the [prerequisites](../README.md), run `bash script/demo.sh`. Open `/?demo=1&scene=3` on the local address it prints. Preload the two BscScan receipts above. The demo needs no wallet or signature. [Timed English and Chinese narration](judge-demo.md)
-
-| Time | Show |
-| --- | --- |
-| 00:00–00:22 | In scene 3, enter a budget of 1 BNB and a limit of 0.00003. The order buys 50,000 tokens at the shared price of 0.00002 BNB. |
-| 00:22–00:35 | Lower only the limit to 0.000015. The same order buys zero tokens and gets its full 1 BNB back in the simulation. |
-| 00:35–00:53 | Switch to the public settlement, then the public claim. Point to 4.45 tBNB and the 500,000-token transfer. |
-| 00:53–01:00 | Open scene 5. The three bids total 3 BNB against a pool minimum of about 4.34 BNB. All three can claim a refund. |
+To illustrate the pricing rule, run `bash script/demo.sh` from the submitted checkout with submodules and the [prerequisites](../README.md). Open `/?demo=1&scene=3` on the local address it prints. Set a 1 BNB budget and compare limits of 0.00003 and 0.000015. The first simulated order buys 50,000 tokens at 0.00002 BNB. The second buys zero and can reclaim its full budget. A presenter can use the optional [60-second recording script](judge-demo.md).
 
 For an offline presentation, download the checkout before the event. Open the [scene 3 image](../qa/submission/scene-3.png), the [scene 5 image](../qa/submission/scene-5.png) and the local [public transaction record](public-testnet-evidence.md). The six images and the saved record open without an RPC connection. [All six scenes](../qa/submission/README.md)
 
@@ -52,5 +49,6 @@ For an offline presentation, download the checkout before the event. Open the [s
 
 - [ ] Verify organizer approval and confirm participation. Open the correct team's project.
 - [ ] Enter the project name, one-liner and description. Select **Developer Track** and **Flap Track**.
-- [ ] Replace the repository placeholder with the final public GitHub version. Open it in a signed-out window. Check that the demo material and the two BscScan receipts open from what the judge receives.
+- [ ] Open the submission branch in a signed-out window. If the repository field requires a root URL, enter the [project repository](https://github.com/Jimmycoding0301/uniform-launch) and end the description with `Submission code and evidence — https://github.com/Jimmycoding0301/uniform-launch/tree/codex/bangkok-submission`.
+- [ ] Check that a judge can open the Factory creation, settlement and claim receipts, the custom Flap UI and the fork Vault record from the submitted links.
 - [ ] Submit before **27 November 2026 at 09:00 Bangkok / 10:00 Beijing**. Check the HackQuest confirmation and retain the project URL and submission time. [Official submission instructions](https://www.hackquest.io/hackathons/BNB-Bangkok)
