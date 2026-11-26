@@ -54,6 +54,9 @@ for (const [price, tokens, spend, refund] of [
   assert.equal((await amounts.nth(0).innerText()).trim(), spend);
   assert.equal((await amounts.nth(1).innerText()).trim(), refund);
 }
+await page.locator("#price").fill("0.00002");
+await page.locator(".estimate").getByText("限价等于当前清算价，可能部分成交或不成交。").waitFor();
+assert.equal((await page.locator(".preview-head .chart-price").innerText()).trim(), "0 枚");
 await page.locator("#price").fill("0.00003001");
 assert.equal(await presets.locator('[aria-pressed="true"]').count(), 0);
 
@@ -103,6 +106,7 @@ await missing.route("**/demo.json", (route) => route.fulfill({ status: 404, body
 await missing.goto(`${demoOrigin}/?demo=1`, { waitUntil: "domcontentloaded" });
 await missing.getByText("还没有演示场").first().waitFor();
 await missing.getByText("先跑演示命令").first().waitFor();
+assert.equal(await missing.getByRole("link", { name: "查看公开发射回执" }).getAttribute("href"), "/?network=testnet");
 await missing.close();
 const down = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 await down.goto(`${demoOrigin}/?demo=1`, { waitUntil: "domcontentloaded" });

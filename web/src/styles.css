@@ -418,10 +418,35 @@ svg.plot { display: block; touch-action: none; background: var(--bg); }
   cursor: pointer;
   text-decoration: none;
 }
-.public-launch h2 { margin: 0 0 var(--space-2); font-size: var(--fs-20); }
-.public-launch p { margin-bottom: 0; }
-.public-launch-links { display: flex; flex-wrap: wrap; gap: 0 var(--space-4); }
-.public-launch-links a { display: inline-flex; align-items: center; text-decoration: underline; text-underline-offset: 3px; }
+.testnet-board { grid-template-columns: minmax(0, 1.1fr) minmax(0, 1fr); gap: var(--gap); }
+.testnet-board .public-launch, .testnet-board .plaque { width: 100%; min-width: 0; }
+.testnet-board h1 { font-size: 48px; line-height: 1.08; }
+.testnet-board .plaque h2 { margin: 0 0 var(--space-3); font-size: var(--fs-20); }
+.public-launch { padding-block: var(--space-4); }
+.public-launch > p { color: var(--text-2); margin: var(--space-2) 0; font-size: var(--fs-14); }
+.public-launch .public-launch-amount {
+  color: var(--accent); margin: var(--space-4) 0 0;
+  font: 550 var(--fs-56)/1.08 var(--font-mono); letter-spacing: -.065em;
+}
+.public-launch-amount span { font: 500 var(--fs-20)/1 var(--font-mono); letter-spacing: 0; }
+.public-launch .public-launch-caption { color: var(--muted); margin-top: var(--space-1); }
+.public-launch-primary {
+  display: inline-flex; align-items: center; justify-content: space-between; gap: var(--space-4);
+  min-height: 44px; margin-top: var(--space-3); padding: 0 var(--space-3);
+  background: var(--accent); color: var(--accent-ink); clip-path: var(--cut-control);
+  font-size: var(--fs-14); font-weight: 600; text-decoration: none;
+}
+.public-launch-primary:focus-visible { outline: 0; box-shadow: inset 0 0 0 3px var(--text); }
+.public-launch-links { display: flex; flex-wrap: wrap; gap: 0 var(--space-4); margin-top: var(--space-1); }
+.public-launch-links a {
+  display: inline-flex; align-items: center; min-height: 44px; color: var(--accent);
+  font-size: var(--fs-14); text-decoration: underline; text-underline-offset: 3px;
+}
+@media (max-width: 900px) {
+  .testnet-board h1 { font-size: 36px; }
+  .public-launch .public-launch-amount { font-size: 48px; }
+  .public-launch { padding-block: var(--space-2); }
+}
 .tag {
   border: 1px solid var(--rule-strong);
   border-radius: var(--radius-2);

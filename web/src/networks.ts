@@ -12,6 +12,7 @@ export const TESTNET = {
   publicLaunch: {
     launcher: "0xEc6410ACea44ac8aaD7f048f68CE45D3c113c59e",
     settlementTx: "0x56d87f21c4dbd55227d9e619986555f150c7da5ddec5db663b201a9b9985ae20",
+    claimTx: "0x732353fc11a666984971d62c5b7a0016d76775145823938bf515ef776354f27f",
   },
   saltLockFeeWei: "5000000000000000",
 } as const;

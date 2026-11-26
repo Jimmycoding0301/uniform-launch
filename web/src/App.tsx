@@ -676,7 +676,7 @@ export function App() {
           <b>Uniform Launch</b>
           <nav className="mast-links" aria-label="工作台导航">
             <a className="script-link" href="/?demo=1" aria-current={demoOn ? "page" : undefined}>演示脚本</a>
-            <a className="script-link" href="/?network=testnet" aria-current={testnetBoard ? "page" : undefined}>测试网合约</a>
+            <a className="script-link" href="/?network=testnet" aria-current={testnetBoard ? "page" : undefined}>发射回执</a>
           </nav>
         </div>
         <span className="top-meta">
@@ -949,22 +949,22 @@ export function App() {
 }
 
 function TestnetBoard() {
+  const launch = TESTNET.publicLaunch;
   return (
-    <div className="grid">
-      <div>
-        <h1>同价发射</h1>
-        <p className="en">Uniform Launch</p>
-        <p className="user-line"><Zh text={USER_LINE} /></p>
-      </div>
-      <div className="plaque">
-        <section className="public-launch" aria-labelledby="public-launch-title">
-          <h2 id="public-launch-title">公开测试网发射</h2>
-          <p>区块 144,926,064 已结算，4.45 tBNB 进入 PancakeSwap V2 池。</p>
-          <div className="public-launch-links">
-            <a href={`/?network=testnet&launcher=${TESTNET.publicLaunch.launcher}`}>查看已结算拍卖</a>
-            <a href={`${TESTNET.explorer}/tx/${TESTNET.publicLaunch.settlementTx}`} target="_blank" rel="noreferrer">BscScan 发射回执 ↗</a>
-          </div>
-        </section>
+    <div className="grid testnet-board">
+      <section className="public-launch" aria-labelledby="public-launch-title">
+        <h1 id="public-launch-title">公开测试网发射</h1>
+        <p className="public-launch-amount">4.45 <span>tBNB</span></p>
+        <p className="public-launch-caption">实际入池，区块 144,926,064</p>
+        <p>出价者已领取 500,000 UNIFORM。</p>
+        <a className="public-launch-primary" href={`/?network=testnet&launcher=${launch.launcher}`}>查看已结算拍卖 <span aria-hidden="true">↗</span></a>
+        <div className="public-launch-links">
+          <a href={`${TESTNET.explorer}/tx/${launch.settlementTx}`} target="_blank" rel="noreferrer">BscScan 发射回执 ↗</a>
+          <a href={`${TESTNET.explorer}/tx/${launch.claimTx}`} target="_blank" rel="noreferrer">BscScan 领取回执 ↗</a>
+        </div>
+      </section>
+      <section className="plaque" aria-labelledby="testnet-contract-title">
+        <h2 id="testnet-contract-title">测试网合约</h2>
         {TESTNET_ROWS.map((row) => (
           <div className="row" key={row.address}>
             <span className="name">{row.name}</span>
@@ -974,7 +974,7 @@ function TestnetBoard() {
             <a href={`https://testnet.bscscan.com/address/${row.address}`} target="_blank" rel="noreferrer">BscScan</a>
           </div>
         ))}
-      </div>
+      </section>
     </div>
   );
 }
@@ -989,7 +989,8 @@ function DemoMissing() {
       </div>
       <div className="plot-wrap empty-plot">
         <div className="empty stack">
-          <p><Zh text="还没有演示场。先跑演示命令。命令跑完会写下地址，再刷新这个页面。" /></p>
+          <p><Zh text="还没有演示场。先跑演示命令，再刷新页面。" /></p>
+          <a className="back-link" href="/?network=testnet">查看公开发射回执</a>
         </div>
       </div>
     </div>
@@ -1164,7 +1165,7 @@ function quoteLine(snap: Snap | null, budgetWei: bigint | null, priceWei: bigint
   if (priceWei < snap.floor) return "低于保留价，这笔不会入场。";
   if (clearing === 0n) return "清算价未形成。";
   if (priceWei < clearing) return "低于当前清算价，按现价不会成交。";
-  if (priceWei === clearing) return `限价正好在清算价上，按边际成交，约 ${formatTokens(tokensFor(budgetWei, clearing))} 枚。`;
+  if (priceWei === clearing) return "限价等于当前清算价，可能部分成交或不成交。";
   return `按当前清算价可得约 ${formatTokens(tokensFor(budgetWei, clearing))} 枚。`;
 }
 
