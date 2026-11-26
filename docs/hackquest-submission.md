@@ -4,7 +4,7 @@
 
 | Field | Text to paste |
 | --- | --- |
-| Project name | Uniform Launch · 同价发射 |
+| Project name | Uniform Launch · One-Price Auctions |
 | English one-liner | One bid per identity. One price for every winner. A BNB Chain auction that launches through Flap or lets everyone reclaim their bid. |
 | 中文一句话 | 一个身份出价一次，所有成交者支付同一价格。达到门槛就通过 Flap 建池，未达门槛则全额退款。 |
 | Tracks | Developer Track — Build on BNB Chain · Flap Track — Build on Pool Launch |
@@ -28,7 +28,7 @@ BSC 公共测试网上，一笔出价以每枚 0.0000089 tBNB 成交。Flap 创�
 
 ## What to show the judges
 
-[Download the editable pitch deck](../qa/submission/Uniform-Launch-BNB-Bangkok.pptx). It follows the Flap demo evidence below and includes English and Chinese speaker notes.
+[Download the editable pitch deck](../qa/submission/Uniform-Launch-BNB-Bangkok.pptx). Use the [stage script and judge Q&A](pitch-runbook.md) for the two-minute pitch or its one-minute cut.
 
 Flap asks teams to show a public BSC Testnet launch through their Factory, share code, explain the launch mechanism, and show their custom Flap UI. Projects that include a Vault should demonstrate how it works. [Official Flap brief](https://www.hackquest.io/hackathons/BNB-Bangkok)
 
