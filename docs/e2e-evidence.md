@@ -27,6 +27,8 @@ Carol 的最高价低于清算价，所以代币是 0。领取交易把她的预
 
 原始记录在 `deployments/bsc-testnet-e2e.json`。这些哈希只存在于本机 anvil，BscScan 上查不到。
 
+另在区块 144915595 的独立 Anvil 分叉上复核了原始 Solidity 脚本入口。沿用链上工厂配置，依次执行 `E2ETestnet.create()`、三次 `bid()`、`settle()`、`claim()`、`trade()` 和 `withdraw()`。清算价 0.00008 tBNB，入池 40 tBNB。Vault 提取前有 0.027516256919450703 tBNB，提取后为零，owner 收到相同金额（按实际回执加回 gas 核算）。逐阶段哈希、代币和池地址见[原脚本复核回执](../deployments/bsc-testnet-e2e-pinned-fork.json)。本次从官方已启用的 Launcher 工厂创建，与下方单人预算采用同一分叉起点。
+
 ## 4.6 tBNB 单人发射
 
 创建者、出价人和领取人使用同一地址。这套方案只演示创建、领取测试身份、出价、结算和领取代币。含税买卖和 Vault 提取见上面的三人彩排。

@@ -1,0 +1,88 @@
+{
+  "network": "anvil-fork-of-97",
+  "forkBlock": 144915595,
+  "entrypoint": "script/E2ETestnet.s.sol",
+  "transactions": {
+    "create": [
+      "0xdb2e5a57641afa695d50f9f435fefc01e173d2fc75343fc52aed9b5edb2a3da9"
+    ],
+    "bid-1": [
+      "0xe9d0b3d33f0804c3cebc2483012538b3d2bfa8975de324177c7d9992a9a87a06",
+      "0x30914506aa04c07ed1349e03bbcbae06630528323fbe64f29b3238361d9b1270"
+    ],
+    "bid-2": [
+      "0x5ed86e36f7922d0f3f3a689e891809e25087e192e29d4eac051eddd9b4d1c445",
+      "0xab48bd0b5479e61fe063694d07d618ef4276aec8e5a62bc06fb7517049ebc73c"
+    ],
+    "bid-3": [
+      "0x121f47dd4b37d382c47120f97ff09f24e8ce2873ac97ad4eb17bde1374847bcd",
+      "0xbbe17cbdd9402b6c101a5787cffe509471156a781dddff45019acdf652c87dd3"
+    ],
+    "settle": [
+      "0x6a82202aaf35e01dcfff0c6185aab136c4b567ad63ee991a44aa2f25dc342a17"
+    ],
+    "claim": [
+      "0xc51cb0b9189767286613cf70d6e3dea26a3f387d5fed84196f0bc64cc3cecd89",
+      "0xb04d1f2e2ac23984a1f4fbf278647f4e0e584ff02fa8191f58286b551c3dcd1d",
+      "0x720b98eb8039b0a2e4dd722c8604b0830abbb0fd219f85a8c0421223a3e17a28"
+    ],
+    "trade": [
+      "0xfef73f6433ef24c0aa42f6bdf60b5779c332df65eb86b64d2dd17ea89a180000",
+      "0xc763306661f6920db9ec935093aecaf2b81c411fa3831f86f4bb08b445a8ff7c",
+      "0x3504c739b4edf6dd2c07146d203c69d32adcdede9af1430f7ad308e05a73eef6",
+      "0x8b21978adce7587026405cb3f0119391e4db7c4947059f9359ff5cdfa143804d"
+    ],
+    "withdraw": [
+      "0xa9640db252aa2299396f0179a939c6e54a43660177eaaf5d10c919402d7f5f4c"
+    ]
+  },
+  "token": "0x069E1c7B4bA7ACDdAB4138B90e384c91A4067777",
+  "pool": "0x494204b873F8Ada50AC55E6A99Ec19DddCee56DF",
+  "launcher": "0x6D77917E47CaC807B3A62FdC21b8A1921FB2587D",
+  "poolQuoteWei": "40000000000000000000",
+  "clearingPriceWei": "80000000000000",
+  "forkHash": "0x6fe1d57e3fea840d8d8e9a054c667bfad630c346223cf5fcdd5f7e9967d3f193",
+  "session": "Local Anvil, five unlocked rehearsal addresses, existing Portal and factory settings",
+  "blockNumbers": {
+    "create": [
+      144915596
+    ],
+    "bid-1": [
+      144915597,
+      144915598
+    ],
+    "bid-2": [
+      144915599,
+      144915600
+    ],
+    "bid-3": [
+      144915601,
+      144915602
+    ],
+    "settle": [
+      144915797
+    ],
+    "claim": [
+      144915798,
+      144915799,
+      144915800
+    ],
+    "trade": [
+      144915802,
+      144915803,
+      144915803,
+      144915803
+    ],
+    "withdraw": [
+      144915804
+    ]
+  },
+  "vault": "0x745faB1A8d3C2629E537f8E9e1c59021Ae118D91",
+  "bids": 3,
+  "aliceTokensWei": "250000000000000000000000",
+  "bobTokensWei": "250000000000000000000000",
+  "carolTokensWei": "0",
+  "vaultBeforeWithdrawWei": "27516256919450703",
+  "vaultAfterWithdrawWei": "0",
+  "ownerGrossReceiptWei": "27516256919450703"
+}
