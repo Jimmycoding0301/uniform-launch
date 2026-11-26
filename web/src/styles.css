@@ -418,6 +418,10 @@ svg.plot { display: block; touch-action: none; background: var(--bg); }
   cursor: pointer;
   text-decoration: none;
 }
+.public-launch h2 { margin: 0 0 var(--space-2); font-size: var(--fs-20); }
+.public-launch p { margin-bottom: 0; }
+.public-launch-links { display: flex; flex-wrap: wrap; gap: 0 var(--space-4); }
+.public-launch-links a { display: inline-flex; align-items: center; text-decoration: underline; text-underline-offset: 3px; }
 .tag {
   border: 1px solid var(--rule-strong);
   border-radius: var(--radius-2);

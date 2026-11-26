@@ -23,6 +23,14 @@ const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 for (const path of pages) {
   await page.goto(base + path, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(400);
+  if (path === "/?network=testnet") {
+    const launch = page.getByRole("region", { name: "公开测试网发射" });
+    assert.match(await launch.innerText(), /4\.45 tBNB/);
+    assert.equal(await launch.getByRole("link", { name: "查看已结算拍卖" }).getAttribute("href"),
+      "/?network=testnet&launcher=0xEc6410ACea44ac8aaD7f048f68CE45D3c113c59e");
+    assert.equal(await launch.getByRole("link", { name: /BscScan 发射回执/ }).getAttribute("href"),
+      "https://testnet.bscscan.com/tx/0x56d87f21c4dbd55227d9e619986555f150c7da5ddec5db663b201a9b9985ae20");
+  }
   const words = await page.evaluate(() => {
     const root = document.body.cloneNode(true);
     root.querySelectorAll(".bid, textarea, .paste, .roller").forEach((node) => node.remove());

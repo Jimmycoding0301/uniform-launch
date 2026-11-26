@@ -9,6 +9,10 @@ export const TESTNET = {
   agentIdSource: "0xe4f7B9aBA67FEDAbF9B9a151C604466D448DAb09",
   erc8004Registry: "0x8004A818BFB912233c491871b3d84c89A494BD9e",
   erc8004Source: "0x0526f00B99e952cE55F1B7BDaf9E6Ae42b42cf22",
+  publicLaunch: {
+    launcher: "0xEc6410ACea44ac8aaD7f048f68CE45D3c113c59e",
+    settlementTx: "0x56d87f21c4dbd55227d9e619986555f150c7da5ddec5db663b201a9b9985ae20",
+  },
   saltLockFeeWei: "5000000000000000",
 } as const;
 

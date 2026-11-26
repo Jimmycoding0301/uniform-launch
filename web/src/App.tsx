@@ -949,7 +949,14 @@ function TestnetBoard() {
         <p className="user-line"><Zh text={USER_LINE} /></p>
       </div>
       <div className="plaque">
-        <p>测试网工厂已部署。公开发射回执待补。</p>
+        <section className="public-launch" aria-labelledby="public-launch-title">
+          <h2 id="public-launch-title">公开测试网发射</h2>
+          <p>区块 144,926,064 已结算，4.45 tBNB 进入 PancakeSwap V2 池。</p>
+          <div className="public-launch-links">
+            <a href={`/?network=testnet&launcher=${TESTNET.publicLaunch.launcher}`}>查看已结算拍卖</a>
+            <a href={`${TESTNET.explorer}/tx/${TESTNET.publicLaunch.settlementTx}`} target="_blank" rel="noreferrer">BscScan 发射回执 ↗</a>
+          </div>
+        </section>
         {TESTNET_ROWS.map((row) => (
           <div className="row" key={row.address}>
             <span className="name">{row.name}</span>
