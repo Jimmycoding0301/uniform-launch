@@ -16,7 +16,7 @@ The Flap brief asks for the Factory, a complete BSC Testnet launch, a custom Fla
 | 01:12 | [Settle and launch](https://testnet.bscscan.com/tx/0x56d87f21c4dbd55227d9e619986555f150c7da5ddec5db663b201a9b9985ae20) | Clearing price 0.0000089 tBNB. Pair reserves 500,000 UNIFORM and 4.45 WBNB. Block 144,926,064. |
 | 01:28 | [Claim tokens](https://testnet.bscscan.com/tx/0x732353fc11a666984971d62c5b7a0016d76775145823938bf515ef776354f27f) | Transfer of 500,000 UNIFORM to the bidder. Block 144,927,029. |
 
-For the interactive shot, run `DEMO_WEB_PORT=4417 bash script/demo.sh` in the submitted checkout and open `/?demo=1&scene=3` at the printed address. Both price buttons set the budget to one BNB. Preload the five receipts, the Flap UI and the submission code. Offline, use the two outcomes printed on slide 3, the saved public transaction record and the fork Vault record. If the browser is slow during the recording, cut directly to the preloaded tab. [Public record and contract addresses](public-testnet-evidence.md) · [Local-fork screenshots](../qa/submission/README.md) · [Custom Flap component](../flap-ui/launcher-detail) · [Fork Vault receipts](e2e-evidence.md)
+For the interactive shot, run `DEMO_WEB_PORT=4417 bash script/demo.sh` in the submitted checkout and open `/?demo=1&scene=3&lang=en` at the printed address. Both price buttons set the budget to one BNB. Switch languages from the header while keeping the current scene. Preload the five receipts, the Flap UI and the submission code. Offline, use the two outcomes printed on slide 3, the saved public transaction record and the fork Vault record. [Public record and contract addresses](public-testnet-evidence.md) · [Local-fork screenshots](../qa/submission/README.md) · [Custom Flap component](../flap-ui/launcher-detail) · [Fork Vault receipts](e2e-evidence.md)
 
 ### Voice and screen cues
 
@@ -27,10 +27,10 @@ For the interactive shot, run `DEMO_WEB_PORT=4417 bash script/demo.sh` in the su
 | 00:18 | 切到 Factory 创建交易，指 Launcher 创建事件。 | Our Factory created this Launcher. | 我们开发的工厂创建了这场拍卖。 |
 | 00:22 | 切到出价回执，指 Value 4.45 tBNB。 | One bidder committed 4.45 test BNB. | 这场公开拍卖只有一笔出价。 |
 | 00:26 | 回第 2 页，指 Clear once 和 Launch or refund。 | After close, anyone can settle. That call launches through Flap if the pool qualifies. Otherwise, bidders can claim full refunds. | 到期后任何人都能发起结算。达标即建池，失败可全额退款。 |
-| 00:36 | 第 3 页，切到本机第 3 幕。 | On this local nine-bid book, I set a one-BNB budget and try two price limits. | 下面是本地九单簿的试算。预算固定，改变最高价。 |
+| 00:36 | 切到本机演示。填写预算和限价并复制代理指令，再切第 3 幕。 | On this local nine-bid book, I set a one-BNB budget and try two price limits. | 下面是本地九单簿的试算。预算固定，改变最高价。 |
 | 00:44 | 点 0.00003，指预计成交 50,000 和实付 1 BNB。 | At the higher limit, my one BNB buys fifty thousand tokens. I pay the shared clearing price shown here, below my maximum. | 较高限价成交五万枚。成交价低于我填的最高价。 |
 | 00:58 | 点 0.000015，指预计成交 0、退回 1 BNB 和不变的清算价。 | Now I lower only my limit. The clearing price stays at 0.00002. My bid gets zero tokens and the whole BNB back. | 改成较低限价。这单零成交，全退。两次清算价都是 0.00002。 |
-| 01:12 | 第 4 页，回到公网，开发射回执的 Pair Sync 日志。屏幕标 0.0000089 tBNB/枚。 | Back on public testnet, that single bid funded a real launch. Settlement opened a PancakeSwap V2 pool with half a million UNIFORM and 4.45 test BNB. | 回到刚才的公网单笔拍卖。结算创建池，五十万枚 UNIFORM 与 4.45 枚 WBNB 配对。 |
+| 01:12 | 第 4 页，打开 BscScan 发射回执。随后展示 Pair Sync 初始储备。 | Back on public testnet, that single bid funded a real launch. Settlement opened a PancakeSwap V2 pool with half a million UNIFORM and 4.45 test BNB. | 回到刚才的公网单笔拍卖。结算创建池，五十万枚 UNIFORM 与 4.45 枚 WBNB 配对。 |
 | 01:28 | 打开展示第五笔领取回执，指 ERC-20 Transfer，金额 500,000。 | Here is the fifth transaction. The bidder claimed the other half million tokens. You can verify that transfer on BscScan. | 与入池份额分开，出价者实际领到另外五十万枚。 |
 | 01:41 | 第 5 页，指 Flap 自制界面。并排显示公共 Vault 绑定、分叉分税和提款证据。 | We built the Launcher interface using Flap’s template. The public launch linked the Vault. On a separate fork, trading fees reached it and the owner withdrew them. | 公网验证 Vault 绑定。分叉上实际做过交易、收税和提款。 |
 | 01:55 | 停在第 5 页，显示最终 GitHub 提交分支。 | Our code is public for both the Flap and Developer tracks. | Flap 与 Developer 两个赛道共用这份公开代码。 |
