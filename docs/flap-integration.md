@@ -38,13 +38,13 @@ node /tmp/flap-template/scripts/launcher-check-source.mjs \
 
 ```sh
 node /tmp/flap-template/scripts/launcher-check-source.mjs \
-  /agent/repos/tmp-445ccfbce5eacc5d/flap-ui/launcher-detail
+  flap-ui/launcher-detail
 ```
 
 ```json
 {
   "ok": true,
-  "directory": "/agent/repos/tmp-445ccfbce5eacc5d/flap-ui/launcher-detail",
+  "directory": "flap-ui/launcher-detail",
   "artifactId": "uniform-launcher-detail",
   "chainId": 97,
   "factoryAddress": "0xe82642ac5c3b3b4b7d4cdeaf6a251dc0bb7acefd",

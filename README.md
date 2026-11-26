@@ -1,5 +1,9 @@
 # 同价发射
 
+基于 Agent ID 的 BNB Chain 同价发行协议：窗口结束一次清算，成功经 Flap 建池，失败全额退款。
+
+![第 1 幕，接单场](qa/r15/demo-1-1440.png)
+
 代理用限价和预算参加新币开盘，窗口结束只清算一次，成交的人付同一个价。
 
 ## 问题
@@ -50,10 +54,11 @@ The page never signs. Settlement creates the pool through Flap. Tax sits in the 
 
 | 合约 | 地址 |
 | --- | --- |
-| 发射工厂 | [0xE82642aC5c3B3B4b7D4cDeaf6a251Dc0BB7AcEfd](https://testnet.bscscan.com/address/0xE82642aC5c3B3B4b7D4cDeaf6a251Dc0BB7AcEfd) |
-| 金库工厂 | [0x2EF7a93b2fE4FBF520D5210b3ea39a72E5133dc6](https://testnet.bscscan.com/address/0x2EF7a93b2fE4FBF520D5210b3ea39a72E5133dc6) |
-| Agent ID 来源 | [0xe4f7B9aBA67FEDAbF9B9a151C604466D448DAb09](https://testnet.bscscan.com/address/0xe4f7B9aBA67FEDAbF9B9a151C604466D448DAb09) |
-| ERC-8004 来源 | [0x0526f00B99e952cE55F1B7BDaf9E6Ae42b42cf22](https://testnet.bscscan.com/address/0x0526f00B99e952cE55F1B7BDaf9E6Ae42b42cf22) |
+| UniformLauncherFactory | [0xE82642aC5c3B3B4b7D4cDeaf6a251Dc0BB7AcEfd](https://testnet.bscscan.com/address/0xE82642aC5c3B3B4b7D4cDeaf6a251Dc0BB7AcEfd#code) |
+| UniformVaultFactory | [0x2EF7a93b2fE4FBF520D5210b3ea39a72E5133dc6](https://testnet.bscscan.com/address/0x2EF7a93b2fE4FBF520D5210b3ea39a72E5133dc6#code) |
+| AgentIdStandIn | [0x89c60E8E5aF13508900152e5FEE149bf5708d8a0](https://testnet.bscscan.com/address/0x89c60E8E5aF13508900152e5FEE149bf5708d8a0#code) |
+| BinanceAgentIdSource | [0xe4f7B9aBA67FEDAbF9B9a151C604466D448DAb09](https://testnet.bscscan.com/address/0xe4f7B9aBA67FEDAbF9B9a151C604466D448DAb09#code) |
+| Erc8004Source | [0x0526f00B99e952cE55F1B7BDaf9E6Ae42b42cf22](https://testnet.bscscan.com/address/0x0526f00B99e952cE55F1B7BDaf9E6Ae42b42cf22#code) |
 | Portal | [0x000042108465206185A077Edc3F3fd2b49060000](https://testnet.bscscan.com/address/0x000042108465206185A077Edc3F3fd2b49060000) |
 
 Addresses are the verified BSC testnet deployments. The factories are not enabled by Flap yet.
@@ -85,10 +90,10 @@ python3 --version
 curl --version
 ```
 
-第一次克隆带上子模块。把 `<仓库地址>` 换成这个仓库的地址：
+第一次克隆带上子模块：
 
 ```sh
-git clone --recurse-submodules --branch cursor/r15-win <仓库地址>
+git clone --recurse-submodules https://github.com/Jimmycoding0301/uniform-launch.git
 ```
 
 已经克隆过：

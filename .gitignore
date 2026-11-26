@@ -8,6 +8,8 @@ web/tsconfig.tsbuildinfo
 broadcast/
 .env
 web/public/demo.json
+*.pem
+*.key
 
 __pycache__/
 *.pyc
