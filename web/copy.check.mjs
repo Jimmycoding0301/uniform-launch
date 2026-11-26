@@ -4,7 +4,7 @@ import { openBrowser } from "./test-browser.mjs";
 import { demoBook } from "./demo-book.mjs";
 
 const book = await demoBook();
-const allow = new Set(["uniform", "launch", "agent", "id", "erc", "bnb", "chain", "flap", "vault", "bscscan", "pancakeswap", "binance"]);
+const allow = new Set(["uniform", "launch", "agent", "id", "erc", "bnb", "chain", "flap", "vault", "bscscan", "bsc", "pancakeswap", "binance"]);
 const base = process.env.CHART_URL || demoOrigin;
 const pages = [
   `/?launcher=${book.open}`,
