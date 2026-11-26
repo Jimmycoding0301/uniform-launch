@@ -2,6 +2,8 @@
 
 ## 2 分钟台上讲稿
 
+主讲用 PPT 的第 1–6 页。第 7 页的四笔资金流和第 8 页的 Flap 界面用于答辩。
+
 | 时间 | 操作 | 英文开口 | 中文提词 |
 | --- | --- | --- | --- |
 | 00:00–00:08 | 第 1 页 | Why should two people with the same budget pay different prices for the same launch? | 同样的预算，为什么开盘时两个人要付不同的单价？ |

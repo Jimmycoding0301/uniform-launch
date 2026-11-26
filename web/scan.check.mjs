@@ -25,8 +25,14 @@ assert.deepEqual(bare, [], `裸色值：${bare.join(", ")}`);
 
 const deployed = JSON.parse(readFileSync(join(root, "../deployments/bsc-testnet-marketing.json"), "utf8"));
 const networks = readFileSync(join(src, "networks.ts"), "utf8");
+const agentGuide = readFileSync(join(root, "public/llms.txt"), "utf8");
+const agentManifest = JSON.parse(readFileSync(join(root, "public/agent.json"), "utf8"));
 for (const key of ["launcherFactory", "agentIdNft", "agentIdSource", "erc8004Registry", "erc8004Source"]) {
   assert.ok(networks.includes(deployed[key]), `${key} 与部署文件不一致`);
+}
+for (const key of ["launcherFactory", "agentIdSource", "erc8004Source"]) {
+  assert.equal(agentManifest.contracts[key], deployed[key]);
+  assert.ok(agentGuide.includes(deployed[key]), `${key} 在代理说明里需要同步`);
 }
 assert.ok(networks.includes(deployed.publicAuction.launcher), "测试网拍卖地址与部署文件不一致");
 assert.equal(deployed.chainId, 97);

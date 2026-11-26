@@ -1,17 +1,17 @@
 # Flap 预审答复与四笔出价验算
 
-候选版每场最多 128 笔。生产脚本部署单一 Launcher Factory，使用 Flap 的 `MARKETING` 槽将项目侧交易税支付给创建者。[现行公开测试网发射](marketing-testnet-evidence.md)。[公开发射](marketing-testnet-evidence.md) · [Flap 工厂接入](https://docs.flap.sh/en/flap/v2/developers/pool-launch/build-on-pool-launch)
+候选版每场最多 128 笔。生产脚本部署单一 Launcher Factory，使用 Flap 的 `MARKETING` 槽将项目侧交易税支付给创建者。[公开测试网发射](marketing-testnet-evidence.md) · [Flap 工厂接入](https://docs.flap.sh/en/flap/v2/developers/pool-launch/build-on-pool-launch)
 
 | 预审项 | 候选版改动 |
 | --- | --- |
 | R1 限价与结算 | 拒绝高于 `1e36` wei/枚的限价，按比例和边际价计算使用全精度乘除。结算遇到确定性算术错误进入 Failed，允许各人退回本金。其他错误回滚，保留重试。 |
 | R2 名称和符号 | Launcher 初始化在锁 salt 前调用 `isScamWord(string,string)`。名称或符号命中就拒绝，接口不可用也拒绝。在链 97 和 56 都已用官方地址验证。 |
-| O1 名额 | 主网固定 1–128 个提前准入的钱包。获准钱包各占一个名额。测试网 Mini App 创建场次也要求填名单。 |
+| O1 名额 | 主网固定 1–128 个提前准入的钱包。获准钱包各占一个名额。链 97 的 Mini App 创建表单允许省略名单，且上线的测试网场次没有名单。 |
 | O2 来源授权 | 工厂亲自部署链别绑定的适配器并固定地址。建场时检查每个选择的来源。主网只接受官方 Binance Agent ID，测试网接受工厂配置的替身或 ERC-8004。 |
 | O3 身份保障 | 主网 Binance Agent ID 按 ERC-721 实际 token ID 验证和去重。ERC-8004 是测试网可选身份来源。名单资格仍由创建者核验。[ERC-8004](https://eips.ethereum.org/EIPS/eip-8004) |
 | Gas | 128 笔版保留 13M 入口门槛。普通客户端建议 14M，Flap Mini App 使用 15M。两个数都低于 BSC 的单笔交易上限。 |
 | 时长和募资展示 | 200–20,000 区块按 0.45 秒估算约 90 秒至 2.5 小时，实际以区块为准。description.targetRaise 取保留价募额与实时最低入池额中较大者。详情页也读最低入池额。[BNB Chain 出块说明](https://docs.bnbchain.org/bnb-smart-chain/overview/) |
-| Portal 倍率 | 直接读取 Portal 当前原生币报价及两道 USD 门槛，向上折为 BNB 再加 0.05 BNB 余量。分叉测试启用倍率 10,000 bps。公开旧场使用当时实际倍率。 |
+| Portal 倍率 | 直接读取 Portal 当前原生币报价及两道 USD 门槛，向上折为 BNB 再加 0.05 BNB 余量。分叉测试启用倍率 10,000 bps。公开测试网发射采用该笔交易时 Portal 的实际参数。 |
 | Vault 与文档 | 兼容代码支持 Vault 两步交接。Guardian 只能将余额提给当时的 owner。新版默认以 MARKETING 直付。README 链接现行公网回执和本机分叉测试。 |
 
 筛查地址固定为链 97 的 `0x5CfbE713d070e87F67D1bc84312B7eB8Fe4F2B5E` 和链 56 的 `0xfFb69d59f62454f3B8322Bc1a9FCE6E171a5264f`。两条链均以 `Tongjia/TJ` 验证正常值，并分别验证 `USDT/TJ` 命中名称、`Tongjia/BNB` 命中简称。UI 提示和合约判断都以实际运行时的词库为准。
@@ -49,4 +49,4 @@
 
 - 复审源码 ZIP 包含 `shared/vectors.json`、`script/LocalRpc.sol`、固定版本的 Foundry 依赖、Launcher 详情页和 Mini App 源码。
 - 新版已完成公开测试网发射。Flap 绑定包使用已核对的工厂地址、代码哈希和真实 Launcher 地址。
-- 详情从 Flap 跳转到 `/apps/uniform-launch/launcher/<address>`。Mini App 负责创建、出价、结算、领取、退款。历史 Launcher 可查看旧版回执。
+- 详情从 Flap 跳转到 `/apps/uniform-launch/launcher/<address>`。Mini App 负责创建、出价、结算、领取、退款。
