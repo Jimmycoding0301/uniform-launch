@@ -40,7 +40,7 @@ try {
   await page.getByRole("link", { name: "Receipts", exact: true }).click();
   await page.getByRole("heading", { name: "Public testnet launch" }).waitFor();
   assert.equal(new URL(page.url()).searchParams.get("lang"), "en");
-  const auction = await page.getByRole("link", { name: /View settled auction/ }).getAttribute("href");
+  const auction = await page.getByRole("link", { name: /View public auction/ }).getAttribute("href");
   assert.equal(new URL(auction, demoOrigin).searchParams.get("lang"), "en");
   await page.getByRole("link", { name: "切换到中文" }).click();
   await page.getByRole("heading", { name: "公开测试网发射" }).waitFor();
