@@ -1,4 +1,4 @@
-import { formatBnb, formatBnb4, formatPrice, formatTokens } from "./curve";
+import { formatBnb, formatBnb4, formatPrice, formatTokens, parseBnb } from "./curve";
 
 type Preview = {
   clearingPrice: bigint;
@@ -11,11 +11,26 @@ export type Comparison = {
   sameRaise?: { ratio: number; firstAvg: string; lastAvg: string; gap: string };
 };
 
-export function SimulationSummary({ simulation }: { simulation: Preview | null }) {
+const DEMO_LIMITS = ["0.00003", "0.000015"] as const;
+
+export function SimulationSummary({ simulation, selectedPrice, onPreset }: {
+  simulation: Preview | null;
+  selectedPrice: bigint | null;
+  onPreset: (price: string) => void;
+}) {
   const fill = simulation?.fills.at(-1);
   return (
-    <section className="simulation" aria-label="本笔模拟" aria-live="polite">
-      <div className="preview-head">
+    <section className="simulation" aria-label="本笔模拟">
+      <div className="simulation-presets" role="group" aria-label="以 1 BNB 预算试算限价">
+        <span>用 1 BNB 试两种限价</span>
+        {DEMO_LIMITS.map((limit) => (
+          <button type="button" key={limit} aria-label={`限价 ${limit} BNB/枚`}
+            aria-pressed={selectedPrice === parseBnb(limit)} onClick={() => onPreset(limit)}>
+            {limit} <small>BNB/枚</small>
+          </button>
+        ))}
+      </div>
+      <div className="preview-head" aria-live="polite" aria-atomic="true">
         <div><div className="kicker">本笔模拟 <span>预计成交</span></div>
           <div className="chart-price">{fill ? formatTokens(fill.tokens) : "—"} <small>枚</small></div>
         </div>
