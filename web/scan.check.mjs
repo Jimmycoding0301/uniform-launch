@@ -35,6 +35,8 @@ const tokens = readFileSync(join(src, "tokens.css"), "utf8");
 for (const name of ["--bg", "--accent", "--edge", "--text", "--ease", "--fs-12", "--fs-56"]) {
   assert.ok(tokens.includes(name), `缺少令牌 ${name}`);
 }
+assert.match(tokens, /--accent:\s*#91F85B/i, "主操作和行情使用统一的绿色强调色");
+assert.ok(tokens.includes("--dot-field") && tokens.includes("--cut-control"), "缺少点阵及切角样式");
 const theme = readFileSync(join(src, "theme.ts"), "utf8");
 for (const [key, ms] of [["SETTLE_MS", "800"], ["SWEEP_MS", "600"], ["CURVE_MS", "400"]]) {
   assert.ok(theme.includes(`${key} = ${ms}`), `${key} 与令牌不一致`);

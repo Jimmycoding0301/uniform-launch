@@ -36,7 +36,8 @@ for (const path of pages) {
   const found = [...new Set(stripped.match(/[a-z]{2,}/g) || [])];
   const extra = found.filter((word) => !allow.has(word) && !/^[0-9a-f]+$/.test(word));
   assert.deepEqual(extra, [], `${path} 界面英文：${extra.join(", ")}`);
-  assert.equal(words.includes("·"), false, `${path} 还有中点拼接`);
+  const offLabel = words.replace(/已募 [\d.,]+ BNB\s*·\s*门槛 [\d.,]+ BNB/g, "");
+  assert.equal(offLabel.includes("·"), false, `${path} 出价门槛之外出现中点拼接`);
   const bareNumbers = words.match(/(?<![\d.,])\d{5,}(?![\d.,])/g) ?? [];
   assert.deepEqual(bareNumbers, [], `${path} 缺千分位：${bareNumbers.join(", ")}`);
   const sizes = await page.evaluate(() => {

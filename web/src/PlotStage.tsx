@@ -211,10 +211,6 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
   const hair = (n: number) => Math.round(n) + 0.5;
   const priceIn = yourPrice != null && clearing != null && yourPrice >= clearing;
   const reserveLabelY = Math.min(plot.bottom - 4, Math.max(14, plot.reserveY + (plot.clearingY != null && Math.abs(plot.clearingY - plot.reserveY) < 18 ? 14 : -6)));
-  const filledLabelY = Math.min(plot.bottom - 16, (plot.clearingY ?? plot.bottom) + 16);
-  const filledLabelYSafe = vw <= 300 && Math.abs(filledLabelY - reserveLabelY) < 16
-    ? Math.min(plot.bottom - 4, reserveLabelY + 16)
-    : filledLabelY;
   return (
     <div className="stage" ref={stageRef}>
       <svg
@@ -230,7 +226,16 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
         role="img"
         aria-label="限价台阶和清算价"
       >
+        <defs>
+          <linearGradient id="demand-fill" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
+            <stop offset="0%" className="demand-top" /><stop offset="100%" className="demand-bottom" />
+          </linearGradient>
+        </defs>
         <rect className="plot-bg" x="0" y="0" width={vw} height={vh} />
+        {[0, 1, 2, 3, 4].map((part) => {
+          const x = hair(plot.left + (plot.right - plot.left) * part / 4);
+          return <line key={part} className="plot-guide" x1={x} x2={x} y1={plot.top} y2={plot.bottom} />;
+        })}
         {plot.ticks.map((tick) => (
           <line key={`g-${tick.y}`} className="grid-line" x1={hair(plot.left)} x2={hair(plot.right)} y1={hair(tick.y)} y2={hair(tick.y)} />
         ))}
@@ -256,6 +261,7 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
           <rect className="draw-rect" x="0" y="0" width={vw} height={vh} />
         </clipPath>
         <g clipPath={intro && !reduced && !resting ? "url(#drawClip)" : undefined}>
+          {plot.fill && !failed && <path fill="url(#demand-fill)" d={plot.fill} />}
           {plot.rect && !failed && (
             <rect className={sweep && !reduced ? "uniform-rect play" : "uniform-rect"} x={plot.rect.x} y={plot.rect.y} width={plot.rect.w} height={Math.max(plot.rect.h, 0)} />
           )}
@@ -284,15 +290,8 @@ export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduce
             <text className="badge" x={plot.right - 4} y={Math.max(14, plot.clearingY - 8)} textAnchor="end">
               清算价 {formatPrice(clearing ?? 0n)}
             </text>
-            <text
-              className="tick"
-              x={(plot.right - (plot.crossX ?? plot.left)) < 96 ? (plot.crossX ?? plot.left) - 10 : (plot.crossX ?? plot.left) + 10}
-              y={filledLabelYSafe}
-              textAnchor={(plot.right - (plot.crossX ?? plot.left)) < 96 ? "end" : "start"}
-            >
-              成交 {formatBnb(plot.filled)} BNB
-            </text>
             <g className={pulse ? "clear-dot once" : "clear-dot"} transform={`translate(${plot.crossX ?? plot.left} ${plot.clearingY})`}>
+              <title>限价达到清算价的预算合计 {formatBnb(plot.filled)} BNB</title>
               <circle className="dot-ring" r="7" />
               <circle className="dot-core" r="3" />
             </g>
