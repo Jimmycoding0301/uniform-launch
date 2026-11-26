@@ -101,5 +101,21 @@ await blank.goto(`${demoOrigin}/?empty=1`, { waitUntil: "domcontentloaded" });
 await blank.getByRole("link", { name: "打开演示脚本" }).click();
 await blank.waitForURL((url) => url.search.includes("demo=1"));
 await blank.close();
+// Pending public RPCs should stay in the loading state. Only a rejected response signals failure.
+const pending = await browser.newPage();
+let finishRequest;
+const responseGate = new Promise((resolve) => { finishRequest = resolve; });
+await pending.route("https://bsc-testnet-rpc.publicnode.com/**", async (route) => {
+  await responseGate;
+  const { id } = route.request().postDataJSON();
+  await route.fulfill({ json: { id, jsonrpc: "2.0", error: { code: -32601, message: "Unavailable" } } });
+});
+await pending.goto(`${demoOrigin}/?network=testnet&launcher=0x0000000000000000000000000000000000000001`);
+await pending.getByText("正在读取测试网拍卖。").waitFor();
+await pending.waitForTimeout(3200);
+assert.equal(await pending.getByText(/重试/).count(), 0, "慢响应不应被显示为失败");
+finishRequest();
+await pending.getByText("读取失败，正在重试。", { exact: true }).waitFor();
+await pending.close();
 await browser.close();
 console.log("演示六幕、方向键和退出都通过");

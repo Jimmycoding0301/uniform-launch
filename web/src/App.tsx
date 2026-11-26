@@ -258,6 +258,36 @@ export function App() {
     let dead = false;
     let verifiedNetwork = false;
     let timer = 0;
+    let cachedSources: SourceInfo[] | undefined;
+    async function readSources() {
+      if (cachedSources) return cachedSources;
+      try {
+        const count = await client.readContract({ address: launcher, abi: ABI, functionName: "identitySourceCount" });
+        let complete = true;
+        const sources = await Promise.all(Array.from({ length: Number(count) }, async (_, index) => {
+          const address = await client.readContract({ address: launcher, abi: ABI, functionName: "identitySources", args: [BigInt(index)] });
+          const [id, standIn] = await Promise.all([
+            client.readContract({ address, abi: SOURCE_ABI, functionName: "SOURCE_ID" }).catch(() => null),
+            client.readContract({ address, abi: SOURCE_ABI, functionName: "standIn" }).catch(() => null),
+          ]);
+          if (id === null || standIn === null) complete = false;
+          return { sourceId: id ?? "0x", standIn: standIn ?? false } satisfies SourceInfo;
+        }));
+        // Sources are fixed at initialization. Retry partial or unsupported metadata on the next poll.
+        if (complete) cachedSources = sources;
+        return sources;
+      } catch {
+        return [];
+      }
+    }
+    async function readBids() {
+      try {
+        return await client.readContract({ address: launcher, abi: ABI, functionName: "getBids" });
+      } catch {
+        const legacy = await client.readContract({ address: launcher, abi: LEGACY_BIDS, functionName: "getBids" });
+        return [legacy[0], legacy[1], legacy[2], [], []] as const;
+      }
+    }
     const load = async () => {
       if (dead) {
         window.clearInterval(timer);
@@ -265,7 +295,7 @@ export function App() {
       }
       if (inflight) return;
       inflight = true;
-      const slow = window.setTimeout(() => {
+      const slow = publicTestnet ? undefined : window.setTimeout(() => {
         if (!stop) setRpcError(true);
       }, 3000);
       try {
@@ -286,8 +316,8 @@ export function App() {
           }
           verifiedNetwork = true;
         }
-        const b = await client.getBlockNumber();
-        const [status, floor, clearing, softCap, minPoolQuote, start, end, token, pool, poolQuote, vaultFactory, preview, fills] = await Promise.all([
+        const [b, status, floor, clearing, softCap, minPoolQuote, start, end, token, pool, poolQuote, vaultFactory, preview, fills, got, sources] = await Promise.all([
+          client.getBlockNumber(),
           client.readContract({ address: launcher, abi: ABI, functionName: "status" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "floorPrice" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "clearingPrice" }),
@@ -301,46 +331,10 @@ export function App() {
           client.readContract({ address: launcher, abi: ABI, functionName: "vaultFactory" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "preview" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "getFills" }),
+          readBids(),
+          readSources(),
         ]);
-        let got: readonly [readonly Address[], readonly bigint[], readonly bigint[], readonly `0x${string}`[], readonly bigint[]];
-        try {
-          got = await client.readContract({ address: launcher, abi: ABI, functionName: "getBids" });
-        } catch {
-          const legacy = await client.readContract({ address: launcher, abi: LEGACY_BIDS, functionName: "getBids" });
-          got = [legacy[0], legacy[1], legacy[2], [], []];
-        }
         if (stop) return;
-        const sources: SourceInfo[] = [];
-        try {
-          const sourceCount = (await client.readContract({
-            address: launcher,
-            abi: ABI,
-            functionName: "identitySourceCount",
-          })) as bigint;
-          for (let i = 0; i < Number(sourceCount); i++) {
-            const source = (await client.readContract({
-              address: launcher,
-              abi: ABI,
-              functionName: "identitySources",
-              args: [BigInt(i)],
-            })) as Address;
-            let sourceId = "0x" as `0x${string}`;
-            let standIn = false;
-            try {
-              sourceId = (await client.readContract({ address: source, abi: SOURCE_ABI, functionName: "SOURCE_ID" })) as `0x${string}`;
-            } catch {
-              sourceId = "0x";
-            }
-            try {
-              standIn = Boolean(await client.readContract({ address: source, abi: SOURCE_ABI, functionName: "standIn" }));
-            } catch {
-              standIn = false;
-            }
-            sources.push({ sourceId, standIn });
-          }
-        } catch {
-          sources.length = 0;
-        }
         const agents = got[0] as Address[];
         const budgets = got[1] as bigint[];
         const prices = got[2] as bigint[];
@@ -713,7 +707,7 @@ export function App() {
                   <input id="price" value={maxPrice} inputMode="decimal" autoComplete="off" spellCheck={false} onChange={(e) => setMaxPrice(e.target.value)} />
                   <span className="unit">BNB/枚</span>
                 </div>
-                <p className="help">链上读数还没到。指令里的金额用你现在填的。</p>
+                <p className="help" role="status">{rpcError ? "读取失败，正在重试。" : publicTestnet ? "正在读取测试网拍卖。" : "正在读取本场拍卖。"}</p>
                 <button className="primary" type="button" disabled>等待读取拍卖</button>
                 <p className="risk"><Zh text={RISK_LINE} /></p>
               </form>
