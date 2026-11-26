@@ -1,0 +1,51 @@
+# 同价发射
+
+> 代理专属的统一价批量拍卖。所有成交者付同一个清算价，清算只发生一次。签名必须由用户在币安 App 确认。工具只给未签名交易。
+
+## 规则
+
+- 链：BNB Smart Chain 测试网，链编号 97
+- 出价：`bid`，预算是转账金额，最少 0.01 BNB，最多 100 BNB
+- 读本场 `MAX_BIDS()` 确认容量。当前合约每场上限为 128 笔。每个地址一笔，每个身份来源加身份编号一笔。主网只使用 Binance Agent ID 的真实 NFT 编号。名单场还要用 `admittedWallet(address)` 确认钱包已入选。
+- 最高价不能低于保留价，也不得高于 `MAX_PRICE()`（新版为 1e36 报价 wei/枚）
+- 窗口结束后任何人可以结算。为当前 Launcher 读取 `minPoolQuote()`。未满足门槛时结算失败，可全退出价本金。读不到门槛时先检查 Portal 报价服务。
+- 成功后，竞拍者调用 Launcher 的 `claim()` 领取成交代币和剩余预算。买入税和卖出税各 3%。
+- 公开测试网投产配置通过 Flap 的 MARKETING 槽将项目侧交易税支付给 `creator()` 返回的创建者。
+- 结算的交易 gas 上限用本场 `MIN_SETTLE_GAS()` 加 1,000,000。若进入结算时剩余 gas 低于合约门槛，调用回滚，拍卖保持开放
+
+## 合约
+
+- 发射工厂：https://testnet.bscscan.com/address/0x5A995C7ee958a631FDD151C9582604d347D7799A
+- 旧版公开发射的金库工厂：https://testnet.bscscan.com/address/0x2EF7a93b2fE4FBF520D5210b3ea39a72E5133dc6
+- Agent ID 来源：https://testnet.bscscan.com/address/0xe4f7B9aBA67FEDAbF9B9a151C604466D448DAb09
+- ERC-8004 来源：https://testnet.bscscan.com/address/0x0526f00B99e952cE55F1b7BDaf9E6Ae42b42cf22
+- 机器可读地址和错误码：/agent.json
+
+## 阶段能做的事
+
+- 接单：出价
+- 截单：不能出价，也不能结算
+- 待结算：结算
+- 已发射：领取。没成交的预算也在领取里退回，不要改走退款
+- 失败：退款
+
+## 命令
+
+先在 `agent/` 执行 `npm ci`。
+
+```
+node agent/cli.mjs status --launcher 0x… --rpc http://127.0.0.1:18545 --json
+node agent/cli.mjs simulate --launcher 0x… --budget 1 --max-price 0.00003 --json
+node agent/cli.mjs identity --launcher 0x… --address 0x… --agent-id 1 --json
+node agent/cli.mjs bid-tx --launcher 0x… --budget 1 --max-price 0.00003 --source 0 --agent-id 1 --address 0x… --json
+```
+
+MCP 用 stdio。方法是 initialize、ping、tools/list、tools/call。工具名：status、simulate_bid、check_identity、build_bid_tx、build_settle_tx、build_claim_tx、build_refund_tx。
+
+带 `--address` 时先看这个地址的余额。不够就停，不生成交易。连不上或单次读链超过 8 秒就停，原因是读不到链，不一直等。工具不签名，不广播。测试网 Binance Agent ID 是替身。合约按地址和「来源＋身份编号」限制重复出价。
+
+## 网页与回执
+
+本地六幕演示的复制指令只读取分叉并模拟。真实测试网拍卖用 /?network=testnet&launcher=<Launcher地址> 打开。网页先检查链 97 和 Portal 中登记的工厂。填入代理钱包公开地址后复制指令，代理确认钱包支持该测试网，运行 preview，经用户确认后运行 execute。页面从复制时的区块起匹配发送者、目标合约、方法、金额和出价参数，找到成功回执后显示。手贴哈希可补查。钱包的链列表须以现场实际返回为准。
+
+网页保留历史测试网工厂。运营方核实新版 MARKETING Launcher Factory 的公开地址后，可在构建网页时用 `VITE_MARKETING_LAUNCHER_FACTORY` 加入该地址。页面以 Portal 返回的工厂地址核对场次来源。
