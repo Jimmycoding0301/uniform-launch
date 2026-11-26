@@ -1,10 +1,11 @@
+import { demoOrigin } from "./demo-origin.mjs";
 import assert from "node:assert/strict";
-import { chromium } from "playwright";
+import { openBrowser } from "./test-browser.mjs";
 import { demoBook } from "./demo-book.mjs";
 
 const book = await demoBook();
 const allow = new Set(["uniform", "launch", "agent", "id", "erc", "bnb", "chain", "flap", "vault", "bscscan", "pancakeswap", "binance"]);
-const base = process.env.CHART_URL || "http://127.0.0.1:4317";
+const base = process.env.CHART_URL || demoOrigin;
 const pages = [
   `/?launcher=${book.open}`,
   `/?launcher=${book.open}&preview=wait`,
@@ -17,7 +18,7 @@ const pages = [
   "/?view=script",
 ];
 
-const browser = await chromium.launch();
+const browser = await openBrowser();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 for (const path of pages) {
   await page.goto(base + path, { waitUntil: "domcontentloaded" });
