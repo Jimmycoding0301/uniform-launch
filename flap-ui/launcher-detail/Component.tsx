@@ -175,7 +175,7 @@ export function Launcher({ context, messages }: LauncherProps) {
         </p>
       </header>
       <dl style={{ margin: 0, borderTop: "1px solid #303236" }}>
-        <Row name={messages.bids} text={`${formatInt(snap.bidCount)} / 32`} />
+        <Row name={messages.bids} text={formatInt(snap.bidCount)} />
         <Row name={messages.clearing} text={formatBnb(snap.clearingPrice, "price")} />
         <Row name={messages.floor} text={formatBnb(snap.floorPrice, "price")} />
         <Row name={messages.end} text={formatInt(snap.endBlock)} />

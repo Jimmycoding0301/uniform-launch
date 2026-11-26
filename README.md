@@ -58,7 +58,7 @@ npm --prefix agent ci
 bash script/check.sh
 ```
 
-The browser tests use installed Google Chrome or Playwright Chromium. For the latter, run `(cd web && npx playwright install chromium)` before the web tests. Forge runs the unit suite without an RPC. To include the BSC Testnet fork suite, set `BSC_TESTNET_RPC_URL` to a public testnet RPC. [Foundry configuration](foundry.toml) · [Tests](test/)
+The browser tests use installed Google Chrome or Playwright Chromium. For the latter, run `(cd web && npx playwright install chromium)` before the web tests. Forge runs the unit suite without an RPC. To include the BSC Testnet fork suite, set `BSC_TESTNET_RPC_URL` to a public testnet RPC. [Foundry configuration](foundry.toml) · [Tests](test/) · [Flap review responses and four-bid walkthrough](docs/preaudit-response.md)
 
 中文操作顺序：先初始化子模块并运行 `bash script/demo.sh`，打开终端打印的演示地址。按左右键切换六幕，再运行网页和合约测试。网页可复制出价指令，代理预览，买家确认签名，页面核对回执。
 
@@ -67,7 +67,7 @@ The browser tests use installed Google Chrome or Playwright Chromium. For the la
 | Criterion | What to inspect |
 | --- | --- |
 | Design and usability | The bilingual desk lets the buyer compare a fill and a refund before copying the instruction to their agent. The Flap component shows a bid, claim or refund instruction according to the launch state. [Desk screens](qa/submission/README.md) · [Custom Flap component](flap-ui/launcher-detail/Component.tsx) |
-| Scalability | A shared Factory creates a separate Launcher per auction. This implementation supports 128 bids per auction. A full 128-bid launch used 8,673,707 gas in the BSC testnet fork test. The public Launcher in the receipts above supports 32 bids. [Factory](src/uniform/UniformLauncherFactory.sol) · [Gas measurement and limits](docs/security.md) |
+| Scalability | A shared Factory creates a separate Launcher per auction. This implementation supports 128 bids per auction. With the MARKETING fee route, 128-bid settlement used 8,413,449 gas on a BSC testnet fork and 9,675,086 on a BSC mainnet fork. The public Launcher in the receipts above supports 32 bids. [Factory](src/uniform/UniformLauncherFactory.sol) · [Gas measurement and limits](docs/security.md) |
 | Innovation | Two local buyers each budgeted 2.5 BNB. The simulated curve allocated about 181,000 and 153,000 tokens. The batch allocated 125,000 each at a price discovered from bids. The first-to-last unit-price ratio was 1.7789 on the simulated curve and 1 on the batch. A fixed presale at the eventual clearing price gave the same fills and required choosing the price beforehand. [Assumptions and calculations](docs/why-uniform.md) |
 | Open source | MIT-licensed contracts, Flap component, web desk, agent tools and a one-command local demo. [License](LICENSE) · [Demo script](script/demo.sh) · [Flap integration](docs/flap-integration.md) |
 | Use of BNB Chain | The public testnet launch used Flap Portal and our Factory, created a PancakeSwap V2 pair, registered the Vault and delivered the bidder’s allocation. [Token, pool, Vault and receipts](docs/public-testnet-evidence.md) |

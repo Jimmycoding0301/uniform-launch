@@ -1,6 +1,6 @@
 # Roadmap and business model · 路线图与商业模式
 
-**Today.** A creator can run an auction through the Flap Launcher Factory. The public BSC testnet launch put 4.45 tBNB into its PancakeSwap V2 pool. Uniform charged no launch or settlement fee. The creator’s Vault receives 100% of the configured project tax allocation. [Five public receipts](public-testnet-evidence.md) · [Tax routing](../src/uniform/UniformLauncher.sol) · [Vault withdrawals](../src/uniform/UniformVault.sol)
+**Today.** A creator can run an auction through the Flap Launcher Factory. The public BSC testnet launch put 4.45 tBNB into its PancakeSwap V2 pool. Uniform charged no launch or settlement fee. The historical public launch routes the configured project tax to the creator’s Vault. The next Launcher-only release uses a MARKETING slot to pay the creator directly. [Five public receipts](public-testnet-evidence.md) · [Tax routing](../src/uniform/UniformLauncher.sol) · [Vault withdrawals](../src/uniform/UniformVault.sol)
 
 | Next step | What we would verify |
 | --- | --- |
@@ -8,13 +8,13 @@
 | Prepare for mainnet | Complete the Flap audit and factory approval process. Verify the production identity sources, including the real Binance Agent ID registry. The factory creates a separate launcher per auction. The public Launcher supports 32 bids. The updated implementation supports 128 bids. A full 128-bid launch used 8,673,707 gas in the BSC testnet fork test. Repeat the capacity test on a mainnet fork and publish the cost before opening pilots. [Factory](../src/uniform/UniformLauncherFactory.sol) · [Bid cap and gas measurement](../src/uniform/UniformLauncher.sol) |
 | Improve the bidding experience | Measure how often bidders set a limit below the clearing price. Test clearer reserve-price and bid-limit guidance in the interface before changing the auction rules. |
 
-**Protocol fee plan.** On a successful launch, charge 10 basis points (0.1%) of filled quote. Route the remainder to the pool and check Flap’s funding minimum against that net amount. For 100 BNB of filled bids, the protocol receives 0.1 BNB and the pool receives 99.9 BNB. Unfilled budgets remain refundable. If the auction fails, all bid principal is refundable. The creator keeps the configured post-launch trading-tax allocation.
+**Protocol fee plan.** On a successful launch, charge 10 basis points (0.1%) of filled quote. Route the remainder to the pool and check Flap’s funding minimum against that net amount. For 100 BNB of filled bids, the protocol receives 0.1 BNB and the pool receives 99.9 BNB. Unfilled budgets remain refundable. If the auction fails, all bid principal is refundable. The creator keeps the configured post-launch trading-tax allocation through the launch’s fee route.
 
 Before enabling the fee, show gross fills, fee and net liquidity in the preview, verify the balances and refunds on a fork, and publish the fee recipient and the first successful receipt. Track funded launches, filled quote and protocol fees actually collected.
 
 ### 中文速读
 
-公开测试网已跑通成功发射。4.45 tBNB 用于建池，Uniform 当前的发射费和结算费均为零，项目配置的交易税全部流向创建者金库。[测试网回执](public-testnet-evidence.md)
+公开测试网已跑通成功发射。4.45 tBNB 用于建池，Uniform 当前的发射费和结算费均为零，公开历史版本将项目侧交易税分配给创建者的 Vault。新版以 Flap MARKETING 税槽直接支付到创建者。[测试网回执](public-testnet-evidence.md)
 
 - **近期**把通过检查器的界面包交给 Flap，再补一场公开测试网的未达标拍卖，让评委能同时核对失败结算和退款到账。
 - **主网上线前**完成审计、工厂授权和真实身份源验证。每场有独立合约，公开测试网合约每场最多 32 笔。新版扩到 128 笔，满场发射在测试网分叉的测试中使用约 867 万 gas。上线前还要在主网分叉重测。上线后用低于清算价的出价比例，判断是否要优化保留价和限价提示。

@@ -15,6 +15,7 @@ import { TESTNET, TESTNET_ROWS } from "./networks";
 import { FundingProgress, PriceComparison, SettlementSummary, SimulationSummary, type Comparison } from "./AuctionFigures";
 
 const ABI = [
+  { type: "function", name: "admittedWalletCount", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "MAX_BIDS", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "MIN_SETTLE_GAS", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "status", stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
@@ -28,6 +29,7 @@ const ABI = [
   { type: "function", name: "pool", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
   { type: "function", name: "poolQuote", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "vaultFactory", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
+  { type: "function", name: "creator", stateMutability: "view", inputs: [], outputs: [{ type: "address" }] },
   { type: "function", name: "preview", stateMutability: "view", inputs: [], outputs: [{ type: "bool" }, { type: "uint256" }, { type: "uint256" }] },
   {
     type: "function",
@@ -136,6 +138,7 @@ type Row = {
 type SourceInfo = { sourceId: `0x${string}`; standIn: boolean };
 type Snap = {
   maxBids: number;
+  rostered: boolean;
   minSettleGas: bigint;
   status: number;
   floor: bigint;
@@ -148,6 +151,7 @@ type Snap = {
   pool: Address;
   poolQuote: bigint;
   vaultFactory: Address;
+  marketingRecipient: Address | null;
   previewOk: boolean;
   previewQuote: bigint;
   previewPrice: bigint;
@@ -156,6 +160,11 @@ type Snap = {
 };
 
 const ZERO = "0x0000000000000000000000000000000000000000";
+const trustedTestnetFactories = new Set<string>([TESTNET.launcherFactory.toLowerCase()]);
+const marketingFactory = import.meta.env.VITE_MARKETING_LAUNCHER_FACTORY?.trim().toLowerCase();
+if (marketingFactory && marketingFactory !== ZERO && isAddress(marketingFactory)) {
+  trustedTestnetFactories.add(marketingFactory);
+}
 const PHASES = [
   { id: "wait", label: t("未开始", "Pending") },
   { id: "open", label: t("接单", "Open") },
@@ -269,6 +278,7 @@ export function App() {
     let verifiedNetwork = false;
     let timer = 0;
     let cachedSources: SourceInfo[] | undefined;
+    let marketingRecipient: Address | null = null;
     async function readSources() {
       if (cachedSources) return cachedSources;
       try {
@@ -319,14 +329,14 @@ export function App() {
             address: PORTAL, abi: parseAbi(["function getLauncher(address) view returns (address)"]),
             functionName: "getLauncher", args: [launcher],
           });
-          if (factory.toLowerCase() !== TESTNET.launcherFactory.toLowerCase()) {
+          if (!trustedTestnetFactories.has(factory.toLowerCase())) {
             if (!stop) setRpcNote(t("这个地址不属于同价发射的测试网工厂。", "This address is not an auction from the Uniform Launch testnet factory."));
             dead = true;
             return;
           }
           verifiedNetwork = true;
         }
-        const [b, status, floor, clearing, softCap, minPoolQuote, start, end, token, pool, poolQuote, vaultFactory, preview, fills, got, sources, maxBids, minSettleGas] = await Promise.all([
+        const [b, status, floor, clearing, softCap, minPoolQuote, start, end, token, pool, poolQuote, vaultFactory, preview, fills, got, sources, maxBids, minSettleGas, admittedWalletCount] = await Promise.all([
           client.getBlockNumber(),
           client.readContract({ address: launcher, abi: ABI, functionName: "status" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "floorPrice" }),
@@ -345,7 +355,11 @@ export function App() {
           readSources(),
           client.readContract({ address: launcher, abi: ABI, functionName: "MAX_BIDS" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "MIN_SETTLE_GAS" }),
+          client.readContract({ address: launcher, abi: ABI, functionName: "admittedWalletCount" }).catch(() => 0n),
         ]);
+        if (vaultFactory === ZERO && !marketingRecipient) {
+          marketingRecipient = await client.readContract({ address: launcher, abi: ABI, functionName: "creator" }).catch(() => null);
+        }
         if (stop) return;
         const agents = got[0] as Address[];
         const budgets = got[1] as bigint[];
@@ -355,7 +369,8 @@ export function App() {
         const quotes = fills[1] as bigint[];
         const pulled = fills[2] as boolean[];
         const next: Snap = {
-          maxBids: Number(maxBids),
+          maxBids: Number(admittedWalletCount || maxBids),
+          rostered: admittedWalletCount > 0n,
           minSettleGas,
           status: Number(status),
           floor: floor as bigint,
@@ -368,6 +383,7 @@ export function App() {
           pool: pool as Address,
           poolQuote: poolQuote as bigint,
           vaultFactory: vaultFactory as Address,
+          marketingRecipient,
           previewOk: preview[0] as boolean,
           previewQuote: preview[2] as bigint,
           previewPrice: preview[1] as bigint,
@@ -571,7 +587,7 @@ export function App() {
   }, [launcher, phase, rpc, snap]);
 
   useEffect(() => {
-    if (!snap || snap.status !== 1 || snap.token === ZERO) {
+    if (!snap || snap.vaultFactory === ZERO || snap.status !== 1 || snap.token === ZERO) {
       setVault("");
       return;
     }
@@ -622,18 +638,18 @@ export function App() {
     if (!snap || !draft || previewing || claimNotice || (publicTestnet && (!isAddress(sender.trim(), { strict: false }) || !block))) return;
     const picked = snap?.sources[sourceIndex];
     const sourceName = sourceTag(picked?.sourceId ?? "") || t(`来源 ${sourceIndex}`, `Source ${sourceIndex}`);
-    const autoAgent = !picked || sourceTag(picked.sourceId) !== "8004";
+    const autoAgent = !picked || (sourceTag(picked.sourceId) === "Agent ID" && picked.standIn);
     const agentLine = autoAgent
       ? t("按钱包地址自动识别。合约能调用 tokenOfOwnerByIndex 时用 tokenId，否则用 uint160(你的地址)，把这个数作为第三参。", "Derive the third argument from the wallet. Use tokenId if tokenOfOwnerByIndex is supported, otherwise use uint160(wallet address).")
       : /^\d+$/.test(agentIdInput.trim())
         ? agentIdInput.trim()
-        : t("（你在 ERC-8004 登记的编号）", "(your registered ERC-8004 ID)");
+        : t("（链上身份 token ID）", "(your on-chain identity token ID)");
     const settlementGasLimit = snap ? snap.minSettleGas + 1_000_000n : null;
     const action =
       phase === "open" || !snap
         ? t(
-          `data: bid(uint256,uint8,uint256)\n- maxPrice wei: ${priceWei}\n- 最高价：${priceWei ? formatPrice(priceWei) : ""} BNB/枚\n- sourceIndex: ${sourceIndex}\n- 来源：${sourceName}\n- agentId: ${agentLine}\n- agentId 说明：Agent ID 不用手填，按上面的规则从钱包地址得出。8004 填官方 Identity Registry 的编号，并且这个钱包必须是 ownerOf(agentId) 或 getAgentWallet(agentId)。同一来源的同一个 agentId 只能出一笔。\n- value wei: ${budgetWei}\n- 预算：${budget} BNB`,
-          `data: bid(uint256,uint8,uint256)\n- maxPrice wei: ${priceWei}\n- Limit: ${priceWei ? formatPrice(priceWei) : ""} BNB/token\n- sourceIndex: ${sourceIndex}\n- Source: ${sourceName}\n- agentId: ${agentLine}\n- Agent ID: derive the ID from the wallet as specified above. For ERC-8004, use the official Identity Registry ID. This wallet must be ownerOf(agentId) or getAgentWallet(agentId). Each ID can bid once per source.\n- value wei: ${budgetWei}\n- Budget: ${budget} BNB`,
+          `data: bid(uint256,uint8,uint256)\n- maxPrice wei: ${priceWei}\n- 最高价：${priceWei ? formatPrice(priceWei) : ""} BNB/枚\n- sourceIndex: ${sourceIndex}\n- 来源：${sourceName}\n- agentId: ${agentLine}\n- agentId 说明：真实 Agent ID 使用 NFT token ID，测试网替身按上面的规则确认。8004 填官方 Identity Registry 的编号，并且这个钱包必须是 ownerOf(agentId) 或 getAgentWallet(agentId)。同一来源的同一个 agentId 只能出一笔。\n- value wei: ${budgetWei}\n- 预算：${budget} BNB`,
+          `data: bid(uint256,uint8,uint256)\n- maxPrice wei: ${priceWei}\n- Limit: ${priceWei ? formatPrice(priceWei) : ""} BNB/token\n- sourceIndex: ${sourceIndex}\n- Source: ${sourceName}\n- agentId: ${agentLine}\n- Use the NFT token ID for a real Agent ID. For a testnet stand-in, verify the ID as described above. For ERC-8004, use the official Identity Registry ID. This wallet must be ownerOf(agentId) or getAgentWallet(agentId). Each ID can bid once per source.\n- value wei: ${budgetWei}\n- Budget: ${budget} BNB`,
         )
         : phase === "ready"
           ? t(
@@ -689,6 +705,8 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
   }
 
   const failed = phase === "failed";
+  const marketing = snap?.vaultFactory === ZERO;
+  const sceneLabels = SCENES.map((label, i) => marketing && i === 3 ? t("发射与交易税", "Launch and trading tax") : label);
   const estimate = quoteLine(snap, budgetWei, priceWei, clearingNow);
 
   const budgetNote = noteBudget(budget);
@@ -713,6 +731,7 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
           </nav>
         </div>
         <span className="top-meta">
+          {snap?.rostered && <span className="meta-line">{t("名单场", "Wallet roster required")}</span>}
           {snap?.sources.some((item) => item.standIn) ? <span className="meta-line"><Zh text={t("测试网 Agent ID 为替身", "Testnet Agent ID is a stand-in")} /></span> : null}
           <span className="meta-line network-label">{localFork ? <Zh text={t("本地分叉，不是测试网", "Local fork")} /> : t("BSC 测试网", "BSC Testnet")}</span>
           {block > 0n && <span className="meta-line">{t("区块 ", "Block ")}{groupFull(block)}</span>}
@@ -818,8 +837,8 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
                         <div className="result-row"><span>{t("入池 BNB", "Pool funding")}</span><b>{formatBnb(snap.poolQuote)} BNB</b></div>
                         {showToken && snap.token !== ZERO && <Addr label={t("代币", "Token")} value={snap.token} local={!!localFork} />}
                         {showPool && snap.pool !== ZERO && <Addr label={t("池子", "Pool")} value={snap.pool} local={!!localFork} swap={snap.token !== ZERO && !localFork ? pancakeSwapLink(snap.token) : ""} />}
-                        {vault && vault !== ZERO && <Addr label={t("金库", "Vault")} value={vault} local={!!localFork} />}
-                        {vaultBal !== null && <div className="result-row"><span>{t("金库余额", "Vault balance")}</span><b>{formatBnb4(vaultBal)} BNB</b></div>}
+                        {!marketing && vault && vault !== ZERO && <Addr label={t("金库", "Vault")} value={vault} local={!!localFork} />}
+                        {!marketing && vaultBal !== null && <div className="result-row"><span>{t("金库余额", "Vault balance")}</span><b>{formatBnb4(vaultBal)} BNB</b></div>}
                       </div>
                     ) : (
                       <>
@@ -865,9 +884,9 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
                       ))}
                     </div>
                     <label htmlFor="agent">{t("代理编号", "Agent ID")}</label>
-                    {sourceTag(snap.sources[sourceIndex]?.sourceId ?? "") === "8004" ? (
+                    {snap.sources[sourceIndex] && !snap.sources[sourceIndex].standIn ? (
                       <div className={phase === "open" ? "window" : "window ro"}>
-                        <input id="agent" required={publicTestnet && phase === "open"} maxLength={78} value={agentIdInput} readOnly={phase !== "open"} inputMode="numeric" autoComplete="off" spellCheck={false} placeholder={t("你在 ERC-8004 登记的编号", "Your registered ERC-8004 ID")} onChange={(e) => setAgentIdInput(e.target.value.replace(/[^\d]/g, ""))} />
+                        <input id="agent" required={publicTestnet && phase === "open"} maxLength={78} value={agentIdInput} readOnly={phase !== "open"} inputMode="numeric" autoComplete="off" spellCheck={false} placeholder={t("链上身份 token ID", "On-chain identity token ID")} onChange={(e) => setAgentIdInput(e.target.value.replace(/[^\d]/g, ""))} />
                       </div>
                     ) : (
                       <p className="id-lock" id="agent">{t("按钱包地址自动识别", "Detected from wallet address")}<i>{t("只读", "Read only")}</i></p>
@@ -907,7 +926,7 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
             <div className="col-chart">
               {demoOn && scene === 5 ? (
                 <PriceComparison data={why} />
-              ) : demoOn && scene === 3 && phase === "done" ? (
+              ) : demoOn && scene === 3 && phase === "done" && !marketing ? (
                 <SettlementSummary price={snap.clearing} proceeds={snap.poolQuote} vault={vaultBal} />
               ) : failed ? (
                 <FundingProgress raised={raised} eligible={snap.previewOk ? snap.previewQuote : 0n} minimum={snap.minPoolQuote} />
@@ -954,7 +973,11 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
                 <li><span>{t("出售", "For sale")}</span><span>{t("500,000 枚", "500,000 tokens")}</span></li>
                 <li><span>{t("入池代币", "Pool tokens")}</span><span>{t("500,000 枚", "500,000 tokens")}</span></li>
                 <li><span>{t("买入税 / 卖出税", "Buy / sell tax")}</span><span>3% / 3%</span></li>
+                {marketing && <li><span>{t("税款分配", "Tax allocation")}</span><span>{t("100% 付给创建者用于营销", "100% to the creator for marketing")}</span></li>}
               </ul>
+              {marketing && snap.marketingRecipient && snap.marketingRecipient !== ZERO && (
+                <Addr label={t("营销收款人", "Marketing recipient")} value={snap.marketingRecipient} local={localFork} />
+              )}
               <BidTable rows={snap.bids} phase={phase} clearing={clearingNow} />
             </div>
             </div>
@@ -964,11 +987,11 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
       {demoOn && (
         <nav className="demo-bar" aria-label={t("演示导航", "Demo navigation")}>
           <div className="scene-track" role="group" aria-label={t("跳转到演示场景", "Jump to a demo scene")}>
-            {SCENES.map((text, index) => <button type="button" key={text} aria-label={t(`第 ${index + 1} 幕，${text}`, `Scene ${index + 1}: ${text}`)}
+            {sceneLabels.map((text, index) => <button type="button" key={index} aria-label={t(`第 ${index + 1} 幕，${text}`, `Scene ${index + 1}: ${text}`)}
               aria-current={scene === index ? "step" : undefined} className={scene === index ? "on" : ""} disabled={demoState === "missing"}
               onClick={() => setScene(index)}>{String(index + 1).padStart(2, "0")}</button>)}
           </div>
-          <p aria-live="polite">{demoState === "missing" ? t("还没有演示场。先跑演示命令。", "Run the demo setup to create the auctions.") : t(`第 ${scene + 1} / ${SCENES.length} 幕 ${SCENES[scene]}`, `${scene + 1} / ${SCENES.length}  ${SCENES[scene]}`)}</p>
+          <p aria-live="polite">{demoState === "missing" ? t("还没有演示场。先跑演示命令。", "Run the demo setup to create the auctions.") : t(`第 ${scene + 1} / ${SCENES.length} 幕 ${sceneLabels[scene]}`, `${scene + 1} / ${SCENES.length}  ${sceneLabels[scene]}`)}</p>
           <div>
             <button type="button" onClick={() => setScene((n) => Math.max(0, n - 1))} disabled={demoState === "missing" || scene === 0}>{t("上一幕", "Back")}</button>
             <button type="button" className="next" onClick={() => setScene((n) => Math.min(SCENES.length - 1, n + 1))} disabled={demoState === "missing" || scene === SCENES.length - 1}>{t("下一幕", "Next")}</button>
@@ -1168,10 +1191,10 @@ function groupFull(value: bigint): string {
 }
 
 function sameSnap(a: Snap, b: Snap) {
-  if (a.maxBids !== b.maxBids || a.minSettleGas !== b.minSettleGas) return false;
+  if (a.maxBids !== b.maxBids || a.rostered !== b.rostered || a.minSettleGas !== b.minSettleGas) return false;
   if (a.status !== b.status || a.floor !== b.floor || a.clearing !== b.clearing || a.softCap !== b.softCap || a.minPoolQuote !== b.minPoolQuote) return false;
   if (a.start !== b.start || a.end !== b.end || a.token !== b.token || a.pool !== b.pool || a.poolQuote !== b.poolQuote) return false;
-  if (a.vaultFactory !== b.vaultFactory || a.previewQuote !== b.previewQuote) return false;
+  if (a.vaultFactory !== b.vaultFactory || a.marketingRecipient !== b.marketingRecipient || a.previewQuote !== b.previewQuote) return false;
   if (a.previewOk !== b.previewOk || a.previewPrice !== b.previewPrice || a.bids.length !== b.bids.length) return false;
   if (a.sources.length !== b.sources.length) return false;
   if (a.sources.some((item, i) => item.sourceId !== b.sources[i].sourceId || item.standIn !== b.sources[i].standIn)) return false;

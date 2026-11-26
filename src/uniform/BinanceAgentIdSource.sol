@@ -4,16 +4,11 @@ pragma solidity ^0.8.26;
 import {IAgentIdentitySource} from "./IAgentIdentitySource.sol";
 import {AgentIdentityAddresses} from "./AgentIdentityAddresses.sol";
 
-/// @notice SPACE ID Agent ID（symbol AI）上实际能用的余额视图。
-///         主网 `0x60B9262456dE011F7d15a54CdD8c48bAaa8B022F` 实现了 `balanceOf`。
-///         `supportsInterface(0x780e9d63)` 为 false，`tokenOfOwnerByIndex` 会 revert。
 interface IAgentIdNft {
+    function ownerOf(uint256 tokenId) external view returns (address);
     function balanceOf(address owner) external view returns (uint256);
 }
 
-/// @notice 余额大于 0 才是代理。能枚举时 agentId 取 `tokenOfOwnerByIndex(account, 0)`，
-///         否则取 `uint160(account)`。申报的 agentId 必须等于这个值。
-///         NFT 地址在构造时固定。不是主网真合约时 `standIn()` 为 true。
 contract BinanceAgentIdSource is IAgentIdentitySource {
     bytes32 public constant SOURCE_ID = keccak256("binance-agent-id");
 
@@ -28,21 +23,24 @@ contract BinanceAgentIdSource is IAgentIdentitySource {
         standIn = nft_ != AgentIdentityAddresses.AGENT_ID_MAINNET;
     }
 
+    /// @notice Production bids identify the NFT by its ERC-721 token ID.
     function verify(address account, uint256 agentId) external view returns (bool ok, bytes32 sourceId) {
         sourceId = SOURCE_ID;
         if (account == address(0)) return (false, sourceId);
+        try nft.ownerOf(agentId) returns (address owner) {
+            return (owner == account, sourceId);
+        } catch {}
+        if (!standIn || block.chainid != 97) return (false, sourceId);
+
+        // Historical testnet stand-ins may expose only balanceOf (or optional enumeration).
         try nft.balanceOf(account) returns (uint256 balance) {
             if (balance == 0) return (false, sourceId);
         } catch {
             return (false, sourceId);
         }
-        ok = agentId == _canonicalId(account);
-    }
-
-    function _canonicalId(address account) internal view returns (uint256) {
-        (bool success, bytes memory data) = address(nft)
+        (bool enumerates, bytes memory result) = address(nft)
             .staticcall(abi.encodeWithSignature("tokenOfOwnerByIndex(address,uint256)", account, uint256(0)));
-        if (success && data.length >= 32) return abi.decode(data, (uint256));
-        return uint160(account);
+        if (enumerates && result.length == 32) return (abi.decode(result, (uint256)) == agentId, sourceId);
+        return (uint160(account) == agentId, sourceId);
     }
 }

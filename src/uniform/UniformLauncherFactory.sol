@@ -5,28 +5,43 @@ import {LibClone} from "solady/utils/LibClone.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
 import {LauncherFactoryBase} from "src/flap/LauncherFactoryBase.sol";
 import {LauncherDataSchema, FieldDescriptor} from "src/flap/IVaultSchemas.sol";
+import {IFlapNamePolicy} from "./IFlapNamePolicy.sol";
 import {UniformLauncher, LaunchConfig} from "./UniformLauncher.sol";
 
 contract UniformLauncherFactory is LauncherFactoryBase {
     address public immutable beacon;
     address public immutable vaultFactory;
+    IFlapNamePolicy public immutable namePolicy;
 
     event UniformLauncherCreated(address indexed launcher, address indexed creator, bytes32 salt);
     event FlapLauncherImplementationUpgraded(address implementation);
 
     error ZeroAddress();
+    error InvalidNamePolicy();
+    error ScamNameOrSymbol();
+    error NameScreenUnavailable();
 
-    constructor(address vaultFactory_) {
-        if (vaultFactory_ == address(0)) revert ZeroAddress();
+    constructor(address vaultFactory_, address namePolicy_) {
+        if (namePolicy_.code.length == 0) revert InvalidNamePolicy();
         vaultFactory = vaultFactory_;
+        namePolicy = IFlapNamePolicy(namePolicy_);
         beacon = address(new UpgradeableBeacon(address(this), address(new UniformLauncher())));
     }
 
     function _newLauncher(address creator, bytes calldata data) internal override returns (address launcher) {
         LaunchConfig memory config = abi.decode(data, (LaunchConfig));
+        if (_blocked(config.name) || _blocked(config.symbol)) revert ScamNameOrSymbol();
         launcher = LibClone.deployDeterministicERC1967BeaconProxy(beacon, config.salt);
         UniformLauncher(payable(launcher)).initialize{value: msg.value}(_getHub(), creator, vaultFactory, config);
         emit UniformLauncherCreated(launcher, creator, config.salt);
+    }
+
+    function _blocked(string memory value) private view returns (bool) {
+        try namePolicy.isScamWord(value) returns (bool blocked) {
+            return blocked;
+        } catch {
+            revert NameScreenUnavailable();
+        }
     }
 
     function upgradeVaultImplementation(address newImplementation) external override onlyGuardian {
