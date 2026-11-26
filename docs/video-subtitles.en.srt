@@ -1,86 +1,87 @@
 1
 00:00:00,000 --> 00:00:05,000
-Suppose the founder bids just before you.
-Same budget.
+Fixed-price presale?
+The founder picks the price.
 
 2
-00:00:05,000 --> 00:00:12,000
-On the curve, they get more tokens.
-Here, you both get 125,000.
+00:00:05,000 --> 00:00:11,000
+On the curve, the founder bids just before you.
+Same budget, more tokens.
 
 3
-00:00:12,000 --> 00:00:18,000
+00:00:11,000 --> 00:00:18,000
+In our auction, the bids set one price.
+You both get 125,000 tokens.
+
+4
+00:00:18,000 --> 00:00:24,000
 Each identity bids once. Our public testnet
 bidder used a stand-in Agent ID.
 
-4
-00:00:18,000 --> 00:00:22,000
+5
+00:00:24,000 --> 00:00:28,000
 Our Factory created this Launcher.
 
-5
-00:00:22,000 --> 00:00:26,000
+6
+00:00:28,000 --> 00:00:32,000
 One bidder committed 4.45 test BNB.
 
-6
-00:00:26,000 --> 00:00:29,000
+7
+00:00:32,000 --> 00:00:35,000
 After close, anyone can settle.
 
-7
-00:00:29,000 --> 00:00:33,000
+8
+00:00:35,000 --> 00:00:39,000
 That call launches through Flap if the pool
 qualifies.
 
-8
-00:00:33,000 --> 00:00:36,000
+9
+00:00:39,000 --> 00:00:42,000
 Otherwise, bidders can claim full refunds.
 
-9
-00:00:36,000 --> 00:00:44,000
-On this local nine-bid book, I set a
-one-BNB budget and try two price limits.
-
 10
-00:00:44,000 --> 00:00:51,000
+00:00:42,000 --> 00:00:50,000
+I give my AI agent one BNB and two price limits.
+It previews both against the local bids.
+
+11
+00:00:50,000 --> 00:00:57,000
 At the higher limit, my one BNB buys fifty
 thousand tokens.
 
-11
-00:00:51,000 --> 00:00:58,000
-I pay the shared clearing price shown here,
-below my maximum.
-
 12
-00:00:58,000 --> 00:01:06,000
+00:00:57,000 --> 00:01:04,000
+The agent prepares an unsigned bid.
+I review it before signing.
+
+13
+00:01:04,000 --> 00:01:12,000
 Now I lower only my limit. The clearing
 price stays at 0.00002.
 
-13
-00:01:06,000 --> 00:01:12,000
+14
+00:01:12,000 --> 00:01:18,000
 My bid gets zero tokens and the whole BNB
 back.
 
-14
-00:01:12,000 --> 00:01:19,000
+15
+00:01:18,000 --> 00:01:25,000
 Back on public testnet, that single bid
 funded a real launch.
 
-15
-00:01:19,000 --> 00:01:23,000
+16
+00:01:25,000 --> 00:01:29,000
 Settlement opened a PancakeSwap V2 pool
 
-16
-00:01:23,000 --> 00:01:28,000
+17
+00:01:29,000 --> 00:01:34,000
 with half a million UNIFORM and 4.45 test
 BNB.
 
-17
-00:01:28,000 --> 00:01:35,000
+18
+00:01:34,000 --> 00:01:41,000
 Here is the fifth transaction. The bidder
 claimed the other half million tokens.
-
-18
-00:01:35,000 --> 00:01:41,000
-You can verify that transfer on BscScan.
 
 19
 00:01:41,000 --> 00:01:45,000
