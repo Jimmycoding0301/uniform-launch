@@ -6,6 +6,8 @@ These are rehearsal timings for the five-slide deck. Speak the English column th
 
 Open the deck at slide 1 and the offline cue clock on a second screen. Press Space to start once slide 1 is visible. Run `bash script/demo.sh` in the submitted checkout and open `/?demo=1&scene=3` on the address it prints. Locate the two price buttons under **用 1 BNB 试两种限价**. Each sets the budget to 1 BNB automatically. Open the public settlement and claim in separate tabs. [Settlement](https://testnet.bscscan.com/tx/0x56d87f21c4dbd55227d9e619986555f150c7da5ddec5db663b201a9b9985ae20) · [Claim](https://testnet.bscscan.com/tx/0x732353fc11a666984971d62c5b7a0016d76775145823938bf515ef776354f27f)
 
+The slide 3 demo link opens port 4417. Use `DEMO_WEB_PORT=4417 bash script/demo.sh` on the presentation machine to enable that link, or switch to the tab you opened at the script's printed address.
+
 For an offline room, download the deck and transaction record in advance. Stay on slide 3 and point to its two displayed outcomes at the browser cues. On slide 4 point to the pool and claim figures. Keep the same timings. [Saved public transaction record](public-testnet-evidence.md) · [Six local-fork screenshots](../qa/submission/README.md)
 
 ## Two minutes
