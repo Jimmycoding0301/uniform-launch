@@ -1,3 +1,4 @@
+import { demoOrigin } from "./demo-origin.mjs";
 import assert from "node:assert/strict";
 import { buildStepPath, formatPrice } from "./src/curve.ts";
 
@@ -72,14 +73,14 @@ for (const [width, height] of [[920, 288], [358, 260], [343, 220]]) {
 }
 console.log("生成的出价标注都不出图、不重叠");
 
-const { chromium } = await import("playwright");
+const { openBrowser } = await import("./test-browser.mjs");
 const { demoBook } = await import("./demo-book.mjs");
 const book = await demoBook();
-const browser = await chromium.launch();
+const browser = await openBrowser();
 const pages = [
-  ["1440", 1440, 900, `http://127.0.0.1:4317/?launcher=${book.open}`],
-  ["390", 390, 844, `http://127.0.0.1:4317/?launcher=${book.open}`],
-  ["done", 1440, 900, `http://127.0.0.1:4317/?launcher=${book.launched}`],
+  ["1440", 1440, 900, `${demoOrigin}/?launcher=${book.open}`],
+  ["390", 390, 844, `${demoOrigin}/?launcher=${book.open}`],
+  ["done", 1440, 900, `${demoOrigin}/?launcher=${book.launched}`],
 ];
 for (const [name, width, height, url] of pages) {
   const page = await browser.newPage({ viewport: { width, height } });

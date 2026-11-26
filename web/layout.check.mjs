@@ -1,10 +1,11 @@
+import { demoOrigin } from "./demo-origin.mjs";
 import assert from "node:assert/strict";
-import { chromium } from "playwright";
+import { openBrowser } from "./test-browser.mjs";
 import { demoBook } from "./demo-book.mjs";
 
 const book = await demoBook();
-const base = process.env.CHART_URL ?? `http://127.0.0.1:4317/?launcher=${book.open}`;
-const browser = await chromium.launch();
+const base = process.env.CHART_URL ?? `${demoOrigin}/?launcher=${book.open}`;
+const browser = await openBrowser();
 
 const desk = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 await desk.goto(base, { waitUntil: "domcontentloaded" });
@@ -84,14 +85,14 @@ const covered = await phone.evaluate(() => {
 });
 assert.deepEqual(covered, [], `被挡住的出价行：${covered.join(" | ")}`);
 const reduced = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" });
-await reduced.goto(`http://127.0.0.1:4317/?launcher=${book.launched}`, { waitUntil: "domcontentloaded" });
+await reduced.goto(`${demoOrigin}/?launcher=${book.launched}`, { waitUntil: "domcontentloaded" });
 await reduced.waitForSelector(".uniform-rect");
 await reduced.waitForTimeout(300);
 const running = await reduced.evaluate(() => document.getAnimations().filter((item) => item.playState === "running").length);
 assert.equal(running, 0, `减少动态后仍有 ${running} 个动画`);
 async function demoGap(width, height) {
   const page = await browser.newPage({ viewport: { width, height } });
-  await page.goto("http://127.0.0.1:4317/?demo=1", { waitUntil: "domcontentloaded" });
+  await page.goto(`${demoOrigin}/?demo=1`, { waitUntil: "domcontentloaded" });
   await page.waitForSelector("button.primary");
   await page.waitForSelector(".demo-bar");
   return page.evaluate(() => {
