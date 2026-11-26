@@ -1,333 +1,118 @@
-import { useEffect, useLayoutEffect, useMemo, useRef, useState, type PointerEvent } from "react";
-import {
-  buildStepPath,
-  easeOut,
-  formatBnb,
-  formatPrice,
-  pathFromPoints,
-  resample,
-  type Bid,
-  type Plot,
-  type Pt,
-} from "./curve";
-import { CURVE_MS, SETTLE_MS } from "./theme";
+import { useId, useLayoutEffect, useMemo, useRef, useState, type KeyboardEvent, type PointerEvent } from "react";
+import { demandChart, formatBnb, formatPrice, type Bid } from "./curve";
 
 type Props = {
   bids: Bid[];
   floor: bigint;
   clearing: bigint | null;
-  failed: boolean;
-  settle: boolean;
-  intro: boolean;
-  reduced: boolean;
   yourPrice: bigint | null;
   hideEmpty?: boolean;
 };
 
-export function PlotStage({ bids, floor, clearing, failed, settle, intro, reduced, yourPrice, hideEmpty }: Props) {
-  const stageRef = useRef<HTMLDivElement>(null);
+export function PlotStage({ bids, floor, clearing, yourPrice, hideEmpty }: Props) {
+  const viewport = useRef<HTMLDivElement>(null);
+  const description = useId();
   const [size, setSize] = useState({ w: 0, h: 0 });
+  const [active, select] = useState<number | null>(null);
   useLayoutEffect(() => {
-    const el = stageRef.current;
+    const el = viewport.current;
     if (!el) return;
-    const apply = () => {
-      const w = Math.floor(el.clientWidth);
-      const h = Math.floor(el.clientHeight);
-      if (w < 40 || h < 40) return;
-      setSize((prev) => (prev.w === w && prev.h === h ? prev : { w, h }));
+    const measure = () => {
+      const w = el.clientWidth, h = el.clientHeight;
+      setSize((old) => w === old.w && h === old.h ? old : { w, h });
     };
-    apply();
-    const observer = new ResizeObserver(apply);
+    measure();
+    const observer = new ResizeObserver(measure);
     observer.observe(el);
     return () => observer.disconnect();
   }, []);
-  const vw = Math.max(size.w, 1);
-  const vh = Math.max(size.h, 1);
-  const target = useMemo(
-    () => buildStepPath(bids, vw, vh, floor, clearing, settle && !failed ? 1 : 0, yourPrice),
-    [bids, floor, clearing, settle, failed, vw, vh, yourPrice],
-  );
-  const ghost = useMemo(
-    () => buildStepPath(bids, vw, vh, floor, clearing, 0, yourPrice),
-    [bids, floor, clearing, vw, vh, yourPrice],
-  );
-  const [shown, setShown] = useState<Plot>(target);
-  const [resting, setResting] = useState(settle && !failed);
-  const shownRef = useRef(target);
-  const targetRef = useRef(target);
-  targetRef.current = target;
-  const svgRef = useRef<SVGSVGElement>(null);
-  const vRef = useRef<SVGLineElement>(null);
-  const tipRef = useRef<HTMLDivElement>(null);
-  const tipLines = useRef<Array<HTMLParagraphElement | null>>([]);
-  const locked = useRef(false);
-  const sawSettle = useRef<boolean | null>(null);
-  const [sweep, setSweep] = useState(false);
-  const [pulse, setPulse] = useState(false);
+  const chart = useMemo(() => demandChart(bids, size.w, size.h, floor, clearing), [bids, size, floor, clearing]);
+  const tier = active === null ? null : chart.tiers[active];
+  const first = chart.tiers[0];
+  const last = chart.tiers.at(-1);
+  const complete = size.w > 35 && size.h > 35;
+  const point = chart.clear;
 
-  useEffect(() => {
-    shownRef.current = shown;
-  }, [shown]);
-
-  useEffect(() => {
-    if (sawSettle.current === null) {
-      sawSettle.current = settle;
+  function inspect(event: PointerEvent<SVGSVGElement>) {
+    if (!first) return;
+    const bounds = event.currentTarget.getBoundingClientRect();
+    const x = event.clientX - bounds.left, y = event.clientY - bounds.top;
+    if (x < chart.left || x > chart.right || y < chart.top - 6 || y > chart.bottom + 3) {
+      select(null);
       return;
     }
-    if (sawSettle.current || !settle || failed) return;
-    sawSettle.current = true;
-    setPulse(false);
-    const from = shownRef.current;
-    const to = targetRef.current;
-    if (reduced || from.pts.length === 0) {
-      shownRef.current = to;
-      setShown(to);
-      setSweep(true);
-      setResting(true);
-      return;
+    let closest = 0;
+    for (let i = 1; i < chart.tiers.length; i++) {
+      if (Math.abs(x - chart.tiers[i].x) < Math.abs(x - chart.tiers[closest].x)) closest = i;
     }
-    const t0 = performance.now();
-    let frame = 0;
-    const step = (now: number) => {
-      const t = Math.min(1, (now - t0) / SETTLE_MS);
-      const next = mixPlot(from, to, easeOut(t));
-      shownRef.current = next;
-      setShown(next);
-      if (t < 1) frame = requestAnimationFrame(step);
-      else {
-        setSweep(true);
-        setResting(true);
-      }
-    };
-    frame = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(frame);
-  }, [settle, failed, reduced]);
-
-  useEffect(() => {
-    if (settle) return;
-    const from = shownRef.current;
-    if (from.stroke === target.stroke && from.right === target.right && from.bottom === target.bottom && from.reserveY === target.reserveY) return;
-    const resized = Math.abs(from.bottom - target.bottom) > 1 || Math.abs(from.right - from.left - (target.right - target.left)) > 1;
-    if (reduced || from.pts.length === 0 || intro || resized) {
-      shownRef.current = target;
-      setShown(target);
-      return;
-    }
-    const t0 = performance.now();
-    let frame = 0;
-    const step = (now: number) => {
-      const t = Math.min(1, (now - t0) / CURVE_MS);
-      const next = mixPlot(from, target, easeOut(t));
-      shownRef.current = next;
-      setShown(next);
-      if (t < 1) frame = requestAnimationFrame(step);
-    };
-    frame = requestAnimationFrame(step);
-    return () => cancelAnimationFrame(frame);
-  }, [target, settle, reduced, intro]);
-
-  useEffect(() => {
-    if (!intro && !settle) setPulse(true);
-  }, [intro, settle]);
-
-  function pointOf(event: PointerEvent<SVGSVGElement>) {
-    const svg = svgRef.current;
-    if (!svg) return null;
-    const pt = svg.createSVGPoint();
-    pt.x = event.clientX;
-    pt.y = event.clientY;
-    const ctm = svg.getScreenCTM();
-    if (!ctm) return null;
-    return pt.matrixTransform(ctm.inverse());
+    select(closest);
   }
 
-  function hideTip() {
-    locked.current = false;
-    if (tipRef.current) {
-      tipRef.current.style.transitionDuration = "100ms";
-      tipRef.current.style.opacity = "0";
-    }
-    if (vRef.current) vRef.current.style.opacity = "0";
+  function onKeyDown(event: KeyboardEvent<SVGSVGElement>) {
+    if (!first || !["ArrowLeft", "ArrowRight", "Escape"].includes(event.key)) return;
+    event.preventDefault();
+    event.stopPropagation();
+    if (event.key === "Escape") select(null);
+    else select((i) => Math.max(0, Math.min(chart.tiers.length - 1, (i ?? -1) + (event.key === "ArrowRight" ? 1 : -1))));
   }
 
-  function showTip(x: number) {
-    const plot = shownRef.current;
-    const tier = plot.tiers.find((item) => x >= item.x1 && x <= item.x2);
-    if (!tier || !vRef.current || !tipRef.current) {
-      if (!locked.current) hideTip();
-      return null;
-    }
-    const mid = Math.round((tier.x1 + tier.x2) / 2) + 0.5;
-    vRef.current.setAttribute("x1", String(mid));
-    vRef.current.setAttribute("x2", String(mid));
-    vRef.current.setAttribute("y1", String(plot.top));
-    vRef.current.setAttribute("y2", String(plot.bottom));
-    vRef.current.style.opacity = "1";
-    const lines = [`限价 ${formatPrice(tier.price)} BNB/枚`, `${tier.count} 笔`, `${formatBnb(tier.budget)} BNB`];
-    lines.forEach((line, i) => {
-      if (tipLines.current[i]) tipLines.current[i]!.textContent = line;
-    });
-    const left = Math.min(Math.max(plot.left, mid + 8), plot.right - 140);
-    tipRef.current.style.left = `${left}px`;
-    tipRef.current.style.top = `${Math.max(8, tier.y - 72)}px`;
-    tipRef.current.style.transitionDuration = "140ms";
-    tipRef.current.style.opacity = "1";
-    return tier;
-  }
-
-  function onMove(event: PointerEvent<SVGSVGElement>) {
-    if (window.matchMedia("(pointer: coarse)").matches) return;
-    const p = pointOf(event);
-    const plot = shownRef.current;
-    if (!p || p.x < plot.left || p.x > plot.right || p.y < plot.top || p.y > plot.bottom) {
-      hideTip();
-      return;
-    }
-    showTip(p.x);
-  }
-
-  function onChartClick(event: PointerEvent<SVGSVGElement>) {
-    if (!window.matchMedia("(pointer: coarse)").matches) return;
-    const p = pointOf(event);
-    const plot = shownRef.current;
-    if (!p || p.x < plot.left || p.x > plot.right) {
-      hideTip();
-      return;
-    }
-    if (locked.current) {
-      hideTip();
-      return;
-    }
-    const tier = showTip(p.x);
-    locked.current = Boolean(tier);
-  }
-
-  function onLeave() {
-    if (locked.current) return;
-    hideTip();
-  }
-
-  const plot = resting ? ghost : shown;
-  const hair = (n: number) => Math.round(n) + 0.5;
-  const priceIn = yourPrice != null && clearing != null && yourPrice >= clearing;
-  const reserveLabelY = Math.min(plot.bottom - 4, Math.max(14, plot.reserveY + (plot.clearingY != null && Math.abs(plot.clearingY - plot.reserveY) < 18 ? 14 : -6)));
   return (
-    <div className="stage" ref={stageRef}>
-      <svg
-        ref={svgRef}
-        className="plot"
-        width={vw}
-        height={vh}
-        viewBox={`0 0 ${vw} ${vh}`}
-        preserveAspectRatio="xMinYMin meet"
-        onPointerMove={onMove}
-        onPointerLeave={onLeave}
-        onClick={onChartClick}
-        role="img"
-        aria-label="限价台阶和清算价"
-      >
-        <defs>
-          <linearGradient id="demand-fill" x1="0" y1="0" x2="0" y2="1" gradientUnits="objectBoundingBox">
-            <stop offset="0%" className="demand-top" /><stop offset="100%" className="demand-bottom" />
-          </linearGradient>
-        </defs>
-        <rect className="plot-bg" x="0" y="0" width={vw} height={vh} />
-        {[0, 1, 2, 3, 4].map((part) => {
-          const x = hair(plot.left + (plot.right - plot.left) * part / 4);
-          return <line key={part} className="plot-guide" x1={x} x2={x} y1={plot.top} y2={plot.bottom} />;
-        })}
-        {plot.ticks.map((tick) => (
-          <line key={`g-${tick.y}`} className="grid-line" x1={hair(plot.left)} x2={hair(plot.right)} y1={hair(tick.y)} y2={hair(tick.y)} />
-        ))}
-        <line className="baseline" x1={hair(plot.left)} x2={hair(plot.right)} y1={hair(plot.bottom)} y2={hair(plot.bottom)} />
-        {plot.ticks.map((tick) => (
-          <text className="tick y-tick" key={tick.text + tick.y} x={plot.left - 8} y={tick.y + 4} textAnchor="end">
-            {tick.text}
-          </text>
-        ))}
-        <text className="tick unit" x={plot.left - 8} y={12} textAnchor="end">
-          BNB/枚
-        </text>
-        {plot.xTicks.map((tick, index) => {
-          const next = plot.xTicks[index + 1];
-          const crowded = next != null && next.x - tick.x < 84 && tick.x !== plot.left;
-          return (
-            <text className="tick x-tick" key={tick.text + tick.x} x={tick.x} y={crowded ? plot.bottom - 4 : plot.bottom + 16} textAnchor={tick.x === plot.left ? "start" : tick.x > plot.right - 8 ? "end" : "middle"}>
-              {tick.text}
-            </text>
-          );
-        })}
-        <clipPath id="drawClip">
-          <rect className="draw-rect" x="0" y="0" width={vw} height={vh} />
-        </clipPath>
-        <g clipPath={intro && !reduced && !resting ? "url(#drawClip)" : undefined}>
-          {plot.fill && !failed && <path fill="url(#demand-fill)" d={plot.fill} />}
-          {plot.rect && !failed && (
-            <rect className={sweep && !reduced ? "uniform-rect play" : "uniform-rect"} x={plot.rect.x} y={plot.rect.y} width={plot.rect.w} height={Math.max(plot.rect.h, 0)} />
-          )}
-          {failed && plot.stroke && <path className="step failed" d={plot.stroke} />}
-          {!failed && plot.inStroke && <path className={settle ? "step-in ghost" : "step-in"} d={plot.inStroke} />}
-          {!failed && plot.outStroke && <path className="step-out" d={plot.outStroke} />}
-          {!failed && !plot.inStroke && plot.stroke && <path className="step" d={plot.stroke} />}
-        </g>
-        <line className="reserve" x1={hair(plot.left)} x2={hair(plot.right)} y1={hair(plot.reserveY)} y2={hair(plot.reserveY)} />
-        <text className="tick" x={plot.left + 4} y={reserveLabelY}>
-          保留价 {formatPrice(floor)}
-        </text>
-        {plot.yourY != null && (
-          <>
-            <line className={priceIn ? "your-line in" : "your-line"} x1={hair(plot.left)} x2={hair(plot.right)} y1={hair(plot.yourY)} y2={hair(plot.yourY)} />
-            <text className="tick" x={plot.left + 4} y={Math.min(plot.bottom - 4, Math.max(14, plot.yourY <= plot.reserveY ? plot.yourY + 14 : plot.yourY - 6))}>
-              你的限价 {formatPrice(yourPrice ?? 0n)}
-            </text>
-          </>
-        )}
-        {plot.clearingY != null && !failed && (
-          <>
-            <line className="volume" x1={hair(plot.crossX ?? plot.left)} x2={hair(plot.crossX ?? plot.left)} y1={hair(plot.clearingY)} y2={hair(plot.bottom)} />
-            <line className="clear-glow" x1={hair(plot.left)} x2={hair(plot.right)} y1={hair(plot.clearingY)} y2={hair(plot.clearingY)} />
-            <line className="clear-line" x1={hair(plot.left)} x2={hair(plot.right)} y1={hair(plot.clearingY)} y2={hair(plot.clearingY)} />
-            <text className="badge" x={plot.right - 4} y={Math.max(14, plot.clearingY - 8)} textAnchor="end">
-              清算价 {formatPrice(clearing ?? 0n)}
-            </text>
-            <g className={pulse ? "clear-dot once" : "clear-dot"} transform={`translate(${plot.crossX ?? plot.left} ${plot.clearingY})`}>
-              <title>限价达到清算价的预算合计 {formatBnb(plot.filled)} BNB</title>
-              <circle className="dot-ring" r="7" />
-              <circle className="dot-core" r="3" />
-            </g>
-          </>
-        )}
-        <line ref={vRef} className="cross" style={{ opacity: 0 }} />
-      </svg>
-      <div ref={tipRef} className="tip" style={{ opacity: 0 }}>
-        <p ref={(node) => { tipLines.current[0] = node; }} />
-        <p ref={(node) => { tipLines.current[1] = node; }} />
-        <p ref={(node) => { tipLines.current[2] = node; }} />
+    <figure className="demand-figure">
+      <div className="demand-heading">
+        <span>限价 <b>BNB/枚</b></span><span>节点为报价档位，连线表示趋势</span>
       </div>
-      {bids.length === 0 && !hideEmpty && <div className="empty">还没有出价</div>}
-    </div>
+      <div className="stage demand-viewport" ref={viewport}>
+        {complete && (
+          <svg className="plot demand-plot" width={size.w} height={size.h} viewBox={`0 0 ${size.w} ${size.h}`}
+            role="group" aria-label="需求曲线，可用左右键查看报价档" aria-describedby={description} tabIndex={first ? 0 : -1}
+            onPointerMove={(e) => { if (e.pointerType !== "touch") inspect(e); }} onPointerDown={inspect}
+            onPointerLeave={() => select(null)} onFocus={() => select(0)} onBlur={() => select(null)} onKeyDown={onKeyDown}>
+            {chart.yTicks.map((tick) => (
+              <g key={tick.value.toString()}>
+                <line className="demand-grid" x1={chart.left} x2={chart.right} y1={tick.position} y2={tick.position} />
+                <text className="tick y-tick" x={chart.left - 9} y={tick.position + 4} textAnchor="end">{tick.text}</text>
+              </g>
+            ))}
+            {chart.xTicks.map((tick) => (
+              <text key={tick.value.toString()} className="tick x-tick" x={tick.position} y={chart.bottom + 16}
+                textAnchor={tick.position === chart.left ? "start" : tick.position === chart.right ? "end" : "middle"}>{tick.text}</text>
+            ))}
+            {first && last && (
+              <>
+                <line className={first === last ? "demand-curve" : "first-tier"} x1={chart.left} x2={first.x} y1={first.y} y2={first.y} />
+                <path className="demand-curve" d={chart.stroke} />
+                {chart.tiers.map((t) => (
+                  <circle key={t.price.toString()} className={t === tier ? "tier-node active" : "tier-node"} cx={t.x} cy={t.y} r={t === tier ? 4 : 2.6} />
+                ))}
+              </>
+            )}
+            {point && (
+              <g className="clear-point" data-budget={formatBnb(chart.filled)} data-price={formatPrice(clearing!)}>
+                <line className="clear-guide" x1={point.x} x2={point.x} y1={point.y + 6} y2={Math.max(point.y + 6, chart.bottom)} />
+                <circle className="clear-ring" cx={point.x} cy={point.y} r={5.5} />
+                <circle className="clear-core" cx={point.x} cy={point.y} r={2} />
+              </g>
+            )}
+          </svg>
+        )}
+        {tier && (
+          <div className="tier-detail" role="status" style={{
+            left: Math.max(4, Math.min(tier.x - 62, size.w - 152)),
+            top: Math.max(0, tier.y > 76 ? tier.y - 72 : Math.min(size.h - 72, tier.y + 12)),
+          }}>
+            <strong>限价 {formatPrice(tier.price)}</strong>
+            <span>本档 {tier.count} 笔，共 {formatBnb(tier.budget)} BNB</span>
+            <span>累计 {formatBnb(tier.cumulative)} BNB</span>
+          </div>
+        )}
+        {!first && !hideEmpty && <div className="empty">还没有出价</div>}
+      </div>
+      <figcaption className="demand-caption" id={description}>
+        <span className="clear-key"><i aria-hidden="true" />过线预算 <b>{point ? `${formatBnb(chart.filled)} BNB` : "—"}</b></span>
+        <span>保留价 <b>{formatPrice(floor)}</b></span>
+        {yourPrice !== null && yourPrice > 0n && <span>你的限价 <b>{formatPrice(yourPrice)}</b></span>}
+        <span className="budget-axis">累计预算（BNB）</span>
+      </figcaption>
+    </figure>
   );
 }
-
-function mixPlot(from: Plot, to: Plot, t: number): Plot {
-  const pts =
-    from.pts.length === to.pts.length && from.pts.length > 0
-      ? from.pts.map((p, i) => ({ x: p.x + (to.pts[i].x - p.x) * t, y: p.y + (to.pts[i].y - p.y) * t }))
-      : (() => {
-          const a = resample(from.pts, 48);
-          const b = resample(to.pts, 48);
-          return a.map((p, i) => ({ x: p.x + (b[i].x - p.x) * t, y: p.y + (b[i].y - p.y) * t }));
-        })();
-  const painted = pathFromPoints(pts, to.bottom);
-  const ly = (a: number | null, b: number | null) => (a == null || b == null ? b : a + (b - a) * t);
-  return {
-    ...to,
-    pts,
-    stroke: painted.stroke,
-    fill: painted.fill,
-    clearingY: ly(from.clearingY, to.clearingY),
-    crossX: ly(from.crossX, to.crossX),
-    reserveY: from.reserveY + (to.reserveY - from.reserveY) * t,
-  };
-}
-
