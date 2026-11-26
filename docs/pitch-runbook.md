@@ -4,6 +4,8 @@
 
 主讲用 PPT 的第 1–6 页。第 7 页的四笔资金流和第 8 页的 Flap 界面用于答辩。
 
+提前打开[公开试算](https://jimmycoding0301.github.io/uniform-launch/?demo=1&scene=3&lang=en)、[真实拍卖](https://jimmycoding0301.github.io/uniform-launch/?network=testnet&launcher=0xADD4e8b95B194D457611b4754e53c45A6E2A41d6&lang=en)和发射、领取回执。公开试算使用九笔示例订单，无需钱包。展示代理生成的未签名交易时，可打开页面下方的 MCP 实测结果。
+
 | 时间 | 操作 | 英文开口 | 中文提词 |
 | --- | --- | --- | --- |
 | 00:00–00:08 | 第 1 页 | Why should two people with the same budget pay different prices for the same launch? | 同样的预算，为什么开盘时两个人要付不同的单价？ |
@@ -13,7 +15,7 @@
 | 00:40–00:50 | 第 3 页，指结果 | At the deadline, Flap launches the token if the pool qualifies. If the auction falls short, bidders can reclaim all their principal. | 达到入池条件就通过 Flap 发币建池。否则所有人可领回全部出价本金。 |
 | 00:50–00:58 | 切浏览器，点较低限价 | Here’s the agent preview. With one BNB and the lower limit, I get zero tokens. My bid budget comes back. | 看代理预览。1 BNB 预算选较低限价，成交零枚，预算全退。 |
 | 00:58–01:05 | 点较高限价 | Same budget, higher limit. This preview now fills fifty thousand tokens. | 同样预算，提高限价，现在显示成交五万枚。 |
-| 01:05–01:16 | 复制指令，切回第 4 页 | The agent can prepare the transaction. I still choose the limit and approve the signature. | 代理可以生成未签名交易，用户自己决定限价并确认签名。 |
+| 01:05–01:16 | 指向 MCP 实测链接，切回第 4 页 | The agent can prepare the transaction. I still choose the limit and approve the signature. | 代理可以生成未签名交易，用户自己决定限价并确认签名。 |
 | 01:16–01:26 | 第 5 页，点发射回执 | Here’s the public proof. The auction sent four point four five testnet BNB and half the supply to Pancake Swap. | 这是公开链上证据。4.45 tBNB 和一半代币进入 PancakeSwap 池。 |
 | 01:26–01:39 | 点领取回执，再切真实拍卖页 | The second receipt confirms the bidder received the other half. The auction page shows the same clearing price and the tax recipient. | 领取回执确认买家拿到另一半。拍卖页展示统一清算价和交易税收款人。 |
 | 01:39–01:48 | 第 6 页，指规模和权限 | We cap each auction at a hundred and twenty-eight bids. Mainnet uses Agent ID and a fixed wallet roster. | 每场最多 128 笔。主网用 Agent ID 和固定钱包名单。 |

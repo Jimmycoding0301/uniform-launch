@@ -11,6 +11,7 @@
 | Repository | [Public repository](https://github.com/Jimmycoding0301/uniform-launch) |
 | Website | [Public testnet website](https://jimmycoding0301.github.io/uniform-launch/?lang=en) |
 | Demo Video | [2:12 demo video](https://jimmycoding0301.github.io/uniform-launch/demo-video.html) · [Direct MP4](https://jimmycoding0301.github.io/uniform-launch/demo.mp4) |
+| Agent preview | [Try two bid limits in the browser](https://jimmycoding0301.github.io/uniform-launch/?demo=1&scene=3&lang=en) · [Recorded MCP responses](../qa/submission/agent-preview.json) |
 
 ## English description
 

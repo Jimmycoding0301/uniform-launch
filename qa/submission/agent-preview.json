@@ -1,22 +1,69 @@
 {
-  "source": "node agent/mcp.mjs (stdio) + web/public/demo.json",
-  "commit": "da843af67d5a9c52570553b6f208555a0a13d406",
-  "timeUTC": "2026-11-26T17:16:02.027682+00:00",
-  "rpc": "http://127.0.0.1:18549",
-  "launcher": "0x0c84220140D15b7A902b3fE2370b29Cd812D4C9d",
+  "source": "Uniform Launch MCP server over stdio",
+  "sourceBlobs": {
+    "agent/mcp.mjs": "9e74b2ac22a84cfa16a7d2f3fbe0c3aacac3b508",
+    "agent/core.mjs": "0c7f42bd0771ad6404b4747afccbff7339f8db86",
+    "shared/settle.mjs": "7c4e9cc6d1775f9f1125794ce21dbbad32ae3e41"
+  },
+  "observedAtUTC": "2026-11-26T20:43:45.250Z",
   "chainId": 97,
-  "blockReadAfterPreview": 144918277,
+  "statusSource": "Public BSC Testnet",
+  "previewSource": "Local Anvil fork with nine recorded bids",
+  "liveStatus": {
+    "request": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "method": "tools/call",
+      "params": {
+        "name": "status",
+        "arguments": {
+          "rpc": "https://bsc-testnet-dataseed.bnbchain.org",
+          "launcher": "0xADD4e8b95B194D457611b4754e53c45A6E2A41d6"
+        }
+      }
+    },
+    "response": {
+      "jsonrpc": "2.0",
+      "id": 1,
+      "result": {
+        "content": [
+          {
+            "type": "text",
+            "text": "{\"ok\":true,\"phase\":\"已发射\",\"block\":\"145045553\",\"remainingBlocks\":\"0\",\"floorPrice\":\"0.000008\",\"clearingPrice\":\"0.0000089\",\"bidCount\":1,\"seatsLeft\":127,\"minPoolQuote\":\"4.335714285714285715\",\"sources\":[{\"index\":0,\"address\":\"0x5aBdA470ed6A8dad942F6ff125b172c4274A7d32\"}]}"
+          }
+        ],
+        "isError": false
+      }
+    },
+    "value": {
+      "ok": true,
+      "phase": "已发射",
+      "block": "145045553",
+      "remainingBlocks": "0",
+      "floorPrice": "0.000008",
+      "clearingPrice": "0.0000089",
+      "bidCount": 1,
+      "seatsLeft": 127,
+      "minPoolQuote": "4.335714285714285715",
+      "sources": [
+        {
+          "index": 0,
+          "address": "0x5aBdA470ed6A8dad942F6ff125b172c4274A7d32"
+        }
+      ]
+    }
+  },
   "calls": [
     {
       "request": {
         "jsonrpc": "2.0",
-        "id": 1,
+        "id": 2,
         "method": "tools/call",
         "params": {
           "name": "simulate_bid",
           "arguments": {
-            "rpc": "http://127.0.0.1:18549",
-            "launcher": "0x0c84220140D15b7A902b3fE2370b29Cd812D4C9d",
+            "rpc": "http://127.0.0.1:18607",
+            "launcher": "0x1F9472743E3758edbDE59Ef0c4ef3F39B32B16A2",
             "budget": "1",
             "maxPrice": "0.00003"
           }
@@ -24,12 +71,12 @@
       },
       "response": {
         "jsonrpc": "2.0",
-        "id": 1,
+        "id": 2,
         "result": {
           "content": [
             {
               "type": "text",
-              "text": "{\"ok\":true,\"clearingPrice\":\"0.00002\",\"tokens\":\"50000\",\"spend\":\"1\",\"refund\":\"0\",\"meetsMinPool\":true,\"poolQuote\":\"10\"}"
+              "text": "{\"ok\":true,\"clearingPrice\":\"0.00002\",\"tokens\":\"50000\",\"spend\":\"1\",\"refund\":\"0\",\"meetsMinPool\":true,\"poolQuote\":\"10.000000000000000001\"}"
             }
           ],
           "isError": false
@@ -42,19 +89,19 @@
         "spend": "1",
         "refund": "0",
         "meetsMinPool": true,
-        "poolQuote": "10"
+        "poolQuote": "10.000000000000000001"
       }
     },
     {
       "request": {
         "jsonrpc": "2.0",
-        "id": 2,
+        "id": 3,
         "method": "tools/call",
         "params": {
           "name": "simulate_bid",
           "arguments": {
-            "rpc": "http://127.0.0.1:18549",
-            "launcher": "0x0c84220140D15b7A902b3fE2370b29Cd812D4C9d",
+            "rpc": "http://127.0.0.1:18607",
+            "launcher": "0x1F9472743E3758edbDE59Ef0c4ef3F39B32B16A2",
             "budget": "1",
             "maxPrice": "0.000015"
           }
@@ -62,7 +109,7 @@
       },
       "response": {
         "jsonrpc": "2.0",
-        "id": 2,
+        "id": 3,
         "result": {
           "content": [
             {
@@ -81,6 +128,48 @@
         "refund": "1",
         "meetsMinPool": true,
         "poolQuote": "10"
+      }
+    },
+    {
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "method": "tools/call",
+        "params": {
+          "name": "build_bid_tx",
+          "arguments": {
+            "rpc": "http://127.0.0.1:18607",
+            "launcher": "0x1F9472743E3758edbDE59Ef0c4ef3F39B32B16A2",
+            "budget": "1",
+            "maxPrice": "0.00003",
+            "sourceIndex": "0",
+            "agentId": "3235774465",
+            "address": "0x00000000000000000000000000000000c0de0001"
+          }
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 4,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"ok\":true,\"to\":\"0x1F9472743E3758edbDE59Ef0c4ef3F39B32B16A2\",\"value\":\"1000000000000000000\",\"valueBnb\":\"1\",\"data\":\"0x44ba98a600000000000000000000000000000000000000000000000000001b48eb57e000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0de0001\",\"gas\":\"8000000\",\"chainId\":97,\"instruction\":\"在 BNB Smart Chain 测试网操作。链编号 97。\\n先做完这三步，缺一步就停止，不要发交易：\\n1. 跑 baw wallet chains。确认有 BSC 测试网。没有就停，不要改用 56。\\n2. 确认身份。币安 Agent ID 或 ERC-8004 有一个即可。两个都没有就停。\\n3. 跑 baw wallet settings。Developer Mode 要开着，余额不能超限。\\n然后只准备这一笔。不要改金额，不要多发一笔。先用 baw 预览，确认后再执行。\\n合约：0x1F9472743E3758edbDE59Ef0c4ef3F39B32B16A2\\n预算 1 BNB，最高价 0.00003 BNB/枚。\\n动作：出价。\"}"
+            }
+          ],
+          "isError": false
+        }
+      },
+      "value": {
+        "ok": true,
+        "to": "0x1F9472743E3758edbDE59Ef0c4ef3F39B32B16A2",
+        "value": "1000000000000000000",
+        "valueBnb": "1",
+        "data": "0x44ba98a600000000000000000000000000000000000000000000000000001b48eb57e000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000000c0de0001",
+        "gas": "8000000",
+        "chainId": 97,
+        "instruction": "在 BNB Smart Chain 测试网操作。链编号 97。\n先做完这三步，缺一步就停止，不要发交易：\n1. 跑 baw wallet chains。确认有 BSC 测试网。没有就停，不要改用 56。\n2. 确认身份。币安 Agent ID 或 ERC-8004 有一个即可。两个都没有就停。\n3. 跑 baw wallet settings。Developer Mode 要开着，余额不能超限。\n然后只准备这一笔。不要改金额，不要多发一笔。先用 baw 预览，确认后再执行。\n合约：0x1F9472743E3758edbDE59Ef0c4ef3F39B32B16A2\n预算 1 BNB，最高价 0.00003 BNB/枚。\n动作：出价。"
       }
     }
   ]
