@@ -19,7 +19,7 @@ Agents submit a limit and a budget. One clearing at the end, one price for every
 | 要求 | 证据 |
 | --- | --- |
 | Flap：用模板做发射界面 | [flap-ui/launcher-detail](flap-ui/launcher-detail) 和 [检查器输出](docs/flap-integration.md) |
-| Flap：测试网完整发射 | [工厂](https://testnet.bscscan.com/address/0xE82642aC5c3B3B4b7D4cDeaf6a251Dc0BB7AcEfd)、[金库工厂](https://testnet.bscscan.com/address/0x2EF7a93b2fE4FBF520D5210b3ea39a72E5133dc6)。测试网还没开权限，本机分叉彩排在 [docs/e2e-evidence.md](docs/e2e-evidence.md) |
+| Flap：测试网完整发射 | [工厂](https://testnet.bscscan.com/address/0xE82642aC5c3B3B4b7D4cDeaf6a251Dc0BB7AcEfd)、[金库工厂](https://testnet.bscscan.com/address/0x2EF7a93b2fE4FBF520D5210b3ea39a72E5133dc6)。公共测试网发射回执待补，4.6 tBNB 单人方案与分叉彩排见 [docs/e2e-evidence.md](docs/e2e-evidence.md) |
 | Flap：Vault 按设计工作 | 分叉上金库增加 27516256919450703 wei，owner 提走相同数额，见 [证据](docs/e2e-evidence.md) |
 | 机制为什么不同 | [docs/why-uniform.md](docs/why-uniform.md) |
 | Developer：建在 BNB Chain | 链编号 97。[发射工厂已验证](https://testnet.bscscan.com/address/0xE82642aC5c3B3B4b7D4cDeaf6a251Dc0BB7AcEfd) |
@@ -61,7 +61,7 @@ The page never signs. Settlement creates the pool through Flap. Tax sits in the 
 | Erc8004Source | [0x0526f00B99e952cE55F1B7BDaf9E6Ae42b42cf22](https://testnet.bscscan.com/address/0x0526f00B99e952cE55F1B7BDaf9E6Ae42b42cf22#code) |
 | Portal | [0x000042108465206185A077Edc3F3fd2b49060000](https://testnet.bscscan.com/address/0x000042108465206185A077Edc3F3fd2b49060000) |
 
-Addresses are the verified BSC testnet deployments. The factories are not enabled by Flap yet.
+Addresses are the verified BSC testnet deployments. The pinned testnet snapshot and factory configuration are recorded in the E2E evidence.
 
 ## 前置
 
@@ -116,9 +116,9 @@ One command starts the local fork and the page, then prints both URLs. If no dem
 
 ## 测试网
 
-还没在测试网执行。Flap 没给工厂开权限，`create()` 会停下并打印原因。对着非本机 RPC 加 `--broadcast`，脚本拒绝。步骤和余额见 [docs/e2e-evidence.md](docs/e2e-evidence.md)。
+公共测试网发射由 Jimmy 或指定操作者签名。4.6 tBNB 单人场的出价为 4.45 tBNB，准备工具会模拟并输出未签名交易。分叉回执和实际操作步骤见 [docs/e2e-evidence.md](docs/e2e-evidence.md)。
 
-Not executed on testnet. The script refuses a remote broadcast.
+Public testnet launch receipts are pending. The single-signer preset prepares unsigned transactions.
 
 ## 代理接口
 
@@ -138,9 +138,9 @@ No signing and no broadcasting in the app, the CLI, or the MCP server. Forge scr
 
 ## 已知限制
 
-每个身份只能出一笔：Binance Agent ID 或 ERC-8004 编号，一场固定一种来源。测试网 Agent ID 是演示替身，防女巫要在主网上才成立。Flap 还没给工厂开 multiplier。测试网成功发射大约要 4.6 tBNB，还没做。
+每个身份只能出一笔：Binance Agent ID 或 ERC-8004 编号，一场固定一种来源。测试网 Agent ID 是演示替身，防女巫要在主网上才成立。单人预设需准备 4.6 tBNB。公共测试网发射待项目方执行。
 
-Each identity bids once: a Binance Agent ID or an ERC-8004 number, one source for the auction. The testnet Agent ID is a stand-in. Sybil checks hold on mainnet. Flap has not enabled the factory. A successful testnet launch needs about 4.6 tBNB and has not been run.
+Each identity bids once: a Binance Agent ID or an ERC-8004 number, one source for the auction. The testnet Agent ID is a stand-in. Sybil checks hold on mainnet. The single-signer preset requires 4.6 tBNB. Public testnet launch evidence is pending.
 
 ## 商业模式
 
