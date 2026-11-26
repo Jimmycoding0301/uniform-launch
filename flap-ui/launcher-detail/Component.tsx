@@ -114,14 +114,15 @@ function group(text: string): string {
   return text.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
-function formatBnb(raw: Value): string {
+function formatBnb(raw: Value, display: "amount" | "price" = "amount"): string {
   const wei = asBig(raw);
   if (wei == null) return "";
   const neg = wei < 0n;
   const v = neg ? -wei : wei;
   const whole = v / 1000000000000000000n;
-  const frac = (v % 1000000000000000000n).toString().padStart(18, "0").slice(0, 6);
-  return `${neg ? "-" : ""}${group(whole.toString())}.${frac}`;
+  const fraction = (v % 1000000000000000000n).toString().padStart(18, "0");
+  const digits = display === "price" ? fraction.replace(/0+$/, "") : fraction.slice(0, 6);
+  return `${neg ? "-" : ""}${group(whole.toString())}${digits ? "." + digits : ""}`;
 }
 
 function formatInt(raw: Value): string {
@@ -175,8 +176,8 @@ export function Launcher({ context, messages }: LauncherProps) {
       </header>
       <dl style={{ margin: 0, borderTop: "1px solid #303236" }}>
         <Row name={messages.bids} text={`${formatInt(snap.bidCount)} / 32`} />
-        <Row name={messages.clearing} text={formatBnb(snap.clearingPrice)} />
-        <Row name={messages.floor} text={formatBnb(snap.floorPrice)} />
+        <Row name={messages.clearing} text={formatBnb(snap.clearingPrice, "price")} />
+        <Row name={messages.floor} text={formatBnb(snap.floorPrice, "price")} />
         <Row name={messages.end} text={formatInt(snap.endBlock)} />
         <Row name={messages.poolQuote} text={formatBnb(snap.poolQuote)} />
         <Row name={messages.token} text={token || messages.none} />
