@@ -190,7 +190,12 @@ export function App() {
   const forceEmpty = params.get("empty") === "1";
   const testnetBoard = params.get("network") === "testnet" && !params.get("launcher");
   const demoOn = params.get("demo") === "1" || params.get("view") === "script";
-  const [scene, setScene] = useState(0);
+  const [scene, setScene] = useState(() => {
+    const requested = params.get("scene") ?? "";
+    if (!demoOn || !/^[1-9]\d*$/.test(requested)) return 0;
+    const number = Number(requested);
+    return number <= SCENES.length ? number - 1 : 0;
+  });
   const [why, setWhy] = useState<WhyFile | null>(null);
   const sceneAddress = [demo?.open, demo?.open, demo?.open, demo?.launched, demo?.failed, demo?.open][scene] || "";
   const launcher = (forceEmpty || testnetBoard ? "" : demoOn ? sceneAddress : params.get("launcher") || demo?.open || "") as Address;
@@ -868,7 +873,10 @@ export function App() {
                 <FundingProgress raised={raised} eligible={snap.previewOk ? snap.previewQuote : 0n} minimum={snap.minPoolQuote} />
               ) : (
                 <>
-                  {demoOn && scene === 2 ? <SimulationSummary simulation={sim} /> : (
+                  {demoOn && scene === 2 ? (
+                    <SimulationSummary simulation={sim} selectedPrice={budgetWei === 10n ** 18n ? priceWei : null}
+                      onPreset={(price) => { setBudget("1"); setMaxPrice(price); }} />
+                  ) : (
                     <div className="chart-head">
                       <div>
                         <div className="kicker">{phase === "done" ? "统一开盘价" : "当前清算价"}<span>BNB / 枚</span></div>

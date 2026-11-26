@@ -22,6 +22,25 @@ await page.waitForFunction(() => {
 }, undefined, { timeout: 3000 });
 await page.getByRole("button", { name: "下一幕" }).click();
 await expectScene(3, "入池");
+const presets = page.getByRole("group", { name: "以 1 BNB 预算试算限价" });
+await page.locator("#budget").fill("2");
+for (const [price, tokens, spend, refund] of [
+  ["0.000015", "0 枚", "0 BNB", "1 BNB"],
+  ["0.00003", "50,000 枚", "1 BNB", "0 BNB"],
+]) {
+  const preset = presets.getByRole("button", { name: `限价 ${price} BNB/枚`, exact: true });
+  await preset.click();
+  assert.equal(await page.locator("#budget").inputValue(), "1");
+  assert.equal(await page.locator("#price").inputValue(), price);
+  assert.equal(await preset.getAttribute("aria-pressed"), "true");
+  assert.equal((await page.locator(".preview-head .chart-price").innerText()).trim(), tokens);
+  const amounts = page.locator(".preview-head dd");
+  assert.equal((await amounts.nth(0).innerText()).trim(), spend);
+  assert.equal((await amounts.nth(1).innerText()).trim(), refund);
+}
+await page.locator("#price").fill("0.00003001");
+assert.equal(await presets.locator('[aria-pressed="true"]').count(), 0);
+
 await page.locator("#budget").fill("");
 await page.getByText("还不能算").waitFor();
 await page.locator("#budget").fill("1");
@@ -54,6 +73,14 @@ await expectScene(6, "单价比");
 await page.locator("#budget").focus();
 await page.keyboard.press("Escape");
 await page.waitForURL((url) => !url.search.includes("demo=1"));
+const shared = await browser.newPage({ viewport: { width: 390, height: 844 } });
+await shared.goto(`${demoOrigin}/?demo=1&scene=3`, { waitUntil: "domcontentloaded" });
+await shared.getByRole("group", { name: "以 1 BNB 预算试算限价" }).waitFor();
+await shared.getByText("第 3 / 6 幕").waitFor();
+assert.equal(await shared.evaluate(() => document.documentElement.scrollWidth), 390);
+await shared.goto(`${demoOrigin}/?demo=1&scene=7`, { waitUntil: "domcontentloaded" });
+await shared.getByText("第 1 / 6 幕").waitFor();
+await shared.close();
 const missing = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 await missing.route("**/demo.json", (route) => route.fulfill({ status: 404, body: "" }));
 await missing.goto(`${demoOrigin}/?demo=1`, { waitUntil: "domcontentloaded" });
