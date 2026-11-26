@@ -257,3 +257,5 @@ Wed Nov 25 09:39:01 PM UTC 2026
 已满 120 分钟
 Thu Nov 26 12:09:02 AM UTC 2026
 准备公开发布。全历史扫描没有真实私钥或令牌。0x 加 64 位十六进制都是本机分叉交易哈希。gitleaks 11 条是合约地址和金额的误报，熵在 3.7 到 4.0。提交说明里的 Co-authored-by 个人邮箱会从公开历史的说明里去掉，Origin 上的 cursor/r15-win 不改写。
+Thu Nov 26 12:10:19 AM UTC 2026
+GitHub 推送没有成功。git push github github-publish:main 返回：fatal: could not read Username for 'https://github.com/' : No such device or address。公开仓库仍是空的。没有换凭据。
