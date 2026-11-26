@@ -1,8 +1,9 @@
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, statSync } from "node:fs";
+import { fileURLToPath } from "node:url";
 import { join, relative } from "node:path";
 
-const root = new URL(".", import.meta.url).pathname;
+const root = fileURLToPath(new URL(".", import.meta.url));
 const src = join(root, "src");
 
 function files(dir, out = []) {

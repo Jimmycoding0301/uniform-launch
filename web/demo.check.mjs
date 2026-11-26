@@ -14,12 +14,12 @@ const expectScene = async (n, text) => {
 await expectScene(1, "0.00002");
 await page.getByRole("button", { name: "下一幕" }).click();
 await expectScene(2, "复制出价指令");
-const focused = await page.evaluate(() => ({
-  market: Number(getComputedStyle(document.querySelector(".col-main")).opacity),
-  price: getComputedStyle(document.querySelector(".order-input .window")).borderColor,
-  accent: getComputedStyle(document.querySelector(".scene-track .on")).backgroundColor,
-}));
-assert.ok(focused.market < .6 && focused.price === focused.accent, "填单幕应突出委托字段并压暗行情");
+await page.waitForFunction(() => {
+  const market = Number(getComputedStyle(document.querySelector(".col-main")).opacity);
+  const priceBorder = getComputedStyle(document.querySelector(".order-input .window")).borderColor;
+  const accent = getComputedStyle(document.querySelector("button.primary")).backgroundColor;
+  return market < .6 && priceBorder === accent;
+}, undefined, { timeout: 3000 });
 await page.getByRole("button", { name: "下一幕" }).click();
 await expectScene(3, "入池");
 await page.locator("#budget").fill("");
