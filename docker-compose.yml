@@ -1,0 +1,28 @@
+# compose 只起分叉和页面，不造场。演示请用 bash script/demo.sh。本环境没有 Docker，未实测。
+services:
+  anvil:
+    image: ghcr.io/foundry-rs/foundry:latest
+    entrypoint: ["anvil"]
+    command:
+      - --fork-url
+      - ${BSC_TESTNET_RPC_URL:-https://bsc-testnet-rpc.publicnode.com}
+      - --host
+      - 0.0.0.0
+      - --port
+      - "18545"
+      - --chain-id
+      - "97"
+      - --auto-impersonate
+    ports:
+      - "18545:18545"
+  web:
+    image: node:22
+    working_dir: /app
+    volumes:
+      - ./web:/app
+    entrypoint: ["sh", "-c"]
+    command: "npm ci && npm run dev"
+    ports:
+      - "4317:4317"
+    depends_on:
+      - anvil
