@@ -1,0 +1,102 @@
+1
+00:00:00,000 --> 00:00:06,000
+Why should the second buyer pay more for
+the same token?
+
+2
+00:00:06,000 --> 00:00:12,000
+With Uniform Launch, each identity bids
+once. Winners pay one price.
+
+3
+00:00:12,000 --> 00:00:18,000
+On public BSC Testnet, our bidder
+registered a stand-in Agent ID.
+
+4
+00:00:18,000 --> 00:00:22,000
+Our Factory created this Launcher.
+
+5
+00:00:22,000 --> 00:00:26,000
+One bidder committed 4.45 test BNB.
+
+6
+00:00:26,000 --> 00:00:29,000
+After close, anyone can settle.
+
+7
+00:00:29,000 --> 00:00:33,000
+That call launches through Flap if the pool
+qualifies.
+
+8
+00:00:33,000 --> 00:00:36,000
+Otherwise, bidders can claim full refunds.
+
+9
+00:00:36,000 --> 00:00:44,000
+On this local nine-bid book, I set a
+one-BNB budget and try two price limits.
+
+10
+00:00:44,000 --> 00:00:51,000
+At the higher limit, my one BNB buys fifty
+thousand tokens.
+
+11
+00:00:51,000 --> 00:00:58,000
+I pay the shared clearing price shown here,
+below my maximum.
+
+12
+00:00:58,000 --> 00:01:06,000
+Now I lower only my limit. The clearing
+price stays at 0.00002.
+
+13
+00:01:06,000 --> 00:01:12,000
+My bid gets zero tokens and the whole BNB
+back.
+
+14
+00:01:12,000 --> 00:01:19,000
+Back on public testnet, that single bid
+funded a real launch.
+
+15
+00:01:19,000 --> 00:01:23,000
+Settlement opened a PancakeSwap V2 pool
+
+16
+00:01:23,000 --> 00:01:28,000
+with half a million UNIFORM and 4.45 test
+BNB.
+
+17
+00:01:28,000 --> 00:01:35,000
+Here is the fifth transaction. The bidder
+claimed the other half million tokens.
+
+18
+00:01:35,000 --> 00:01:41,000
+You can verify that transfer on BscScan.
+
+19
+00:01:41,000 --> 00:01:45,000
+We built the Launcher interface using
+Flap’s template.
+
+20
+00:01:45,000 --> 00:01:48,000
+The public launch linked the Vault.
+
+21
+00:01:48,000 --> 00:01:55,000
+On a separate fork, trading fees reached it
+and the owner withdrew them.
+
+22
+00:01:55,000 --> 00:02:00,000
+Our code is public for both the Flap and
+Developer tracks.
