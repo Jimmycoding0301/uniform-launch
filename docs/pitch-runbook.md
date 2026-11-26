@@ -18,12 +18,15 @@ The Flap brief asks for the Factory, a complete BSC Testnet launch, a custom Fla
 
 For the interactive shot, run `DEMO_WEB_PORT=4417 bash script/demo.sh` in the submitted checkout and open `/?demo=1&scene=3&lang=en` at the printed address. Both price buttons set the budget to one BNB. Switch languages from the header while keeping the current scene. Preload the five receipts, the Flap UI and the submission code. Offline, use the two outcomes printed on slide 3, the saved public transaction record and the fork Vault record. [Public record and contract addresses](public-testnet-evidence.md) · [Local-fork screenshots](../qa/submission/README.md) · [Custom Flap component](../flap-ui/launcher-detail) · [Fork Vault receipts](e2e-evidence.md)
 
+The opening uses bids 2 and 3 from the nine-bid local order book. Each spends 2.5 BNB and fills in both models. The founder and buyer are illustrative roles. Curve quantities are rounded to the nearest thousand. [Comparison inputs and curve parameters](https://github.com/Jimmycoding0301/uniform-launch/blob/da843af67d5a9c52570553b6f208555a0a13d406/web/public/why.json)
+
 ### Voice and screen cues
 
 | Time | 画面与操作 | Read aloud in English | 中文提词 |
 | --- | --- | --- | --- |
-| 00:00 | 第 1 页，按空格开表。 | Why should the second buyer pay more for the same token? With Uniform Launch, each identity bids once. Winners pay one price. | 为什么晚点买就贵？每个身份出一单，成交者支付同一个价格。 |
-| 00:12 | 第 2 页，显示公网身份回执，指向 Success。 | On public BSC Testnet, our bidder registered a stand-in Agent ID. | 这笔交易登记了测试身份，用的是 Agent ID 替身。 |
+| 00:00 | 第 1 页，指向两笔各 2.5 BNB 的出价。 | Suppose the founder bids just before you. Same budget. | 假设项目方刚好排在你前面。两人预算相同。 |
+| 00:05 | 指曲线列的约 18.1 万、15.3 万枚，再指同价列的两个 12.5 万。 | On the curve, they get more tokens. Here, you both get a hundred twenty-five thousand. | 曲线上，先到的项目方拿得更多。同价拍卖里，两人各拿 12.5 万枚。 |
+| 00:12 | 第 2 页，切到第一张公共测试网回执。 | Each identity bids once. Our public testnet bidder used a stand-in Agent ID. | 每个身份出价一次；这位公网测试买家用的是替身身份。 |
 | 00:18 | 切到 Factory 创建交易，指 Launcher 创建事件。 | Our Factory created this Launcher. | 我们开发的工厂创建了这场拍卖。 |
 | 00:22 | 切到出价回执，指 Value 4.45 tBNB。 | One bidder committed 4.45 test BNB. | 这场公开拍卖只有一笔出价。 |
 | 00:26 | 回第 2 页，指 Clear once 和 Launch or refund。 | After close, anyone can settle. That call launches through Flap if the pool qualifies. Otherwise, bidders can claim full refunds. | 到期后任何人都能发起结算。达标即建池，失败可全额退款。 |
@@ -40,7 +43,7 @@ For the interactive shot, run `DEMO_WEB_PORT=4417 bash script/demo.sh` in the su
 
 | Clock | Stage action | Say in English | 中文口播 |
 | --- | --- | --- | --- |
-| 00:00 | Slide 1. Start. | Why should the slower click pay more? We give every winning bidder one price. | 为什么点得慢就要付更多？我们让所有成交者付同一个价格。 |
+| 00:00 | Slide 1. Point to both budgets, then to the fills. | Two equal bids. On a curve, the founder gets more by going first. Here, both get the same amount. | 两人各出 2.5 BNB。曲线上项目方早一笔就多拿；同价拍卖两人各得 12.5 万枚。 |
 | 00:08 | Slide 2. Point to the three steps. | One identity, one budget, one limit. We clear once and launch through Flap when the pool minimum is met. | 一个身份出一单，填预算和限价，统一清算。达到入池门槛就通过 Flap 发射。 |
 | 00:17 | Slide 3. Switch to local scene 3. | One BNB. Two limits. | 同预算，两档限价。 |
 | 00:20 | Click **0.00003**. | The higher limit buys fifty thousand tokens. | 高限价可以买到五万枚。 |
@@ -56,6 +59,9 @@ Give one answer, then pause. The Chinese column is a cue for the presenter.
 
 | Likely question | English answer, about ten seconds | 中文提示 |
 | --- | --- | --- |
+| Could a founder still buy most of the supply and sell later? | Yes. A founder can buy a large allocation and sell it later. Bidding earlier gives them no price advantage over another winning bid in that auction. | 项目方仍可买很多，也可以卖。对已成交的两人，先提交没有首发单价优势。 |
+| What if the founder sells the moment the pool opens? | Our pool starts at the auction price. With no intervening buys, a sale pushes the price down. The founder receives less per token than they paid. | 以本场建池比例为前提，若没有后续买单，项目方马上卖会压低池价，实际卖出均价低于首发成本。 |
+| Did two public testnet wallets produce the comparison? | The two wallets are hypothetical roles for bids two and three in our nine-bid simulation. The public launch had one bidder and a 4.45 tBNB pool. | 开场两种身份是假设；数量来自九笔本地订单。公网发射只有一笔出价。 |
 | What does one price change for a buyer? | Winners share one clearing price. At an exact marginal-price tie, submission order can still affect who gets an allocation. | 成交价相同。在边际价完全并列时，提交顺序仍可能影响分配。 |
 | How do you stop someone bidding twice? | Each wallet and each identity ID within a source can bid once. Identity issuance belongs to the issuer. Our testnet used an Agent ID stand-in. | 钱包和身份双重去重，测试网身份用替身。 |
 | What did you actually launch? | On public BSC Testnet, one bid funded a 4.45 tBNB pool. The bidder claimed 500,000 tokens. The multi-bid example is a local simulation. | 公网单笔发射、领取；九笔案例是本地试算。 |
