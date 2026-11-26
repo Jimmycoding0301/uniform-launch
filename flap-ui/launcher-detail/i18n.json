@@ -18,7 +18,8 @@
     "openApp": "Open auction",
     "appNote": "Use the Mini App to bid, settle, or withdraw.",
     "linkUnavailable": "The Mini App link is unavailable.",
-    "poolMinimum": "Minimum pool BNB"
+    "poolMinimum": "Minimum pool BNB",
+    "marketingTax": "During the first 30 days, buys and sells each incur a 3% tax paid directly to the creator."
   },
   "zh": {
     "title": "同价发射",
@@ -39,7 +40,8 @@
     "openApp": "打开拍卖",
     "appNote": "在 Mini App 出价、结算或领取退款。",
     "linkUnavailable": "目前无法打开 Mini App。",
-    "poolMinimum": "最低入池 BNB"
+    "poolMinimum": "最低入池 BNB",
+    "marketingTax": "发射后 30 天内，买卖各收 3% 交易税，直接支付给创建者。"
   },
   "ko": {
     "title": "동일가 발행",
@@ -60,6 +62,7 @@
     "openApp": "경매 열기",
     "appNote": "미니 앱에서 입찰, 정산, 수령을 진행하세요.",
     "linkUnavailable": "미니 앱을 열 수 없습니다.",
-    "poolMinimum": "최소 풀 BNB"
+    "poolMinimum": "최소 풀 BNB",
+    "marketingTax": "발행 후 30일간 매수와 매도에 각각 3%의 세금이 부과되며, 생성자에게 직접 지급됩니다."
   }
 }

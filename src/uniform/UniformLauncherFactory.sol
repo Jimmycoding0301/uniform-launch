@@ -69,9 +69,9 @@ contract UniformLauncherFactory is LauncherFactoryBase {
 
     function launcherDataSchema() external pure override returns (LauncherDataSchema memory schema) {
         schema.description =
-            "Uniform-price batch auction. Half the supply sells at one clearing price and half seeds the pool with the BNB taken. Below the reserve price, bids are refunded.";
+            "Uniform-price batch auction. Half the supply sells at one clearing price. The other half and the proceeds seed the pool. If the launch fails, bidders can reclaim their full budgets.";
         schema.isArray = false;
-        FieldDescriptor[] memory fields = new FieldDescriptor[](6);
+        FieldDescriptor[] memory fields = new FieldDescriptor[](8);
         fields[0] = FieldDescriptor("name", "string", "Token name", 0);
         fields[1] = FieldDescriptor("symbol", "string", "Token symbol", 0);
         fields[2] = FieldDescriptor("meta", "string", "Metadata URI", 0);
@@ -79,6 +79,15 @@ contract UniformLauncherFactory is LauncherFactoryBase {
         fields[4] = FieldDescriptor("floorPrice", "uint256", "Reserve price, quote wei per token", 18);
         fields[5] = FieldDescriptor(
             "durationBlocks", "uint64", "Blocks. 200-20000 is about 90 seconds to 2.5 hours at 0.45 s/block.", 0
+        );
+        fields[6] = FieldDescriptor(
+            "identitySources",
+            "address[]",
+            "Use this factory's Agent ID source. ERC-8004 is available on testnet only.",
+            0
+        );
+        fields[7] = FieldDescriptor(
+            "admittedWallets", "address[]", "Mainnet requires 1-128 distinct wallets. Testnet allows an empty list.", 0
         );
         schema.fields = fields;
     }

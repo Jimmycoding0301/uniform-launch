@@ -18,9 +18,9 @@ import {UniformSettle} from "./UniformSettle.sol";
 string constant TITLE_ZH = unicode"统一价拍卖";
 string constant TITLE_EN = "Uniform-price auction";
 string constant SUMMARY_ZH =
-    unicode"代理提交限价和预算。窗口结束后按一个清算价卖出一半供应，另一半和成交的 BNB 注入池子。到不了保留价就全额退款，不发射。";
+    unicode"参与者提交预算和限价。统一清算价卖出一半代币，另一半与成交所得 BNB 建池。发射失败时，出价人可领回全部本金。主网仅允许准入名单内且通过 Binance Agent ID 验证的钱包出价。";
 string constant SUMMARY_EN =
-    "Agents submit a limit and a budget. At the end, half the supply sells at one clearing price. The other half and the BNB taken seed the pool. Below the reserve price, bidders are refunded in full and nothing launches.";
+    "Bidders submit a budget and a price limit. Half the supply sells at one clearing price. The other half and the proceeds seed the pool. If launch fails, bidders can reclaim their full budgets. On mainnet, bidding requires Binance Agent ID and a wallet on the auction allowlist.";
 
 struct LaunchConfig {
     string name;
@@ -230,8 +230,18 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         d.poolTokenRatio = POOL_AMOUNT * 1e18 / TOTAL_SUPPLY;
         d.titleZh = TITLE_ZH;
         d.titleEn = TITLE_EN;
-        d.summaryZh = SUMMARY_ZH;
-        d.summaryEn = SUMMARY_EN;
+        if (vaultFactory == address(0)) {
+            d.summaryZh = string.concat(
+                SUMMARY_ZH, unicode"发射后 30 天内，买卖各收 3% 交易税，直接支付给创建者。"
+            );
+            d.summaryEn =
+                string.concat(SUMMARY_EN, " The 3% buy and 3% sell tax goes directly to the creator for 30 days.");
+        } else {
+            d.summaryZh = string.concat(
+                SUMMARY_ZH, unicode"发射后 30 天内，买卖各收 3% 交易税，支付到本场发射的金库。"
+            );
+            d.summaryEn = string.concat(SUMMARY_EN, " The 3% buy and 3% sell tax goes to the launch vault for 30 days.");
+        }
     }
 
     function softCap() public view returns (uint256) {

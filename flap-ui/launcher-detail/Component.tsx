@@ -178,6 +178,7 @@ export function Launcher({ context, messages, host }: LauncherProps) {
         <Row name={messages.token} text={token || messages.none} />
         <Row name={messages.poolMinimum} text={formatBnb(snap.minPoolQuote) || messages.none} />
       </dl>
+      <p style={note}>{messages.marketingTax}</p>
       {canOpen && (
         <button type="button" style={actionStyle}
           onClick={() => setRedirectFailed(host.redirect?.(`/apps/uniform-launch/launcher/${address}`) !== true)}>
