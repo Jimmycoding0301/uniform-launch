@@ -533,6 +533,7 @@ button.primary:hover:not(:disabled) { box-shadow: 0 0 0 3px var(--accent-a24); }
 .market-note strong { color: var(--text-2); font-weight: 500; }
 .market-note small { display: block; font-size: 12px; color: var(--muted); }
 .market-note strong, .market-note span { white-space: nowrap; }
+.market-note small > span { display: inline-block; }
 .plot-wrap, .stage { min-height: 0; height: clamp(200px, 24vh, 260px); }
 .stage { margin: 0; }
 .col-bids { padding: 12px 20px 6px; background: var(--surface); }
