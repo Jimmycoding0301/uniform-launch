@@ -149,6 +149,17 @@ await blank.goto(`${demoOrigin}/?empty=1`, { waitUntil: "domcontentloaded" });
 await blank.getByRole("link", { name: "打开演示脚本" }).click();
 await blank.waitForURL((url) => url.search.includes("demo=1"));
 await blank.close();
+for (const width of [390, 1440]) {
+  const proof = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: "reduce" });
+  await proof.goto(`${demoOrigin}/?network=testnet`, { waitUntil: "domcontentloaded" });
+  const launch = proof.getByRole("heading", { name: "公开测试网发射" });
+  await launch.waitFor();
+  const bodyColor = await proof.locator("body").evaluate((element) => getComputedStyle(element).color);
+  for (const heading of [launch, proof.getByRole("heading", { name: "测试网合约" })]) {
+    assert.equal(await heading.evaluate((element) => getComputedStyle(element).color), bodyColor, "减少动态效果时标题仍应使用浅色文字");
+  }
+  await proof.close();
+}
 // Pending public RPCs should stay in the loading state. Only a rejected response signals failure.
 const pending = await browser.newPage();
 let finishRequest;
