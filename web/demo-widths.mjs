@@ -1,8 +1,8 @@
 import { demoOrigin } from "./demo-origin.mjs";
 import assert from "node:assert/strict";
-import { chromium } from "playwright";
+import { openBrowser } from "./test-browser.mjs";
 
-const browser = await chromium.launch();
+const browser = await openBrowser();
 const notes = [];
 for (const width of [390, 375, 320]) {
   const page = await browser.newPage({ viewport: { width, height: 844 } });

@@ -1,6 +1,6 @@
 import { demoOrigin } from "./demo-origin.mjs";
 import assert from "node:assert/strict";
-import { chromium } from "playwright";
+import { openBrowser } from "./test-browser.mjs";
 import { demoBook } from "./demo-book.mjs";
 
 const book = await demoBook();
@@ -18,7 +18,7 @@ const pages = [
   "/?view=script",
 ];
 
-const browser = await chromium.launch();
+const browser = await openBrowser();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 for (const path of pages) {
   await page.goto(base + path, { waitUntil: "domcontentloaded" });

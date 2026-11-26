@@ -1,8 +1,8 @@
 import { demoOrigin } from "./demo-origin.mjs";
 import assert from "node:assert/strict";
-import { chromium } from "playwright";
+import { openBrowser } from "./test-browser.mjs";
 
-const browser = await chromium.launch();
+const browser = await openBrowser();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 await page.goto(`${demoOrigin}/?demo=1`, { waitUntil: "domcontentloaded" });
 await page.waitForSelector(".demo-bar");
