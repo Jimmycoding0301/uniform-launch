@@ -161,14 +161,15 @@ contract UniformLauncherTest is Test {
         launcher.settle();
     }
 
-    function test_thirtyThirdBidReverts() public {
+    function test_bidBeyondCapacityReverts() public {
         UniformLauncher launcher = _new("TJ", 1);
-        for (uint256 i; i < 32; ++i) {
+        for (uint256 i; i < launcher.MAX_BIDS(); ++i) {
             address who = address(uint160(1000 + i));
             vm.deal(who, 1 ether);
             vm.prank(who);
             launcher.bid{value: 0.01 ether}(1e16, 0, uint160(who));
         }
+        assertEq(launcher.bidCount(), 128);
         address extra = address(uint160(2000));
         vm.deal(extra, 1 ether);
         vm.prank(extra);
@@ -214,9 +215,9 @@ contract UniformLauncherTest is Test {
         assertEq(launcher.token(), address(0));
         assertEq(address(launcher).balance, bal);
 
-        launcher.settle{gas: 8_000_000}();
+        launcher.settle{gas: launcher.MIN_SETTLE_GAS() + 1_000_000}();
         assertEq(uint8(launcher.status()), uint8(UniformLauncher.Status.Succeeded));
-        assertEq(launcher.MIN_SETTLE_GAS(), 7_000_000);
+        assertEq(launcher.bidCount(), 1);
     }
 
     function test_successClaimMatchesQuote() public {

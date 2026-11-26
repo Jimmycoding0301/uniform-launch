@@ -62,7 +62,7 @@ node /tmp/flap-template/scripts/launcher-check-source.mjs \
 
 `statusCode` 在合约里返回 `uint8`，`endBlock` 返回 `uint64`。ABI 编码都是 32 字节。检查器只允许声明 `address`、`bool`、`uint256`，所以 manifest 写成 `uint256`。
 
-不声明 `transactions`。出价函数带参数，Flap 的 `actions` 只支持无参数方法。`settle` 要求进入函数时剩余 gas 不低于 7,000,000，主机替用户估 gas 时经常低于这条线，交易会在改状态前回滚。签名走代理，不走网页钱包。
+不声明 `transactions`。出价函数带参数，Flap 的 `actions` 只支持无参数方法。`settle` 要求进入函数时剩余 gas 达到该场的 `MIN_SETTLE_GAS`。低于门槛时，交易会在改状态前回滚。签名走代理，不走网页钱包。
 
 ## 要求和实现
 

@@ -96,7 +96,9 @@ CREATOR=0x00000000000000000000000000000000C0DE0001
 settle_one() {
   local to="$1"
   local out hash status
-  out=$(cast send "$to" "settle()" --gas-limit 8000000 --from "$CREATOR" --unlocked --rpc-url "$ANVIL_RPC" --json)
+  local min_gas
+  min_gas=$(cast call "$to" 'MIN_SETTLE_GAS()(uint256)' --rpc-url "$ANVIL_RPC")
+  out=$(cast send "$to" "settle()" --gas-limit "$(( ${min_gas%% *} + 1000000 ))" --from "$CREATOR" --unlocked --rpc-url "$ANVIL_RPC" --json)
   hash=$(python3 -c 'import json,sys; print(json.load(sys.stdin)["transactionHash"])' <<<"$out")
   status=$(cast receipt "$hash" --json --rpc-url "$ANVIL_RPC" | python3 -c 'import json,sys; raw=json.load(sys.stdin)["status"]; print(int(raw,16) if isinstance(raw,str) and raw.startswith("0x") else int(raw))')
   if [ "$status" != "1" ]; then

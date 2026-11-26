@@ -8,13 +8,15 @@ import { PlotStage } from "./PlotStage";
 import { pancakeSwapLink } from "./dex";
 // @ts-expect-error 共享模拟器是普通 JavaScript，返回值在调用处收窄。
 import { settle as settleBids } from "../../shared/settle.mjs";
-import { ADDR_STAGGER_MS, COPY_MS, MIN_SETTLE_GAS, RISK_LINE, SETTLE_GAS_LIMIT, SETTLE_MS, SWEEP_MS, USER_LINE } from "./theme";
+import { ADDR_STAGGER_MS, COPY_MS, RISK_LINE, SETTLE_MS, SWEEP_MS, USER_LINE } from "./theme";
 import { ReceiptPanel } from "./ReceiptPanel";
 import type { Action, Intent, Tracking } from "./receipts";
 import { TESTNET, TESTNET_ROWS } from "./networks";
 import { FundingProgress, PriceComparison, SettlementSummary, SimulationSummary, type Comparison } from "./AuctionFigures";
 
 const ABI = [
+  { type: "function", name: "MAX_BIDS", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "MIN_SETTLE_GAS", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "status", stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
   { type: "function", name: "floorPrice", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "clearingPrice", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
@@ -133,6 +135,8 @@ type Row = {
 };
 type SourceInfo = { sourceId: `0x${string}`; standIn: boolean };
 type Snap = {
+  maxBids: number;
+  minSettleGas: bigint;
   status: number;
   floor: bigint;
   clearing: bigint;
@@ -322,7 +326,7 @@ export function App() {
           }
           verifiedNetwork = true;
         }
-        const [b, status, floor, clearing, softCap, minPoolQuote, start, end, token, pool, poolQuote, vaultFactory, preview, fills, got, sources] = await Promise.all([
+        const [b, status, floor, clearing, softCap, minPoolQuote, start, end, token, pool, poolQuote, vaultFactory, preview, fills, got, sources, maxBids, minSettleGas] = await Promise.all([
           client.getBlockNumber(),
           client.readContract({ address: launcher, abi: ABI, functionName: "status" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "floorPrice" }),
@@ -339,6 +343,8 @@ export function App() {
           client.readContract({ address: launcher, abi: ABI, functionName: "getFills" }),
           readBids(),
           readSources(),
+          client.readContract({ address: launcher, abi: ABI, functionName: "MAX_BIDS" }),
+          client.readContract({ address: launcher, abi: ABI, functionName: "MIN_SETTLE_GAS" }),
         ]);
         if (stop) return;
         const agents = got[0] as Address[];
@@ -349,6 +355,8 @@ export function App() {
         const quotes = fills[1] as bigint[];
         const pulled = fills[2] as boolean[];
         const next: Snap = {
+          maxBids: Number(maxBids),
+          minSettleGas,
           status: Number(status),
           floor: floor as bigint,
           clearing: clearing as bigint,
@@ -484,7 +492,7 @@ export function App() {
   const priceWei = parseBnb(maxPrice);
   const sim = useMemo(() => {
     if (!demoOn || scene !== 2 || !snap || budgetWei == null || priceWei == null ||
-        budgetWei < 10n ** 16n || budgetWei > 100n * 10n ** 18n || priceWei < snap.floor || snap.bids.length >= 32) return null;
+        budgetWei < 10n ** 16n || budgetWei > 100n * 10n ** 18n || priceWei < snap.floor || snap.bids.length >= snap.maxBids) return null;
     const rows = snap.bids.map((row, index) => ({ index: BigInt(index), budget: row.budget, maxPrice: row.maxPrice }));
     rows.push({ index: BigInt(rows.length), budget: budgetWei, maxPrice: priceWei });
     return settleBids(500_000n * 10n ** 18n, snap.floor, rows) as {
@@ -620,6 +628,7 @@ export function App() {
       : /^\d+$/.test(agentIdInput.trim())
         ? agentIdInput.trim()
         : t("（你在 ERC-8004 登记的编号）", "(your registered ERC-8004 ID)");
+    const settlementGasLimit = snap ? snap.minSettleGas + 1_000_000n : null;
     const action =
       phase === "open" || !snap
         ? t(
@@ -628,8 +637,8 @@ export function App() {
         )
         : phase === "ready"
           ? t(
-            `data: settle()\n- value wei: 0\n- gas limit: ${SETTLE_GAS_LIMIT}\n\ngas limit 固定为 ${SETTLE_GAS_LIMIT}，不要用节点估算值。估算往往只有一两百万。进入 settle 时如果剩余 gas 低于 ${MIN_SETTLE_GAS}，合约直接回滚，这场拍卖保持开放，不会被记成失败。${SETTLE_GAS_LIMIT} 扣掉基础 gas 后仍高于这条线，也够一次发射。`,
-            `data: settle()\n- value wei: 0\n- gas limit: ${SETTLE_GAS_LIMIT}\n\nUse the fixed gas limit of ${SETTLE_GAS_LIMIT}. Node estimates can be only one or two million. If less than ${MIN_SETTLE_GAS} gas remains on entry, settle reverts and the auction stays open. The fixed limit covers the launch and its minimum gas threshold.`,
+            `data: settle()\n- value wei: 0\n- gas limit: ${settlementGasLimit}\n\n请使用该场的 gas limit。进入 settle 时如果剩余 gas 低于 ${snap.minSettleGas}，合约会回滚，拍卖状态保持开放。`,
+            `data: settle()\n- value wei: 0\n- gas limit: ${settlementGasLimit}\n\nUse the gas limit for this auction. If less than ${snap.minSettleGas} gas remains on entry, settle reverts and the auction stays open.`,
           )
           : phase === "failed"
             ? "data: refund()\n- value wei: 0"
@@ -868,8 +877,8 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
                     )}
                   </div>
                   <div className="action">
-                    {phase === "open" && snap.bids.length >= 32 ? (
-                      <div className="notice">{t("本场出价已满 32 笔，不再接新单。", "All 32 bid slots are filled.")}</div>
+                    {phase === "open" && snap.bids.length >= snap.maxBids ? (
+                      <div className="notice">{t(`本场出价已满 ${snap.maxBids} 笔。`, `All ${snap.maxBids} bid slots are filled.`)}</div>
                     ) : phase === "wait" ? (
                       <div className="notice">{t("开始后可以复制出价指令。", "Bid instructions become available when bidding opens.")}</div>
                     ) : phase === "closed" ? (
@@ -881,7 +890,7 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
                         <span>{copied ? t("已复制", "Copied") : button}</span>
                       </button>
                     ) : null}
-                    {phase === "open" && snap.bids.length < 32 && <p className="risk"><Zh text={RISK_LINE} /></p>}
+                    {phase === "open" && snap.bids.length < snap.maxBids && <p className="risk"><Zh text={RISK_LINE} /></p>}
                     {phase === "ready" && <p className="help"><Zh text={t("结算要用的燃料上限已写在指令里，照指令发。", "The settlement instruction includes the required gas limit.")} /></p>}
                   </div>
                 </form>
@@ -940,7 +949,7 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
               )}
             </div>
             <div className="col-bids">
-              <div className="ledger-heading"><h2>{t("出价簿", "Bid book")}</h2><span>{snap.bids.length} {t("/ 32 笔", "/ 32 bids")}</span></div>
+              <div className="ledger-heading"><h2>{t("出价簿", "Bid book")}</h2><span>{snap.bids.length} {t(`/ ${snap.maxBids} 笔`, `/ ${snap.maxBids} bids`)}</span></div>
               <ul className="facts">
                 <li><span>{t("出售", "For sale")}</span><span>{t("500,000 枚", "500,000 tokens")}</span></li>
                 <li><span>{t("入池代币", "Pool tokens")}</span><span>{t("500,000 枚", "500,000 tokens")}</span></li>
@@ -1159,6 +1168,7 @@ function groupFull(value: bigint): string {
 }
 
 function sameSnap(a: Snap, b: Snap) {
+  if (a.maxBids !== b.maxBids || a.minSettleGas !== b.minSettleGas) return false;
   if (a.status !== b.status || a.floor !== b.floor || a.clearing !== b.clearing || a.softCap !== b.softCap || a.minPoolQuote !== b.minPoolQuote) return false;
   if (a.start !== b.start || a.end !== b.end || a.token !== b.token || a.pool !== b.pool || a.poolQuote !== b.poolQuote) return false;
   if (a.vaultFactory !== b.vaultFactory || a.previewQuote !== b.previewQuote) return false;

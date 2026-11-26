@@ -213,13 +213,10 @@ abstract contract ForkBase is Test {
         return _launch(floor, duration, symbol, seed, sources);
     }
 
-    function _launch(
-        uint256 floor,
-        uint64 duration,
-        string memory symbol,
-        bytes32 seed,
-        address[] memory sources
-    ) internal returns (UniformLauncher launcher) {
+    function _launch(uint256 floor, uint64 duration, string memory symbol, bytes32 seed, address[] memory sources)
+        internal
+        returns (UniformLauncher launcher)
+    {
         LaunchConfig memory c;
         c.name = "Tongjia";
         c.symbol = symbol;
@@ -337,20 +334,27 @@ contract UniformForkTest is ForkBase {
 
     function test_maxBidsSettleGas() public {
         UniformLauncher launcher = _create(1e13, 200, "GAS", bytes32(uint256(88001)));
-        for (uint256 i; i < 32; ++i) {
+        uint256 cap = launcher.MAX_BIDS();
+        for (uint256 i; i < cap; ++i) {
             address who = address(uint160(0x2000 + i));
             vm.deal(who, 1 ether);
             vm.prank(who);
-            launcher.bid{value: 0.2 ether}(1e16, 0, uint160(who));
+            // Ascending, distinct limits exercise the sort's worst case.
+            launcher.bid{value: 0.2 ether}(1e16 + i, 0, uint160(who));
         }
+        assertEq(launcher.bidCount(), cap);
         vm.roll(launcher.endBlock());
+        uint256 gasLimit = launcher.MIN_SETTLE_GAS() + 1_000_000;
         uint256 before = gasleft();
-        launcher.settle();
+        launcher.settle{gas: gasLimit}();
         uint256 used = before - gasleft();
         console2.log("FORK_MAX_BIDS_SETTLE_GAS", used);
         assertEq(uint8(launcher.status()), uint8(UniformLauncher.Status.Succeeded));
-        assertLt(used, 8_000_000, "8_000_000 gas limit cannot cover settle");
-        assertLt(used, launcher.MIN_SETTLE_GAS(), "MIN_SETTLE_GAS is below the measured settle");
+        assertEq(launcher.poolQuote(), cap * 0.2 ether);
+        assertLt(used, launcher.MIN_SETTLE_GAS(), "insufficient settlement headroom");
+        vm.prank(address(uint160(0x2000 + cap - 1)));
+        launcher.claim();
+        assertGt(IERC20(launcher.token()).balanceOf(address(uint160(0x2000 + cap - 1))), 0);
     }
 
     function test_oneBnbBelowLaunchFloorRefunds() public {
@@ -479,5 +483,4 @@ contract UniformForkTest is ForkBase {
         // 当前测试网 Portal 在工厂被关闭后仍完成发射，不回滚。
         assertEq(uint8(launcher.status()), uint8(UniformLauncher.Status.Succeeded));
     }
-
 }

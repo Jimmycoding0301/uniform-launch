@@ -9,7 +9,7 @@
 | 角色 | 可以做 | 不可以做 |
 | --- | --- | --- |
 | 出价人 | 在窗口内 `bid` 一次；成功后 `claim`；失败后 `refund` | 第二次出价、改已提交的限价、领取别人的份额 |
-| 任何人 | 窗口结束后调用 `settle`；随时 `preview` | 窗口没结束就结算；用低于 7,000,000 的剩余 gas 把一场成功拍卖打成失败 |
+| 任何人 | 窗口结束后调用 `settle`；随时 `preview` | 窗口没结束就结算；用低于该场 `MIN_SETTLE_GAS` 的剩余 gas 把一场成功拍卖打成失败 |
 | 创建者 | 作为 Vault 的 owner 提取税款 | 改保留价、改清算价、拿走出价里的 BNB |
 | Guardian | `guardianFail` 把未结算的场次打成失败；`withdrawAll` 只能把 Vault 余额转到 owner；升级 Launcher 实现 | 把税款提到自己的地址 |
 | Portal | `newLauncher`；回调 `initializeDistribution`；收走入池的 BNB | 在 Launcher 的锁还开着时再插入一笔出价 |
@@ -68,4 +68,6 @@ flowchart LR
 
 ### 结算 gas
 
-32 笔出价并且发射成功时，BSC 测试网分叉上的 `settle` 用了 5,772,154 gas。本地假 Portal 只有 1,576,830，因为里面没有真实的建池。进入函数时若 `gasleft()` 低于 7,000,000，函数直接revert，状态保持开放。复制给代理的指令把 gas limit 写成 8,000,000。这两个数都高于实测值。
+公开测试网合约接受 32 笔出价，结算入口要求 7,000,000 gas。新版接受 128 笔，结算时按限价排序，归并排序在价格相同时沿用原有出价编号的顺序。计算边际价时先用累计预算排除不可能成交的档位，通过检查的档位沿用逐笔取整。两种办法避免为大量不同限价重复扫描整个出价簿。
+
+在 BSC 测试网分叉的 `test_maxBidsSettleGas` 中，128 个钱包以递增的不同限价入场，成功发币、建池并验证末笔领取，测试测得结算调用消耗 **8,673,707 gas**。混合限价的满场测试也核对了部分成交、退款和余额守恒。新版的 `MIN_SETTLE_GAS` 为 13,000,000，客户端在链上读取该值并加 1,000,000 作为交易 gas 上限。BSC 单笔交易 gas 上限为 16,777,216。[测试代码](../test/Uniform.fork.t.sol) · [BEP-652](https://github.com/bnb-chain/BEPs/blob/master/BEPs/BEP-652.md)

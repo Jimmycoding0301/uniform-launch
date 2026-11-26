@@ -37,12 +37,11 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
     uint256 public constant POOL_AMOUNT = TOTAL_SUPPLY - SELL_AMOUNT;
     uint256 public constant MIN_BUDGET = 0.01 ether;
     uint256 public constant MAX_BUDGET = 100 ether;
-    uint256 public constant MAX_BIDS = 32;
+    uint256 public constant MAX_BIDS = 128;
     uint64 public constant CLOSE_BUFFER = 20;
-    /// @notice 进入 settle 后若剩余 gas 低于此值，直接回滚且不改状态。
-    ///         指令里的 gas limit 是 8000000。扣掉基础 gas 后仍高于这条线，
-    ///         也盖得住一次成功发射。32 笔出价在 BSC 测试网分叉上实测 5772154 gas，低于这条线，也低于指令里的 8000000。估算值往往更低，低了就不能把拍卖打成失败。
-    uint256 public constant MIN_SETTLE_GAS = 7_000_000;
+    /// @notice Reject an underfunded settle call before it can change auction state.
+    ///         Clients add 1,000,000 gas for transaction and proxy overhead.
+    uint256 public constant MIN_SETTLE_GAS = 13_000_000;
     uint64 public constant MIN_DURATION = 200;
     uint64 public constant MAX_DURATION = 20_000;
     uint16 public constant BUY_TAX_BPS = 300;

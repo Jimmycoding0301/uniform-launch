@@ -15,7 +15,7 @@ interface IProxyAdminLike {
     function owner() external view returns (address);
 }
 
-/// @notice 只在本机 anvil 分叉上广播。造出截单、待结算、已开始但零出价、以及 32 笔满额。
+/// @notice 只在本机 anvil 分叉上广播。造出截单、待结算、已开始但零出价、以及满额出价。
 ///         合约把开始区块写成部署时的区块，所以这里造不出「还没开始」。
 contract PhaseShotScript is Script {
     address internal constant TOKEN_IMPL = 0x7777c57ff7dc441c1715b2e36fa581c48B782222;
@@ -44,10 +44,9 @@ contract PhaseShotScript is Script {
         UniformLauncher readyL = _create(portal, launcherFactory, fee, 200, "READY", bytes32("ready"));
         UniformLauncher closedL = _create(portal, launcherFactory, fee, 230, "CLOSED", bytes32("closed"));
 
-        for (uint256 i = 1; i <= 32; ++i) {
+        for (uint256 i = 1; i <= fullL.MAX_BIDS(); ++i) {
             address who = address(uint160(0xC0DE1000) + uint160(i));
-            uint256 price = 1e14 - (i - 1) * 2e12;
-            if (price < 1e13) price = 1e13;
+            uint256 price = i <= fullL.MAX_BIDS() / 2 ? 1.01e13 : 1e14 + i;
             vm.startBroadcast(who);
             fullL.bid{value: 0.05 ether}(price, 0, uint160(who));
             vm.stopBroadcast();

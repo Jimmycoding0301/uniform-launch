@@ -162,7 +162,7 @@ contract E2ETestnet is Script {
             require(block.number >= l.endBlock() && l.status() == UniformLauncher.Status.Open, "not-ready");
             (bool ok, uint256 price, uint256 quote) = l.preview();
             require(ok && price == 8.9e12 && quote == 4.45 ether && quote >= l.minPoolQuote(), "book-changed");
-            return (instance, 0, 8_000_000, abi.encodeCall(l.settle, ()));
+            return (instance, 0, l.MIN_SETTLE_GAS() + 1_000_000, abi.encodeCall(l.settle, ()));
         }
         if (action == keccak256("claim")) {
             require(l.status() == UniformLauncher.Status.Succeeded && l.bidOf(signer) > 0, "not-claimable");
@@ -200,8 +200,9 @@ contract E2ETestnet is Script {
             console2.log(unicode"窗口已关");
             revert("closed");
         }
+        uint256 gasLimit = launcher.MIN_SETTLE_GAS() + 1_000_000;
         vm.startBroadcast(CREATOR);
-        (bool ok,) = address(launcher).call{gas: 8_000_000}(abi.encodeWithSignature("settle()"));
+        (bool ok,) = address(launcher).call{gas: gasLimit}(abi.encodeWithSignature("settle()"));
         vm.stopBroadcast();
         if (!ok) {
             console2.log(unicode"结算回滚");

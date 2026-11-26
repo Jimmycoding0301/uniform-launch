@@ -371,22 +371,48 @@ contract UniformAuditTest is Test {
         assertEq(address(owner).balance, 1 ether);
     }
 
+    function test_fullBookMarginalFillsAndRefundsConserveQuote() public {
+        UniformLauncher launcher = _launcher(1e13);
+        uint256 cap = launcher.MAX_BIDS();
+        uint256 marginalLimit = 4.01e13;
+        for (uint256 i; i < cap; ++i) {
+            uint256 limit = i < cap / 2 ? marginalLimit : 1e16 + i;
+            _bid(launcher, address(uint160(0x1000 + i)), 0.2 ether, limit);
+        }
+        (bool ok, uint256 price, uint256 quote) = launcher.preview();
+        assertTrue(ok);
+        assertEq(price, marginalLimit);
+        assertApproxEqAbs(quote, 20.05 ether, cap);
+        vm.roll(launcher.endBlock());
+        launcher.settle{gas: launcher.MIN_SETTLE_GAS() + 1_000_000}();
+        assertEq(uint8(launcher.status()), uint8(UniformLauncher.Status.Succeeded));
+        assertEq(launcher.clearingPrice(), price);
+        assertEq(launcher.poolQuote(), quote);
+        (uint256[] memory tokensOwed, uint256[] memory quoteOwed,) = launcher.getFills();
+        for (uint256 i; i < cap; ++i) {
+            assertGt(tokensOwed[i], 0);
+            assertApproxEqAbs(quoteOwed[i], i < cap / 2 ? 0.08671875 ether : 0, 1);
+        }
+        assertEq(_claimAll(launcher) + quote, cap * 0.2 ether);
+        assertEq(address(launcher).balance, 0);
+    }
+
     function test_maxBidsSettleGas() public {
         UniformLauncher launcher = _launcher(1e13);
-        for (uint256 i; i < 32; ++i) {
+        for (uint256 i; i < launcher.MAX_BIDS(); ++i) {
             _bid(launcher, address(uint160(0x1000 + i)), 0.2 ether, 1e16);
         }
-        assertEq(launcher.bidCount(), 32);
+        assertEq(launcher.bidCount(), launcher.MAX_BIDS());
         vm.roll(launcher.endBlock());
         uint256 before = gasleft();
         launcher.settle();
         uint256 used = before - gasleft();
         console2.log("MAX_BIDS_SETTLE_GAS", used);
         assertEq(uint8(launcher.status()), uint8(UniformLauncher.Status.Succeeded));
-        assertLt(used, 8_000_000);
+        assertLt(used, launcher.MIN_SETTLE_GAS() + 1_000_000);
         assertLt(used, launcher.MIN_SETTLE_GAS());
         uint256 paid = _claimAll(launcher);
-        assertLe(paid + launcher.poolQuote(), 32 * 0.2 ether);
+        assertLe(paid + launcher.poolQuote(), launcher.MAX_BIDS() * 0.2 ether);
         assertGe(address(launcher).balance, 0);
     }
 }

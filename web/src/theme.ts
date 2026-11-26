@@ -20,8 +20,6 @@ export const SETTLE_MS = 800;
 export const SWEEP_MS = 600;
 export const CURVE_MS = 400;
 export const ADDR_STAGGER_MS = 150;
-export const SETTLE_GAS_LIMIT = 8_000_000;
-export const MIN_SETTLE_GAS = 7_000_000;
 export const COPY_MS = 1600;
 
 export const RISK_LINE = t("截拍前的新增出价可能改变清算价。", "New bids may change the clearing price before close.");

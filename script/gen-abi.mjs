@@ -4,6 +4,8 @@ const artifact = JSON.parse(fs.readFileSync("out/UniformLauncher.sol/UniformLaun
 const keep = new Set([
   "statusCode",
   "bidCount",
+  "MAX_BIDS",
+  "MIN_SETTLE_GAS",
   "clearingPrice",
   "floorPrice",
   "startBlock",

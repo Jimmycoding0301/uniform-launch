@@ -84,6 +84,8 @@ node agent/cli.mjs identity --launcher 0xdE5F5e380689d23E3fcC3E8c2Af3bf066931b2a
 
 ## settle-tx
 
+代理读取指定 Launcher 的 `MIN_SETTLE_GAS()`，在它的基础上加 1,000,000 生成交易 gas 上限。下面的 8,000,000 来自旧版 32 笔场次，新版 128 笔场次使用 14,000,000。
+
 接单场会拒绝。待结算场 `0xdA237694120AFC09f2005b0F00dAfA70974ABe82`：
 
 ```json

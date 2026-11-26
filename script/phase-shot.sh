@@ -4,11 +4,16 @@ set -euo pipefail
 export PATH="$HOME/.foundry/bin:$PATH"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-ANVIL_RPC="http://127.0.0.1:18545"
+PORT="${ANVIL_PORT:-18545}"
+if [[ ! "$PORT" =~ ^[1-9][0-9]{0,4}$ ]] || (( PORT > 65535 )); then
+  echo "ANVIL_PORT 应为 1 到 65535 的整数。" >&2
+  exit 1
+fi
+ANVIL_RPC="http://127.0.0.1:$PORT"
 
-cast block-number --rpc-url "$ANVIL_RPC" >/dev/null
+cast rpc anvil_nodeInfo --rpc-url "$ANVIL_RPC" >/dev/null
 
-for i in $(seq 1 32); do
+for i in $(seq 1 128); do
   addr=$(printf "0x%040x" $((0xC0DE1000 + i)))
   cast rpc anvil_setBalance "$addr" 0xDE0B6B3A7640000 --rpc-url "$ANVIL_RPC" >/dev/null
 done
