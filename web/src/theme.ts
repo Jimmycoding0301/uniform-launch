@@ -23,5 +23,5 @@ export const SETTLE_GAS_LIMIT = 8_000_000;
 export const MIN_SETTLE_GAS = 7_000_000;
 export const COPY_MS = 1600;
 
-export const RISK_LINE = "最后区块的加价会抬高清算价。";
+export const RISK_LINE = "截拍前的新增出价可能改变清算价。";
 export const USER_LINE = "基于 Agent ID 与 ERC-8004 的 BNB Chain 发行协议，代理限价出价，一次清算定开盘价，税进 Flap Vault。";
