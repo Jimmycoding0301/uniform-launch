@@ -160,7 +160,10 @@ type Snap = {
 };
 
 const ZERO = "0x0000000000000000000000000000000000000000";
-const trustedTestnetFactories = new Set<string>([TESTNET.launcherFactory.toLowerCase()]);
+const trustedTestnetFactories = new Set<string>([
+  TESTNET.launcherFactory.toLowerCase(),
+  TESTNET.legacyLauncherFactory.toLowerCase(),
+]);
 const marketingFactory = import.meta.env.VITE_MARKETING_LAUNCHER_FACTORY?.trim().toLowerCase();
 if (marketingFactory && marketingFactory !== ZERO && isAddress(marketingFactory)) {
   trustedTestnetFactories.add(marketingFactory);
@@ -1008,7 +1011,7 @@ function TestnetBoard() {
   return (
     <div className="grid testnet-board">
       <section className="public-launch" aria-labelledby="public-launch-title">
-        <h1 id="public-launch-title">{t("公开测试网发射", "Public testnet launch")}</h1>
+        <h1 id="public-launch-title">{t("旧版公开测试网发射", "Original public testnet launch")}</h1>
         <p className="public-launch-amount">4.45 <span>tBNB</span></p>
         <p className="public-launch-caption">{t("实际入池，区块 144,926,064", "Added to the pool at block 144,926,064")}</p>
         <p>{t("出价者已领取 500,000 UNIFORM。", "The bidder claimed 500,000 UNIFORM.")}</p>
@@ -1020,6 +1023,11 @@ function TestnetBoard() {
       </section>
       <section className="plaque" aria-labelledby="testnet-contract-title">
         <h2 id="testnet-contract-title">{t("测试网合约", "Testnet contracts")}</h2>
+        <p><a href={localizedHref(`/?network=testnet&launcher=${TESTNET.currentAuction.launcher}`)}>{t("查看新版公开测试网拍卖 ↗", "View the current public testnet auction ↗")}</a></p>
+        <div className="public-launch-links">
+          <a href={`${TESTNET.explorer}/tx/${TESTNET.currentAuction.createTx}`} target="_blank" rel="noreferrer">{t("新版创建回执 ↗", "Current creation receipt ↗")}</a>
+          <a href={`${TESTNET.explorer}/tx/${TESTNET.currentAuction.bidTx}`} target="_blank" rel="noreferrer">{t("新版出价回执 ↗", "Current bid receipt ↗")}</a>
+        </div>
         {TESTNET_ROWS.map((row) => (
           <div className="row" key={row.address}>
             <span className="name">{row.name}</span>

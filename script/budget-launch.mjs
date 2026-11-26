@@ -14,6 +14,7 @@ const root = fileURLToPath(new URL("../", import.meta.url));
 const deployment = require("../deployments/bsc-testnet.json");
 const portal = "0x000042108465206185A077Edc3F3fd2b49060000";
 const budget = parseEther("4.6");
+const defaultRpc = "https://bsc-testnet-dataseed.bnbchain.org";
 const defaultFork = "https://bsc-testnet-rpc.publicnode.com";
 const forkBlock = 144915595n;
 const forkHash = "0x6fe1d57e3fea840d8d8e9a054c667bfad630c346223cf5fcdd5f7e9967d3f193";
@@ -30,13 +31,13 @@ function read(client, address, signature, args = []) {
   return client.readContract({ address, abi, functionName: abi[0].name, args });
 }
 
-async function plan(client, rpc, stage, signer, launcher, runNumber, duration) {
+async function plan(client, rpc, stage, signer, launcher, runNumber, duration, builder = "prepareBudget") {
   if (!stages.includes(stage)) throw new Error("Expected create, identity, bid, settle or claim");
   if (await client.getChainId() !== 97) throw new Error("Expected BSC testnet (97)");
   if (stage !== "create" && stage !== "identity" && !launcher) throw new Error("Supply the Launcher address from the creation receipt");
   const raw = execFileSync("forge", [
     "script", "script/E2ETestnet.s.sol:E2ETestnet", "--json", "--rpc-url", rpc,
-    "--sig", "prepareBudget(string,address,address,uint256,uint64)", stage, signer, launcher ?? zeroAddress, runNumber, String(duration),
+    "--sig", `${builder}(string,address,address,uint256,uint64)`, stage, signer, launcher ?? zeroAddress, runNumber, String(duration),
   ], { cwd: root, encoding: "utf8", maxBuffer: 8_000_000, stdio: ["ignore", "pipe", "pipe"] });
   const result = JSON.parse(raw).returns;
   const gasPrice = await client.getGasPrice();
@@ -105,7 +106,7 @@ async function rehearse(upstream, runNumber, duration) {
           await rpc("anvil_mine", toHex(remaining < 200n ? remaining : 200n));
         }
       }
-      const tx = await plan(client, local, stage, signer, launcher, runNumber, duration);
+      const tx = await plan(client, local, stage, signer, launcher, runNumber, duration, "prepareLegacyBudget");
       const hash = await rpc("eth_sendTransaction", tx);
       const receipt = await client.waitForTransactionReceipt({ hash });
       if (receipt.status !== "success") throw new Error(stage + " reverted");
@@ -141,7 +142,7 @@ async function rehearse(upstream, runNumber, duration) {
 
 try {
   const { values, positionals: [command, stage] } = parseArgs({ allowPositionals: true, options: {
-    rpc: { type: "string", default: defaultFork }, signer: { type: "string" }, launcher: { type: "string" },
+    rpc: { type: "string" }, signer: { type: "string" }, launcher: { type: "string" },
     run: { type: "string", default: "1" }, duration: { type: "string", default: "200" },
   } });
   if (!/^\d+$/.test(values.run)) throw new Error("Run number must be a nonnegative integer");
@@ -154,9 +155,10 @@ try {
   if (command === "plan") {
     if (!values.signer) throw new Error("Supply the public signer address with --signer");
     const launcher = values.launcher && getAddress(values.launcher);
-    result = await plan(makeClient(values.rpc), values.rpc, stage, getAddress(values.signer), launcher, runNumber, duration);
+    const rpc = values.rpc ?? defaultRpc;
+    result = await plan(makeClient(rpc), rpc, stage, getAddress(values.signer), launcher, runNumber, duration);
   } else if (command === "rehearse") {
-    result = await rehearse(values.rpc, runNumber, duration);
+    result = await rehearse(values.rpc ?? defaultFork, runNumber, duration);
   } else {
     throw new Error("Use plan STAGE --signer ADDRESS [--launcher ADDRESS] or rehearse [--rpc PUBLIC_READ_RPC]");
   }

@@ -49,9 +49,11 @@ interface IRouter {
 ///         私钥不在这个脚本里读取，也不打印。本机分叉用已解锁地址。
 contract E2ETestnet is Script {
     address internal constant PORTAL = 0x000042108465206185A077Edc3F3fd2b49060000;
-    address internal constant FACTORY = 0xE82642aC5c3B3B4b7D4cDeaf6a251Dc0BB7AcEfd;
-    address internal constant AGENT_SOURCE = 0xe4f7B9aBA67FEDAbF9B9a151C604466D448DAb09;
-    address internal constant ERC_SOURCE = 0x0526f00B99e952cE55F1B7BDaf9E6Ae42b42cf22;
+    address internal constant FACTORY = 0x5A995C7ee958a631FDD151C9582604d347D7799A;
+    address internal constant AGENT_SOURCE = 0x5aBdA470ed6A8dad942F6ff125b172c4274A7d32;
+    address internal constant LEGACY_VAULT_FACTORY = 0xE82642aC5c3B3B4b7D4cDeaf6a251Dc0BB7AcEfd;
+    address internal constant LEGACY_AGENT_SOURCE = 0xe4f7B9aBA67FEDAbF9B9a151C604466D448DAb09;
+    address internal constant LEGACY_ERC_SOURCE = 0x0526f00B99e952cE55F1B7BDaf9E6Ae42b42cf22;
     address internal constant STAND_IN = 0x89c60E8E5aF13508900152e5FEE149bf5708d8a0;
     address internal constant REGISTRY = 0x8004A818BFB912233c491871b3d84c89A494BD9e;
     address internal constant TOKEN_IMPL = 0x7777c57ff7dc441c1715b2e36fa581c48B782222;
@@ -62,13 +64,14 @@ contract E2ETestnet is Script {
     address internal constant CAROL = address(uint160(0xC0DE0005));
     string internal constant PATH = "deployments/bsc-testnet-e2e.json";
 
+    /// @notice Create an auction for the historical three-bid Vault rehearsal on a local fork.
     function create() external {
         _refuseRemote();
         IPortal portal = IPortal(PORTAL);
-        (bool enabled,) = portal.launcherFactoryMultiplier(FACTORY);
+        (bool enabled,) = portal.launcherFactoryMultiplier(LEGACY_VAULT_FACTORY);
         if (!enabled) {
             console2.log(unicode"Flap 还没开这个工厂的权限");
-            console2.log(FACTORY);
+            console2.log(LEGACY_VAULT_FACTORY);
             revert("flap-not-enabled");
         }
         uint256 fee = portal.SALT_LOCK_FEE();
@@ -94,11 +97,11 @@ contract E2ETestnet is Script {
         c.floorPrice = 1e13;
         c.durationBlocks = 200;
         c.identitySources = new address[](2);
-        c.identitySources[0] = AGENT_SOURCE;
-        c.identitySources[1] = ERC_SOURCE;
+        c.identitySources[0] = LEGACY_AGENT_SOURCE;
+        c.identitySources[1] = LEGACY_ERC_SOURCE;
 
         vm.startBroadcast(CREATOR);
-        address launcher = portal.newLauncher{value: fee}(FACTORY, abi.encode(c));
+        address launcher = portal.newLauncher{value: fee}(LEGACY_VAULT_FACTORY, abi.encode(c));
         vm.stopBroadcast();
         console2.log(unicode"Launcher");
         console2.log(launcher);
@@ -121,13 +124,33 @@ contract E2ETestnet is Script {
         view
         returns (address to, uint256 value, uint256 gasLimit, bytes memory data)
     {
+        return _prepareBudget(stage, signer, instance, runNumber, durationBlocks, FACTORY, AGENT_SOURCE);
+    }
+
+    /// @notice Reproduce the historical Vault auction against its pinned fork.
+    function prepareLegacyBudget(string calldata stage, address signer, address instance, uint256 runNumber, uint64 durationBlocks)
+        external
+        view
+        returns (address to, uint256 value, uint256 gasLimit, bytes memory data)
+    {
+        return _prepareBudget(stage, signer, instance, runNumber, durationBlocks, LEGACY_VAULT_FACTORY, LEGACY_AGENT_SOURCE);
+    }
+
+    function _prepareBudget(
+        string calldata stage,
+        address signer,
+        address instance,
+        uint256 runNumber,
+        uint64 durationBlocks,
+        address factory,
+        address agentSource
+    ) private view returns (address to, uint256 value, uint256 gasLimit, bytes memory data) {
         require(!vm.isContext(VmSafe.ForgeContext.ScriptBroadcast), "unsigned-only");
         require(block.chainid == 97 && signer != address(0), "wrong-chain-or-signer");
         bytes32 action = keccak256(bytes(stage));
         if (action == keccak256("create")) {
             IPortal portal = IPortal(PORTAL);
-            (bool enabled,) = portal.launcherFactoryMultiplier(FACTORY);
-            require(enabled, "factory-authorization-required");
+            // The caller simulates the real Portal call. Testnet can accept creation before formal enablement.
             require((portal.featureFlags() & 1) == 0, "creation-paused");
             uint256 fee = portal.SALT_LOCK_FEE();
             require(fee <= 0.005 ether && signer.balance >= 4.45 ether + fee + 0.123 ether, "budget-preflight");
@@ -139,16 +162,16 @@ contract E2ETestnet is Script {
             c.floorPrice = 8e12; // 500,000 tokens at the reserve require 4 tBNB.
             c.durationBlocks = durationBlocks;
             c.identitySources = new address[](1);
-            c.identitySources[0] = AGENT_SOURCE;
-            return (PORTAL, fee, 3_000_000, abi.encodeCall(portal.newLauncher, (FACTORY, abi.encode(c))));
+            c.identitySources[0] = agentSource;
+            return (PORTAL, fee, 3_000_000, abi.encodeCall(portal.newLauncher, (factory, abi.encode(c))));
         }
 
         UniformLauncher l = UniformLauncher(payable(instance));
         // Registration belongs to the signing account and can be prepared before an auction exists.
         if (instance != address(0) || action != keccak256("identity")) {
-            require(IPortal(PORTAL).getLauncher(instance).launcherFactory == FACTORY, "wrong-factory");
+            require(IPortal(PORTAL).getLauncher(instance).launcherFactory == factory, "wrong-factory");
             require(l.creator() == signer && l.hub() == PORTAL && l.floorPrice() == 8e12, "wrong-auction");
-            require(l.identitySourceCount() == 1 && l.identitySources(0) == AGENT_SOURCE, "wrong-identity");
+            require(l.identitySourceCount() == 1 && l.identitySources(0) == agentSource, "wrong-identity");
         }
         if (action == keccak256("identity")) {
             return (STAND_IN, 0, 100_000, abi.encodeCall(IStandIn.claim, ()));

@@ -4,7 +4,7 @@
   "artifactId": "uniform-launcher-detail",
   "name": "同价发射",
   "chainId": 97,
-  "factoryAddress": "0xe82642ac5c3b3b4b7d4cdeaf6a251dc0bb7acefd",
+  "factoryAddress": "0x5a995c7ee958a631fdd151c9582604d347d7799a",
   "configContract": "launcher-detail/v1",
   "surfaces": [
     "launcher-ui"

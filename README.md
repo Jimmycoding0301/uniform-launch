@@ -2,7 +2,7 @@
 
 A buyer chooses a budget and a maximum price. When bidding closes, everyone who fills pays the same price. If the auction meets its funding conditions, Flap issues the token and seeds a PancakeSwap V2 pool in the settlement transaction. Otherwise, every bidder can claim their full bid back.
 
-**Public BSC Testnet launch, chain 97, original Vault release.** One bid cleared at **0.0000089 tBNB per UNIFORM**. The pool opened with **500,000 UNIFORM and 4.45 WBNB**. The bidder claimed the other **500,000 UNIFORM**. The 128-bid candidate with direct marketing payouts has completed local fork tests and awaits its own public testnet launch. [Public settlement](https://testnet.bscscan.com/tx/0x56d87f21c4dbd55227d9e619986555f150c7da5ddec5db663b201a9b9985ae20) · [Bidder’s claim](https://testnet.bscscan.com/tx/0x732353fc11a666984971d62c5b7a0016d76775145823938bf515ef776354f27f) · [Candidate evidence](docs/preaudit-response.md)
+**Public BSC Testnet launch, chain 97, original Vault release.** One bid cleared at **0.0000089 tBNB per UNIFORM**. The pool opened with **500,000 UNIFORM and 4.45 WBNB**. The bidder claimed the other **500,000 UNIFORM**. The 128-bid MARKETING factory has been deployed on BSC Testnet and its first public auction has accepted a bid. Settlement and claim receipts are tracked separately. [New public auction](docs/marketing-testnet-evidence.md) [Public settlement](https://testnet.bscscan.com/tx/0x56d87f21c4dbd55227d9e619986555f150c7da5ddec5db663b201a9b9985ae20) · [Bidder’s claim](https://testnet.bscscan.com/tx/0x732353fc11a666984971d62c5b7a0016d76775145823938bf515ef776354f27f) · [Candidate evidence](docs/preaudit-response.md)
 
 ## 问题与机制 · Why auction the opening price?
 
@@ -72,7 +72,7 @@ The browser tests use installed Google Chrome or Playwright Chromium. For the la
 | Open source | MIT-licensed contracts, Flap component, web desk, agent tools and a one-command local demo. [License](LICENSE) · [Demo script](script/demo.sh) · [Flap integration](docs/flap-integration.md) |
 | Use of BNB Chain | The public testnet launch used Flap Portal and our Factory, created a PancakeSwap V2 pair, registered the Vault and delivered the bidder’s allocation. [Token, pool, Vault and receipts](docs/public-testnet-evidence.md) |
 
-The candidate factory only accepts its built-in identity sources. BNB mainnet uses Binance Agent ID and requires a fixed roster of 1–128 eligible wallets. On testnet the factory provides an Agent ID stand-in and an ERC-8004 option. Each eligible wallet and each identity within its source can bid once per auction. The public launch used the stand-in. [Identity policy and review evidence](docs/preaudit-response.md) · [Deployment addresses](deployments/bsc-testnet.json)
+The candidate factory only accepts its built-in identity sources. BNB mainnet uses Binance Agent ID and requires a fixed roster of 1–128 eligible wallets. On testnet the factory provides an Agent ID stand-in and an ERC-8004 option. Each eligible wallet and each identity within its source can bid once per auction. The public launch used the stand-in. [Identity policy and review evidence](docs/preaudit-response.md) · [Current deployment addresses](deployments/bsc-testnet-marketing.json)
 
 ## Roadmap and business model · 路线图与收入
 

@@ -67,7 +67,9 @@ node script/budget-launch.mjs rehearse
 | 结算并发射 | `0xe35e8f7d441c6959076b03752f3f899f7692aa10b73b6c400cf343b11599be0a` | 4,604,207 |
 | 领取代币 | `0xa2a5cf70b41d7a63df90a1e7f4649e81aec6fe1845d48ed246e190f9fbc25aff` | 197,316 |
 
-### 项目方签名
+### 项目方签名 · 新版 MARKETING
+
+`plan` 默认使用已部署的新版工厂及其身份适配器，输出单笔未签名交易。上方的 `rehearse` 和三人彩排保留历史 Vault 分叉以复现旧回执。新工厂已在公开测试网接受创建和出价。[新版实际交易](marketing-testnet-evidence.md)
 
 Jimmy 或指定操作者用同一地址完成创建、出价和领取。以下 `plan` 命令会模拟当前步骤并输出未签名交易。先准备好签名设备，查该地址在测试身份替身中的 `balanceOf`。余额为 0 时，先登记身份并等回执。已登记的地址从创建开始。
 
@@ -87,4 +89,4 @@ node script/budget-launch.mjs plan claim --signer "$SIGNER" --launcher "$LAUNCHE
 
 创建时可选 200 至 20,000 个区块，默认 200。人工签名建议用 1,200 个区块，前 1,180 个区块接单，按平均每块 0.45 秒估算约 9 分钟。以链上区块为准，出价须在 `endBlock - 20` 前上链，结算从 `endBlock` 开始。已经创建的场次也支持 `plan identity --signer "$SIGNER" --launcher "$LAUNCHER"`，拍卖窗口会继续计时。
 
-逐笔等实际回执成功。可将每一步输出交给代理预览。核对链 97、目标、金额、calldata、gas 上限及价格后，由操作者使用支持 BSC 测试网的签名工具确认。创建准备时会读取当时的工厂状态、Portal 暂停位和创建费。出价前会检查窗口。结算前会核对预期清算结果。如果公开场次出现其他出价，先重新评估该场的清算预览。结算后检查 Launcher 的 `statusCode() = 1`、`AuctionSettled` 事件以及 token、pool 地址，再准备领取。若实际状态是 2，出价人按失败场流程申请退款。领取后核对 500,000 枚代币到账。公开测试网的创建与结算交易见 [发射回执](public-testnet-evidence.md)。
+逐笔等实际回执成功。可将每一步输出交给代理预览。核对链 97、目标、金额、calldata、gas 上限及价格后，由操作者使用支持 BSC 测试网的签名工具确认。创建准备时会读取 Portal 暂停位和创建费，并预演实际的 Portal 调用。出价前会检查窗口。结算前会核对预期清算结果。如果公开场次出现其他出价，先重新评估该场的清算预览。结算后检查 Launcher 的 `statusCode() = 1`、`AuctionSettled` 事件以及 token、pool 地址，再准备领取。若实际状态是 2，出价人按失败场流程申请退款。领取后核对 500,000 枚代币到账。公开测试网的创建与结算交易见 [发射回执](public-testnet-evidence.md)。
