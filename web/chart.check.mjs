@@ -95,13 +95,15 @@ try {
       const dot = svg.querySelector(".clear-core");
       const guide = svg.querySelector(".clear-guide");
       const data = svg.querySelector(".clear-point").dataset;
+      const poolValue = document.querySelector(".market-note small span:last-child");
       const nearest = Math.min(...tierNodes.map((n) => Math.hypot(n.cx.baseVal.value - dot.cx.baseVal.value, n.cy.baseVal.value - dot.cy.baseVal.value)));
       return {
         ys: svg.querySelectorAll(".y-tick").length, xs: svg.querySelectorAll(".x-tick").length,
         blur: getComputedStyle(svg).filter, filters: svg.querySelectorAll("[filter]").length,
         nearest, markerX: dot.cx.baseVal.value, guideX: guide.x1.baseVal.value,
         xLabels: [...svg.querySelectorAll(".x-tick")].map((e) => e.textContent),
-        poolValueLines: document.querySelector(".market-note small span:last-child").getClientRects().length,
+        poolValueHeight: poolValue.getBoundingClientRect().height,
+        poolLineHeight: parseFloat(getComputedStyle(poolValue).lineHeight),
         nodes: tierNodes.length, cubics: (curve.getAttribute("d").match(/ C /g) ?? []).length,
         budget: data.budget, price: data.price,
         caption: document.querySelector(".demand-caption").innerText,
@@ -116,7 +118,7 @@ try {
     assert.equal(metrics.cubics, metrics.nodes - 1);
     assert.ok(metrics.nearest < .01 && Math.abs(metrics.markerX - metrics.guideX) < .01);
     assert.ok(metrics.xLabels.includes("11") && metrics.xLabels.includes("15.7") && !metrics.xLabels.includes("3.925"));
-    assert.equal(metrics.poolValueLines, 1, "预计入池金额与单位需同一行");
+    assert.ok(metrics.poolValueHeight <= metrics.poolLineHeight + 1, "预计入池金额与单位需同一行");
     assert.equal(metrics.price, "0.00002");
     assert.equal(metrics.budget, "11");
     assert.ok(metrics.caption.includes("11 BNB") && metrics.caption.includes("保留价") && metrics.caption.includes("你的限价"));
