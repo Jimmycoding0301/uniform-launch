@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {Math} from "@openzeppelin/contracts/utils/math/Math.sol";
+
 /// @notice 单次统一价格清算。价格单位是每 1e18 代币 wei 需要多少报价 wei。
 ///         全额前缀与边际卡价取较高清算价；价格相同保留全额前缀。
 ///         代币数量向下取整，实付向上取整，退款是预算减去实付。除不尽的代币留在调用方，不送给某一笔出价。
@@ -26,6 +28,7 @@ library UniformSettle {
     }
 
     uint256 internal constant WAD = 1e18;
+    uint256 internal constant MAX_PRICE = 1e36;
 
     error ZeroSupply();
 
@@ -99,15 +102,17 @@ library UniformSettle {
                 groupBudget += bids[order[end++]].budget;
             } while (end < count && bids[order[end]].maxPrice == candidate);
             eligibleBudget += groupBudget;
-            // Rounding down the higher bids' token amounts can only increase the
-            // remaining cost. Insufficient aggregate budget rules this price out.
-            if (candidate > ((eligibleBudget + 1) * WAD - 1) / sellAmount) continue;
+            // Legacy orders may have higher limits. Their budgets still count for every
+            // lower price. No book admitted by the Launcher can clear above MAX_PRICE.
+            if (candidate > MAX_PRICE) continue;
+            // Per-bid rounding can only increase the remaining cost at this price.
+            if (Math.mulDiv(sellAmount, candidate, WAD) > eligibleBudget) continue;
 
             uint256 higherTokens;
             for (uint256 i; i < first; ++i) {
                 higherTokens += bids[order[i]].budget * WAD / candidate;
             }
-            if (higherTokens < sellAmount && groupBudget >= (sellAmount - higherTokens) * candidate / WAD) {
+            if (higherTokens < sellAmount && groupBudget >= Math.mulDiv(sellAmount - higherTokens, candidate, WAD)) {
                 return (candidate, end);
             }
         }
@@ -124,7 +129,7 @@ library UniformSettle {
         }
         for (uint256 i; i < k; ++i) {
             uint256 pos = order[i];
-            o.fills[pos].tokens = bids[pos].budget * sellAmount / budgetSum;
+            o.fills[pos].tokens = Math.mulDiv(bids[pos].budget, sellAmount, budgetSum);
             o.fills[pos].spend = bids[pos].budget;
             o.fills[pos].refundQuote = 0;
         }
@@ -155,7 +160,7 @@ library UniformSettle {
             if (b.maxPrice > price) {
                 tokens = b.budget * WAD / price;
             } else if (b.maxPrice == price) {
-                tokens = remaining * b.budget / marginalBudget;
+                tokens = Math.mulDiv(remaining, b.budget, marginalBudget);
             } else {
                 continue;
             }
@@ -175,8 +180,7 @@ library UniformSettle {
     /// @dev 向上取整，但不超过这笔预算。代币已经按向下取整算过。
     function _charge(uint256 tokens, uint256 price, uint256 budget) private pure returns (uint256) {
         if (tokens == 0 || price == 0) return 0;
-        uint256 raw = tokens * price;
-        uint256 spend = (raw + WAD - 1) / WAD;
+        uint256 spend = Math.mulDiv(tokens, price, WAD, Math.Rounding.Ceil);
         if (spend > budget) return budget;
         return spend;
     }

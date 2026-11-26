@@ -14,6 +14,19 @@ export const launcherAbi = [
   },
   {
     "type": "function",
+    "name": "MAX_PRICE",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "MIN_SETTLE_GAS",
     "inputs": [],
     "outputs": [
@@ -122,6 +135,19 @@ export const launcherAbi = [
         "name": "",
         "type": "uint64",
         "internalType": "uint64"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "expectedToken",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
       }
     ],
     "stateMutability": "view"
@@ -394,6 +420,11 @@ export const launcherAbi = [
   },
   {
     "type": "error",
+    "name": "NameScreenUnavailable",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "NoUnallocatedTokens",
     "inputs": []
   },
@@ -451,12 +482,27 @@ export const launcherAbi = [
   },
   {
     "type": "error",
+    "name": "OnlySelf",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "PortalQuoteUnavailable",
     "inputs": []
   },
   {
     "type": "error",
+    "name": "PriceTooHigh",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "RefundUnavailable",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "ScamNameOrSymbol",
     "inputs": []
   },
   {

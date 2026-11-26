@@ -2,6 +2,8 @@
 pragma solidity ^0.8.26;
 
 import {Initializable} from "@openzeppelin-contracts-upgradeable/proxy/utils/Initializable.sol";
+import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
+import {IFlapNamePolicy} from "./IFlapNamePolicy.sol";
 import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {LauncherBase} from "src/flap/LauncherBase.sol";
@@ -40,6 +42,10 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
     uint256 public constant MIN_BUDGET = 0.01 ether;
     uint256 public constant MAX_BUDGET = 100 ether;
     uint256 public constant MAX_BIDS = 128;
+    uint256 public constant MAX_PRICE = UniformSettle.MAX_PRICE;
+    address internal constant POOL_TOKEN_IMPLEMENTATION = 0x7777c57ff7dc441c1715b2e36fa581c48B782222;
+    address internal constant MAINNET_NAME_POLICY = 0xfFb69d59f62454f3B8322Bc1a9FCE6E171a5264f;
+    address internal constant TESTNET_NAME_POLICY = 0x5CfbE713d070e87F67D1bc84312B7eB8Fe4F2B5E;
     uint64 public constant CLOSE_BUFFER = 20;
     /// @notice Reject an underfunded settle call before it can change auction state.
     ///         Clients add 1,000,000 gas for transaction and proxy overhead.
@@ -133,6 +139,10 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
     error NotAdmitted();
     error NoUnallocatedTokens();
     error PortalQuoteUnavailable();
+    error ScamNameOrSymbol();
+    error NameScreenUnavailable();
+    error PriceTooHigh();
+    error OnlySelf();
 
     modifier nonReentrant() {
         if (busy) revert Busy();
@@ -155,7 +165,7 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         if (bytes(c.name).length == 0 || bytes(c.name).length > 32) revert InvalidConfig();
         if (bytes(c.symbol).length == 0 || bytes(c.symbol).length > 8) revert InvalidConfig();
         if (bytes(c.meta).length == 0 || c.salt == bytes32(0)) revert InvalidConfig();
-        if (c.floorPrice == 0 || c.floorPrice > 1e36) revert InvalidConfig();
+        if (c.floorPrice == 0 || c.floorPrice > MAX_PRICE) revert InvalidConfig();
         if (c.durationBlocks < MIN_DURATION || c.durationBlocks > MAX_DURATION) revert InvalidConfig();
         if (c.identitySources.length == 0 || c.identitySources.length > 4) revert InvalidConfig();
         for (uint256 i; i < c.identitySources.length; ++i) {
@@ -183,9 +193,25 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         startBlock = uint64(block.number);
         endBlock = startBlock + c.durationBlocks;
 
+        _screenName(c.name, c.symbol);
         uint256 fee = IPortal(hub_).SALT_LOCK_FEE();
         if (msg.value != fee) revert InvalidConfig();
         IPortal(hub_).lockSalt{value: fee}(c.salt, uint8(IPortalTypes.LaunchKind.DIRECT_V2_POOL_TAX));
+    }
+
+    function _screenName(string calldata name_, string calldata symbol_) private view {
+        address policy = block.chainid == 56 ? MAINNET_NAME_POLICY : TESTNET_NAME_POLICY;
+        (bool success, bytes memory result) =
+            policy.staticcall(abi.encodeCall(IFlapNamePolicy.isScamWord, (name_, symbol_)));
+        if (!success || result.length != 64) revert NameScreenUnavailable();
+        (uint256 nameScam, uint256 symbolScam) = abi.decode(result, (uint256, uint256));
+        if (nameScam > 1 || symbolScam > 1) revert NameScreenUnavailable();
+        if (nameScam != 0 || symbolScam != 0) revert ScamNameOrSymbol();
+    }
+
+    /// @notice Predicted token address, available before settlement.
+    function expectedToken() external view returns (address) {
+        return Clones.predictDeterministicAddress(POOL_TOKEN_IMPLEMENTATION, launchSalt, hub);
     }
 
     receive() external payable {
@@ -200,7 +226,7 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         d.name = name;
         d.symbol = symbol;
         d.quoteToken = address(0);
-        d.targetRaise = softCap();
+        d.targetRaise = FixedPointMathLib.max(softCap(), minPoolQuote());
         d.poolTokenRatio = POOL_AMOUNT * 1e18 / TOTAL_SUPPLY;
         d.titleZh = TITLE_ZH;
         d.titleEn = TITLE_EN;
@@ -319,6 +345,7 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         if (admittedWalletCount != 0 && !admittedWallet[msg.sender]) revert NotAdmitted();
         if (msg.value < MIN_BUDGET || msg.value > MAX_BUDGET) revert BadBudget();
         if (maxPrice < floorPrice) revert BelowFloor();
+        if (maxPrice > MAX_PRICE) revert PriceTooHigh();
         if (_bids.length >= MAX_BIDS) revert Full();
         if (sourceIndex >= identitySources.length) revert NotAgent();
         (bool agentOk, bytes32 sourceId) =
@@ -351,7 +378,22 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         if (status != Status.Open) revert Closed();
         if (block.number < endBlock) revert Early();
 
-        UniformSettle.Outcome memory o = _quote();
+        UniformSettle.Outcome memory o;
+        try this.settlementQuote() returns (UniformSettle.Outcome memory calculated) {
+            o = calculated;
+        } catch Panic(uint256 code) {
+            // A deterministic arithmetic error cannot improve on a retry.
+            if (code != 0x11 && code != 0x12) {
+                assembly ("memory-safe") {
+                    mstore(0x00, 0x4e487b71)
+                    mstore(0x20, code)
+                    revert(0x1c, 0x24)
+                }
+            }
+            status = Status.Failed;
+            emit AuctionFailed(3);
+            return;
+        }
         if (!o.ok || o.poolQuote == 0 || !_portalAllowsLaunch(o.poolQuote)) {
             status = Status.Failed;
             emit AuctionFailed(1);
@@ -460,6 +502,11 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
     {
         uint256 usd = FixedPointMathLib.max(floor.floorUsdWad, floor.createFloorUsdWad);
         return FixedPointMathLib.fullMulDivUp(usd, 1 ether, price) + LAUNCH_MARGIN;
+    }
+
+    function settlementQuote() external view returns (UniformSettle.Outcome memory) {
+        if (msg.sender != address(this)) revert OnlySelf();
+        return _quote();
     }
 
     function _quote() internal view returns (UniformSettle.Outcome memory) {

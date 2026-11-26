@@ -30,6 +30,7 @@
     "Early": "还没到结算",
     "AlreadyBid": "这个地址已经出过价",
     "BadBudget": "预算不在范围内",
+    "PriceTooHigh": "限价超过合约上限",
     "BelowFloor": "低于保留价，这笔不会入场",
     "Full": "名额已满",
     "NotAgent": "身份不过",

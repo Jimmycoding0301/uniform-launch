@@ -1,7 +1,7 @@
 import { createPublicClient, encodeFunctionData, getAddress, http, keccak256, toBytes } from "viem";
 import { launcherAbi } from "./abi.mjs";
 import { explain } from "./errors.mjs";
-import { SELL_AMOUNT, settle } from "../shared/settle.mjs";
+import { SELL_AMOUNT, MAX_PRICE, settle } from "../shared/settle.mjs";
 
 const WAD = 10n ** 18n;
 export const CHAIN_ID = 97;
@@ -170,6 +170,7 @@ export async function simulate(rpc, launcher, budgetText, priceText) {
     if (budget < WAD / 100n || budget > 100n * WAD) {
       return { ok: false, reason: "预算不在范围内", next: "单笔 0.01 到 100 BNB。" };
     }
+    if (maxPrice > MAX_PRICE) return { ok: false, reason: "限价超过合约上限", next: "请降低最高价。" };
     if (maxPrice < snap.floor) return { ok: false, reason: "低于保留价，这笔不会入场", next: "把最高价提到保留价以上。" };
     if (snap.bids >= snap.maxBids) return { ok: false, reason: "名额已满", next: `这一场最多 ${snap.maxBids} 笔。` };
     const phase = phaseOf(snap.status, snap.block, snap.start, snap.end);
@@ -275,6 +276,7 @@ export async function bidTx(rpc, launcher, budgetText, priceText, sourceIndex, a
   try {
     const budget = parseBnb(budgetText);
     const price = parseBnb(priceText);
+    if (price > MAX_PRICE) return { ok: false, reason: "限价超过合约上限", next: "请降低最高价。" };
     const sourceText = String(sourceIndex).trim();
     if (!/^\d+$/.test(sourceText) || Number(sourceText) > 255) {
       return { ok: false, reason: "来源编号不对", next: "从 0 开始，按身份来源列表选，不能大于 255。" };
