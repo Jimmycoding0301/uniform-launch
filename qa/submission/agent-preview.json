@@ -1,0 +1,87 @@
+{
+  "source": "node agent/mcp.mjs (stdio) + web/public/demo.json",
+  "commit": "da843af67d5a9c52570553b6f208555a0a13d406",
+  "timeUTC": "2026-11-26T17:16:02.027682+00:00",
+  "rpc": "http://127.0.0.1:18549",
+  "launcher": "0x0c84220140D15b7A902b3fE2370b29Cd812D4C9d",
+  "chainId": 97,
+  "blockReadAfterPreview": 144918277,
+  "calls": [
+    {
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "method": "tools/call",
+        "params": {
+          "name": "simulate_bid",
+          "arguments": {
+            "rpc": "http://127.0.0.1:18549",
+            "launcher": "0x0c84220140D15b7A902b3fE2370b29Cd812D4C9d",
+            "budget": "1",
+            "maxPrice": "0.00003"
+          }
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 1,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"ok\":true,\"clearingPrice\":\"0.00002\",\"tokens\":\"50000\",\"spend\":\"1\",\"refund\":\"0\",\"meetsMinPool\":true,\"poolQuote\":\"10\"}"
+            }
+          ],
+          "isError": false
+        }
+      },
+      "value": {
+        "ok": true,
+        "clearingPrice": "0.00002",
+        "tokens": "50000",
+        "spend": "1",
+        "refund": "0",
+        "meetsMinPool": true,
+        "poolQuote": "10"
+      }
+    },
+    {
+      "request": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "method": "tools/call",
+        "params": {
+          "name": "simulate_bid",
+          "arguments": {
+            "rpc": "http://127.0.0.1:18549",
+            "launcher": "0x0c84220140D15b7A902b3fE2370b29Cd812D4C9d",
+            "budget": "1",
+            "maxPrice": "0.000015"
+          }
+        }
+      },
+      "response": {
+        "jsonrpc": "2.0",
+        "id": 2,
+        "result": {
+          "content": [
+            {
+              "type": "text",
+              "text": "{\"ok\":true,\"clearingPrice\":\"0.00002\",\"tokens\":\"0\",\"spend\":\"0\",\"refund\":\"1\",\"meetsMinPool\":true,\"poolQuote\":\"10\"}"
+            }
+          ],
+          "isError": false
+        }
+      },
+      "value": {
+        "ok": true,
+        "clearingPrice": "0.00002",
+        "tokens": "0",
+        "spend": "0",
+        "refund": "1",
+        "meetsMinPool": true,
+        "poolQuote": "10"
+      }
+    }
+  ]
+}

@@ -86,9 +86,9 @@
   </main>
   <script>
     const cue = {
-      cover: "第 1 页 · 项目方先一笔，双方各出 2.5 BNB",
+      cover: "第 1 页 · 固定预售，双方各出 2.5 BNB",
       mechanism: "机制 · 指预算和最高价",
-      demo: "第 3 页 · 切到演示",
+      demo: "第 3 页 · 代理试算两档限价",
       high: "选高限价 · 看成交",
       low: "选低限价 · 看退回",
       settle: "打开发射回执 · 指入池金额",
@@ -98,13 +98,12 @@
     };
     const schedules = {
       120: [
-        [0, cue.cover], [5, "指曲线列，再指同价列的两个 125,000"], [12, "身份登记 · 指测试网替身和 Success"],
-        [18, "工厂创建 · 指新 Launcher"], [22, "出价回执 · 指 4.45 tBNB"],
-        [26, "第 2 页 · 指清算、发射和退款"],
-        [36, cue.demo], [44, cue.high], [58, cue.low], [72, cue.settle],
-        [88, cue.claim], [101, "第 5 页 · 指自制 Flap 界面"],
-        [108, "展示 Vault 分叉提款"], [115, "展示 GitHub · 两个赛道共用"],
-        [120, cue.stop]
+        [0, cue.cover], [5, "曲线 · 指先后买家的数量差"], [11, "同价拍卖 · 需求定价，同一单价"],
+        [18, "身份登记 · 指测试网替身"], [24, "工厂创建 Launcher"], [28, "指 4.45 tBNB 出价"],
+        [32, "清算、发射和退款"], [42, cue.demo], [50, cue.high],
+        [57, "MCP 实测 · 指两份结果，交易由用户签名"], [64, cue.low], [78, cue.settle],
+        [94, cue.claim], [101, "第 5 页 · 指 Flap 界面"], [108, "展示 Vault 分叉提款"],
+        [115, "展示 GitHub 源码"], [120, cue.stop]
       ],
       60: [
         [0, cue.cover], [8, cue.mechanism], [17, cue.demo], [20, cue.high],
