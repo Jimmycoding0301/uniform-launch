@@ -4,7 +4,7 @@
 
 合约的最低入池额约为 4.3357 tBNB，还要按保留价卖出 500,000 枚，并通过 Portal 毕业检查。下表 40 tBNB 的三人彩排与文末 4.6 tBNB 的单人方案分别核算。
 
-本页发射回执来自本机分叉。公共测试网发射回执待项目方实际执行后补录。
+本页记录本机分叉和签名步骤。公开链的发射交易和合约地址见 [BSC 公共测试网发射回执](public-testnet-evidence.md)。
 
 ## 三人彩排 · 本机测试网分叉
 
@@ -82,4 +82,4 @@ node script/budget-launch.mjs plan settle --signer "$SIGNER" --launcher "$LAUNCH
 node script/budget-launch.mjs plan claim --signer "$SIGNER" --launcher "$LAUNCHER"
 ```
 
-每一步等上一步实际回执成功后运行。拍卖共 200 个区块，最后 20 个区块停止接单。准备好签名设备后再创建。将输出交给代理预览，核对链 97、目标、金额、calldata、gas 上限及价格，在币安 App 确认。创建准备时会读取当时的工厂状态、Portal 暂停位和创建费。出价前会检查窗口。结算前会核对预期清算结果。如果公开场次出现其他出价，先重新评估该场的清算预览。结算后检查 Launcher 的 `statusCode() = 1`、`AuctionSettled` 事件以及 token、pool 地址，再准备领取。若实际状态是 2，出价人按失败场流程申请退款。领取后核对 500,000 枚代币到账。公共测试网的创建、结算哈希与 BscScan 链接待实际回执。
+每一步等上一步实际回执成功后运行。拍卖共 200 个区块，最后 20 个区块停止接单。准备好签名设备后再创建。将输出交给代理预览，核对链 97、目标、金额、calldata、gas 上限及价格，在币安 App 确认。创建准备时会读取当时的工厂状态、Portal 暂停位和创建费。出价前会检查窗口。结算前会核对预期清算结果。如果公开场次出现其他出价，先重新评估该场的清算预览。结算后检查 Launcher 的 `statusCode() = 1`、`AuctionSettled` 事件以及 token、pool 地址，再准备领取。若实际状态是 2，出价人按失败场流程申请退款。领取后核对 500,000 枚代币到账。公开测试网的创建与结算交易见 [发射回执](public-testnet-evidence.md)。
