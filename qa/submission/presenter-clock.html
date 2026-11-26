@@ -85,14 +85,28 @@
     </div>
   </main>
   <script>
-    const cueText = [
-      "封面 · 讲开场", "机制 · 说明统一清算", "第 3 页 · 切到演示",
-      "选高限价 · 看成交", "选低限价 · 看退回", "打开发射回执 · 指入池金额",
-      "打开领取回执 · 指到账数量", "第 5 页 · 讲 Vault 并收尾", "停止演示"
-    ];
+    const cue = {
+      cover: "封面 · 讲开场",
+      mechanism: "机制 · 指预算和最高价",
+      demo: "第 3 页 · 切到演示",
+      high: "选高限价 · 看成交",
+      low: "选低限价 · 看退回",
+      settle: "打开发射回执 · 指入池金额",
+      claim: "打开领取回执 · 指到账数量",
+      vault: "第 5 页 · 讲 Flap 界面与 Vault",
+      stop: "停止演示"
+    };
     const schedules = {
-      120: [0, 12, 36, 44, 58, 72, 88, 101, 120],
-      60:  [0,  8, 17, 20, 28, 35, 44,  52,  60]
+      120: [
+        [0, cue.cover], [12, cue.mechanism], [26, "第 2 页 · 指清算、发射和退款"],
+        [36, cue.demo], [44, cue.high], [58, cue.low], [72, cue.settle],
+        [88, cue.claim], [101, cue.vault], [115, "保持第 5 页 · 说最后一句"],
+        [120, cue.stop]
+      ],
+      60: [
+        [0, cue.cover], [8, cue.mechanism], [17, cue.demo], [20, cue.high],
+        [28, cue.low], [35, cue.settle], [44, cue.claim], [52, cue.vault], [60, cue.stop]
+      ]
     };
     const byId = id => document.getElementById(id);
     const toggle = byId("toggle");
@@ -128,14 +142,16 @@
         progress.value = second;
         lastSecond = second;
       }
-      const times = schedules[duration];
-      const cue = times.findLastIndex(t => t <= second);
-      if (cue !== lastCue) {
-        byId("current-time").textContent = format(times[cue]);
-        byId("current").textContent = cueText[cue];
-        byId("next-time").textContent = done ? "" : format(times[cue + 1]);
-        byId("next").textContent = done ? "已结束" : cueText[cue + 1];
-        lastCue = cue;
+      const cues = schedules[duration];
+      const current = cues.findLastIndex(([time]) => time <= second);
+      if (current !== lastCue) {
+        const [currentTime, currentText] = cues[current];
+        const next = cues[current + 1];
+        byId("current-time").textContent = format(currentTime);
+        byId("current").textContent = currentText;
+        byId("next-time").textContent = next ? format(next[0]) : "";
+        byId("next").textContent = next ? next[1] : "已结束";
+        lastCue = current;
       }
       const status = done ? "Finished" : startedAt !== null ? "Running" : savedMs > 0 ? "Paused" : "Ready";
       if (byId("status").textContent !== status) byId("status").textContent = status;

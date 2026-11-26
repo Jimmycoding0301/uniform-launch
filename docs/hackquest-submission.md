@@ -28,7 +28,7 @@ BSC 公共测试网上，一笔出价以每枚 0.0000089 tBNB 成交。Flap 创�
 
 ## What to show the judges
 
-[Download the editable pitch deck](../qa/submission/Uniform-Launch-BNB-Bangkok.pptx). Use the [stage script and judge Q&A](pitch-runbook.md) for the two-minute pitch or its one-minute cut.
+[Download the editable pitch deck](../qa/submission/Uniform-Launch-BNB-Bangkok.pptx). Use the [stage script and judge Q&A](pitch-runbook.md) for the two-minute pitch or its one-minute cut. [Offline cue clock](../qa/submission/presenter-clock.html)
 
 Flap asks teams to show a public BSC Testnet launch through their Factory, share code, explain the launch mechanism, and show their custom Flap UI. Projects that include a Vault should demonstrate how it works. [Official Flap brief](https://www.hackquest.io/hackathons/BNB-Bangkok)
 

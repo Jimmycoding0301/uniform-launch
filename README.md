@@ -1,8 +1,8 @@
-# 同价发射
+# Uniform Launch · One-Price Auctions
 
 基于 Agent ID 的 BNB Chain 同价发行协议：窗口结束一次清算，成功经 Flap 建池，失败全额退款。
 
-[HackQuest 提交材料 · Submission brief](docs/hackquest-submission.md) · [演示 PPTX · Pitch deck](qa/submission/Uniform-Launch-BNB-Bangkok.pptx) · [公开发射回执 · Public chain evidence](docs/public-testnet-evidence.md)
+[HackQuest 提交材料 · Submission brief](docs/hackquest-submission.md) · [演示 PPTX · Pitch deck](qa/submission/Uniform-Launch-BNB-Bangkok.pptx) · [现场台本和问答 · Pitch runbook](docs/pitch-runbook.md) · [公开发射回执 · Public chain evidence](docs/public-testnet-evidence.md)
 
 ![接单场的需求曲线、清算价和出价簿](qa/submission/scene-1.png)
 
