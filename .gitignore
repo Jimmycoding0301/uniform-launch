@@ -3,6 +3,7 @@ out/
 node_modules/
 web/node_modules/
 web/dist/
+web/dist-pages/
 dist-flap/
 web/tsconfig.tsbuildinfo
 broadcast/

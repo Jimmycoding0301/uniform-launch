@@ -204,8 +204,11 @@ export function App() {
   const reduced = useReducedMotion();
 
   const forceEmpty = params.get("empty") === "1";
-  const testnetBoard = params.get("network") === "testnet" && !params.get("launcher");
-  const demoOn = params.get("demo") === "1" || params.get("view") === "script";
+  const publicSite = import.meta.env.VITE_PUBLIC_SITE === "1";
+  const demoRequested = params.get("demo") === "1" || params.get("view") === "script";
+  const gallery = publicSite && demoRequested;
+  const testnetBoard = !gallery && (publicSite || params.get("network") === "testnet") && !params.get("launcher");
+  const demoOn = !publicSite && demoRequested;
   const [scene, setScene] = useState(() => {
     const requested = params.get("scene") ?? "";
     if (!demoOn || !/^[1-9]\d*$/.test(requested)) return 0;
@@ -214,8 +217,8 @@ export function App() {
   });
   const [why, setWhy] = useState<WhyFile | null>(null);
   const sceneAddress = [demo?.open, demo?.open, demo?.open, demo?.launched, demo?.failed, demo?.open][scene] || "";
-  const launcher = (forceEmpty || testnetBoard ? "" : demoOn ? sceneAddress : params.get("launcher") || demo?.open || "") as Address;
-  const publicTestnet = !demoOn && params.get("network") === "testnet";
+  const launcher = (forceEmpty || testnetBoard || gallery ? "" : demoOn ? sceneAddress : params.get("launcher") || demo?.open || "") as Address;
+  const publicTestnet = !demoOn && (publicSite || params.get("network") === "testnet");
   const localFork = !publicTestnet;
   const rpc = publicTestnet ? "https://bsc-testnet-rpc.publicnode.com" : demo?.rpc || "http://127.0.0.1:18545";
   const scope = `uniform.receipt.v1:${rpc}:${launcher.toLowerCase()}`;
@@ -230,7 +233,7 @@ export function App() {
   const tracking = pending?.scope === scope ? pending.request : restored;
   useEffect(() => {
     if (publicTestnet) return;
-    fetch("/demo.json")
+    fetch(`${import.meta.env.BASE_URL}demo.json`)
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error("missing"))))
       .then((data) => {
         setDemo(data);
@@ -243,7 +246,7 @@ export function App() {
   }, [publicTestnet]);
   useEffect(() => {
     if (!demoOn) return;
-    fetch("/why.json").then((r) => (r.ok ? r.json() : null)).then(setWhy).catch(() => setWhy(null));
+    fetch(`${import.meta.env.BASE_URL}why.json`).then((r) => (r.ok ? r.json() : null)).then(setWhy).catch(() => setWhy(null));
     const onKey = (event: KeyboardEvent) => {
       if (event.key === "Escape") {
         window.location.assign(localizedHref("/"));
@@ -726,7 +729,7 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
           </svg>
           <b>Uniform Launch</b>
           <nav className="mast-links" aria-label={t("工作台导航", "Auction navigation")}>
-            <a className="script-link" href={localizedHref("/?demo=1")} aria-current={demoOn ? "page" : undefined}>{t("演示脚本", "Demo")}</a>
+            <a className="script-link" href={localizedHref("/?demo=1")} aria-current={demoOn || gallery ? "page" : undefined}>{t(publicSite ? "演示" : "演示脚本", "Demo")}</a>
             <a className="script-link" href={localizedHref("/?network=testnet")} aria-current={testnetBoard ? "page" : undefined}>{t("发射回执", "Receipts")}</a>
             <a className="language-switch" href={languageHref(demoOn ? scene : undefined)} hrefLang={t("en", "zh")}
               aria-label={t("Switch to English", "切换到中文")} lang={t("en", "zh")}>{t("EN", "中文")}</a>
@@ -742,8 +745,9 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
       </header>
       <p className="status-line"><Zh text={mobileStatus(localFork, snap?.sources.some((item) => item.standIn))} /></p>
       <main className="screen" id="desk">
-        {!launcher && !rpcError && !demoOn && params.get("network") === "testnet" && <TestnetBoard />}
-        {!launcher && !rpcError && !demoOn && params.get("network") !== "testnet" && <Empty />}
+        {testnetBoard && <TestnetBoard />}
+        {gallery && <PublicGallery />}
+        {!launcher && !rpcError && !demoOn && !testnetBoard && !gallery && <Empty />}
         {demoOn && demoState === "load" && !launcher && <p className="status-line"><Zh text={t("正在读演示场。", "Loading the demo auctions.")} /></p>}
         {demoOn && demoState === "missing" && <DemoMissing />}
         {launcher && !snap && rpcNote && (
@@ -1003,6 +1007,32 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
     </div>
   );
 
+}
+
+const WALKTHROUGH = [
+  t("出价与清算价", "Bids and clearing price"), t("设置出价", "Set a bid limit"),
+  t("代理模拟", "Simulate your bid"), t("发射与交易税", "Launch and trading tax"),
+  t("失败与退款", "Below target, full refund"), t("比较发射机制", "Compare launch prices"),
+];
+
+function PublicGallery() {
+  const requested = Number(new URLSearchParams(location.search).get("scene"));
+  const [scene, setScene] = useState(Number.isInteger(requested) && requested >= 1 && requested <= WALKTHROUGH.length ? requested : 1);
+  return (
+    <section className="public-gallery" aria-labelledby="gallery-title">
+      <h1 id="gallery-title">{t("六幕演示", "Six-scene walkthrough")}</h1>
+      <div className="public-gallery-nav" role="group" aria-label={t("选择演示场景", "Select a demo scene")}>
+        {WALKTHROUGH.map((label, index) => <button type="button" key={label} aria-pressed={scene === index + 1}
+          onClick={() => setScene(index + 1)}>{label}</button>)}
+      </div>
+      <img width="1440" height="900" src={`${import.meta.env.BASE_URL}walkthrough/${language}/scene-${scene}.png`}
+        alt={WALKTHROUGH[scene - 1]} />
+      <div className="public-launch-links">
+        <a href={localizedHref(`/?network=testnet&launcher=${TESTNET.publicLaunch.launcher}`)}>{t("打开真实链上拍卖 ↗", "Open the live testnet auction ↗")}</a>
+        <a href="https://github.com/Jimmycoding0301/uniform-launch#try-the-bidding-desk" target="_blank" rel="noreferrer">{t("运行本机交互演示 ↗", "Run the interactive demo locally ↗")}</a>
+      </div>
+    </section>
+  );
 }
 
 function TestnetBoard() {
