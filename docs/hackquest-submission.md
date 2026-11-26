@@ -28,7 +28,7 @@ BSC 公共测试网上，一笔出价以每枚 0.0000089 tBNB 成交。Flap 创�
 
 ## What to show the judges
 
-[Download the editable pitch deck](../qa/submission/Uniform-Launch-BNB-Bangkok.pptx). Use the [stage script and judge Q&A](pitch-runbook.md) for the two-minute pitch or its one-minute cut. [Offline cue clock](../qa/submission/presenter-clock.html)
+[Download the editable English–Chinese pitch deck](../qa/submission/Uniform-Launch-BNB-Bangkok.pptx). The same two-minute video covers both tracks with the English voiceover and captions. [Stage script and judge Q&A](pitch-runbook.md) · [English captions](video-subtitles.en.srt) · [Offline cue clock](../qa/submission/presenter-clock.html)
 
 Flap asks teams to show a public BSC Testnet launch through their Factory, share code, explain the launch mechanism, and show their custom Flap UI. Projects that include a Vault should demonstrate how it works. [Official Flap brief](https://www.hackquest.io/hackathons/BNB-Bangkok)
 
@@ -43,7 +43,7 @@ Flap asks teams to show a public BSC Testnet launch through their Factory, share
 
 ## Optional interactive walkthrough
 
-To illustrate the pricing rule, run `bash script/demo.sh` from the submitted checkout with submodules and the [prerequisites](../README.md). Open `/?demo=1&scene=3` on the local address it prints. Set a 1 BNB budget and compare limits of 0.00003 and 0.000015. The first simulated order buys 50,000 tokens at 0.00002 BNB. The second buys zero and can reclaim its full budget. A presenter can use the optional [60-second recording script](judge-demo.md).
+To illustrate the pricing rule, run `bash script/demo.sh` from the submitted checkout with submodules and the [prerequisites](../README.md). Open `/?demo=1&scene=3&lang=en` on the local address it prints. Set a 1 BNB budget and compare limits of 0.00003 and 0.000015. The first simulated order buys 50,000 tokens at 0.00002 BNB. The second buys zero and can reclaim its full budget. [60-second recording script](judge-demo.md)
 
 For an offline presentation, download the checkout before the event. Open the [scene 3 image](../qa/submission/scene-3.png), the [scene 5 image](../qa/submission/scene-5.png) and the local [public transaction record](public-testnet-evidence.md). The six images and the saved record open without an RPC connection. [All six scenes](../qa/submission/README.md)
 
