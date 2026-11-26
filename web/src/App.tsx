@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPublicClient, http, keccak256, toBytes, type Address } from "viem";
+import { createPublicClient, http, isAddress, parseAbi, keccak256, toBytes, type Address } from "viem";
 import { formatBnb, formatBnb4, formatPrice, formatRemain, formatTokens, parseBnb, tokensFor } from "./curve";
 import { agentLabel } from "./names";
 import { Roller, useReducedMotion, Zh } from "./motion";
@@ -8,7 +8,9 @@ import { pancakeSwapLink } from "./dex";
 // @ts-expect-error 共享模拟器是普通 JavaScript，返回值在调用处收窄。
 import { settle as settleBids } from "../../shared/settle.mjs";
 import { ADDR_STAGGER_MS, COPY_MS, MIN_SETTLE_GAS, RISK_LINE, SETTLE_GAS_LIMIT, SETTLE_MS, SWEEP_MS, USER_LINE } from "./theme";
-import { TESTNET_ROWS } from "./networks";
+import { ReceiptPanel } from "./ReceiptPanel";
+import type { Action, Intent, Tracking } from "./receipts";
+import { TESTNET, TESTNET_ROWS } from "./networks";
 
 const ABI = [
   { type: "function", name: "status", stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
@@ -167,11 +169,8 @@ export function App() {
   const [maxPrice, setMaxPrice] = useState("0.00003");
   const [sourceIndex, setSourceIndex] = useState(0);
   const [agentIdInput, setAgentIdInput] = useState("");
-  const [hashInput, setHashInput] = useState("");
-  const [hashNote, setHashNote] = useState("");
-  const [hashOpen, setHashOpen] = useState(false);
-  const [hashReceipt, setHashReceipt] = useState<{ hash: string; block: string; amount: string; limit: string } | null>(null);
-  const [hashBusy, setHashBusy] = useState(false);
+  const [sender, setSender] = useState(() => new URLSearchParams(location.search).get("account") || "");
+  const [pending, setPending] = useState<{ scope: string; request: Tracking } | null>(null);
   const [showToken, setShowToken] = useState(false);
   const [showPool, setShowPool] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -192,8 +191,21 @@ export function App() {
   const [why, setWhy] = useState<WhyFile | null>(null);
   const sceneAddress = [demo?.open, demo?.open, demo?.open, demo?.launched, demo?.failed, demo?.open][scene] || "";
   const launcher = (forceEmpty || testnetBoard ? "" : demoOn ? sceneAddress : params.get("launcher") || demo?.open || "") as Address;
-  const rpc = demo?.rpc || "http://127.0.0.1:18545";
+  const publicTestnet = !demoOn && params.get("network") === "testnet";
+  const localFork = !publicTestnet;
+  const rpc = publicTestnet ? "https://bsc-testnet-rpc.publicnode.com" : demo?.rpc || "http://127.0.0.1:18545";
+  const scope = `uniform.receipt.v1:${rpc}:${launcher.toLowerCase()}`;
+  const restored = useMemo(() => {
+    if (!publicTestnet || !launcher) return null;
+    try {
+      const saved = JSON.parse(sessionStorage.getItem(scope) || "null") as Tracking | null;
+      return saved && saved.intent?.launcher.toLowerCase() === launcher.toLowerCase() &&
+        isAddress(saved.intent.account, { strict: false }) && /^\d+$/.test(saved.afterBlock) ? saved : null;
+    } catch { return null; }
+  }, [publicTestnet, launcher, scope]);
+  const tracking = pending?.scope === scope ? pending.request : restored;
   useEffect(() => {
+    if (publicTestnet) return;
     fetch("/demo.json")
       .then((r) => (r.ok ? r.json() : Promise.reject(new Error("missing"))))
       .then((data) => {
@@ -204,7 +216,7 @@ export function App() {
         setDemo({});
         setDemoState("missing");
       });
-  }, []);
+  }, [publicTestnet]);
   useEffect(() => {
     if (!demoOn) return;
     fetch("/why.json").then((r) => (r.ok ? r.json() : null)).then(setWhy).catch(() => setWhy(null));
@@ -222,10 +234,6 @@ export function App() {
     return () => window.removeEventListener("keydown", onKey);
   }, [demoOn]);
   useEffect(() => {
-    setHashOpen(false);
-    setHashNote("");
-    setHashReceipt(null);
-    setHashInput("");
     setCopied(false);
     setCopyFail("");
   }, [scene]);
@@ -245,6 +253,7 @@ export function App() {
     let stop = false;
     let inflight = false;
     let dead = false;
+    let verifiedNetwork = false;
     let timer = 0;
     const load = async () => {
       if (dead) {
@@ -257,6 +266,23 @@ export function App() {
         if (!stop) setRpcError(true);
       }, 3000);
       try {
+        if (publicTestnet && !verifiedNetwork) {
+          if (!isAddress(launcher, { strict: false }) || await client.getChainId() !== TESTNET.chainId) {
+            if (!stop) setRpcNote("请检查测试网和拍卖合约地址。");
+            dead = true;
+            return;
+          }
+          const factory = await client.readContract({
+            address: PORTAL, abi: parseAbi(["function getLauncher(address) view returns (address)"]),
+            functionName: "getLauncher", args: [launcher],
+          });
+          if (factory.toLowerCase() !== TESTNET.launcherFactory.toLowerCase()) {
+            if (!stop) setRpcNote("这个地址不属于同价发射的测试网工厂。");
+            dead = true;
+            return;
+          }
+          verifiedNetwork = true;
+        }
         const b = await client.getBlockNumber();
         const [status, floor, clearing, softCap, start, end, token, pool, poolQuote, vaultFactory, preview, fills] = await Promise.all([
           client.readContract({ address: launcher, abi: ABI, functionName: "status" }),
@@ -366,12 +392,12 @@ export function App() {
       }
     };
     load();
-    timer = window.setInterval(load, 1000);
+    timer = window.setInterval(load, publicTestnet ? 5000 : 1000);
     return () => {
       stop = true;
       clearInterval(timer);
     };
-  }, [launcher, rpc]);
+  }, [launcher, rpc, publicTestnet]);
 
   const status = snap?.status;
   useEffect(() => {
@@ -427,10 +453,6 @@ export function App() {
     document.addEventListener("focusin", onFocus);
     return () => document.removeEventListener("focusin", onFocus);
   }, []);
-  useEffect(() => {
-    if (!hashReceipt && !hashNote) return;
-    document.querySelector(".hash .result-card, .hash .help")?.scrollIntoView({ block: "center" });
-  }, [hashReceipt, hashNote]);
   useEffect(() => {
     if (!snap || reduced || introOnce.current) return;
     introOnce.current = true;
@@ -568,8 +590,15 @@ export function App() {
     };
   }, [rpc, vault]);
 
+  const operation: Action | null = phase === "open" ? "bid" : phase === "ready" ? "settle" : phase === "done" ? "claim" : phase === "failed" ? "refund" : null;
+  const ercSource = sourceTag(snap?.sources[sourceIndex]?.sourceId ?? "") === "8004";
+  const draft: Intent | null = operation && launcher ? {
+    action: operation, launcher, account: publicTestnet ? sender.trim() : "",
+    value: operation === "bid" ? String(budgetWei ?? "") : "0", limit: String(priceWei ?? ""),
+    source: sourceIndex, id: ercSource && agentIdInput ? BigInt(agentIdInput).toString() : "",
+  } : null;
   async function copyInstruction() {
-    if (!launcher) return;
+    if (!snap || !draft || previewing || (publicTestnet && (!isAddress(sender.trim(), { strict: false }) || !block))) return;
     const picked = snap?.sources[sourceIndex];
     const sourceName = picked ? sourceTag(picked.sourceId) || `来源 ${sourceIndex}` : `来源 ${sourceIndex}`;
     const autoAgent = !picked || sourceTag(picked.sourceId) !== "8004";
@@ -586,17 +615,17 @@ export function App() {
           : phase === "failed"
             ? "data: refund()\n- value wei: 0"
             : "data: claim()\n- value wei: 0";
-    const text = `在 BNB Smart Chain 测试网操作。EVM chainId 是 97。
+    const localCommand = operation === "bid" ? `simulate --budget ${budget} --max-price ${maxPrice}` : `${operation}-tx`;
+    const text = localFork
+      ? `本地分叉彩排，只读取状态并预览，停止在签名前。\n在项目目录运行：node agent/cli.mjs ${localCommand} --launcher ${launcher} --rpc ${rpc} --json`
+      : `在 BNB Smart Chain 测试网操作。EVM chainId 是 97。发送地址必须是 ${sender.trim()}。
 
-先做完这三步，缺一步就停止，不要发交易：
-1. 跑 baw wallet chains。确认有 BSC 测试网。没有就停，不要改用 56。
-2. 确认身份。币安 Agent ID 或 ERC-8004 官方登记，有一个即可。两个都没有就停。Agent ID 可跑 baw wallet agent-id。ERC-8004 要能拿出官方 Identity Registry 的 agentId。
-3. 跑 baw wallet settings。Developer Mode 要开着，余额不能超限。
+先跑 baw wallet chains 确认支持 BSC 测试网 97；如未列出就停止。核对钱包公开地址和 Developer Mode，并检查本笔操作在账户限额内。${operation === "bid" ? "按下面选定的来源校验该钱包的身份。" : ""}
 
 然后只准备这一笔：
 - to: ${launcher}
 - ${action}
-- binanceChainId: 第 1 步看到的测试网 id
+- binanceChainId: 钱包支持列表返回的测试网 id
 
 先 contract-call preview，把模拟结果给我。我确认之后再 execute。不要改金额，不要多发一笔。`;
     try {
@@ -607,52 +636,13 @@ export function App() {
       setCopyFail(text);
       setCopied(false);
     }
+    if (publicTestnet) {
+      const request = { intent: draft, afterBlock: block.toString() };
+      setPending({ scope, request });
+      try { sessionStorage.setItem(scope, JSON.stringify(request)); } catch { /* In-memory tracking still works. */ }
+    }
     window.clearTimeout(copyTimer.current);
     copyTimer.current = window.setTimeout(() => setCopied(false), COPY_MS);
-  }
-
-  async function checkHash() {
-    if (!launcher) return;
-    const hash = hashInput.trim();
-    setHashReceipt(null);
-    if (!/^0x[0-9a-fA-F]{64}$/.test(hash)) {
-      setHashNote("哈希是 0x 开头的 66 位字符。");
-      return;
-    }
-    setHashBusy(true);
-    setHashNote("");
-    try {
-      const client = createPublicClient({ transport: http(rpc, { timeout: 8_000 }) });
-      const tx = await client.getTransaction({ hash: hash as `0x${string}` });
-      const receipt = await client.getTransactionReceipt({ hash: hash as `0x${string}` });
-      if (tx.to?.toLowerCase() !== launcher.toLowerCase()) {
-        setHashNote("这笔交易对不上当前指令。检查是否发到了链编号 97 的这场合约。");
-        return;
-      }
-      if (receipt.status === "reverted") {
-        setHashNote("这笔交易在链上失败了。按指令重新发一次。");
-        return;
-      }
-      const bidSelector = keccak256(toBytes("bid(uint256,uint8,uint256)")).slice(0, 10);
-      const limit = tx.input.startsWith(bidSelector) ? formatPrice(BigInt(`0x${tx.input.slice(10, 74)}`)) : "";
-      setHashReceipt({
-        hash,
-        block: groupFull(receipt.blockNumber),
-        amount: formatBnb(tx.value),
-        limit,
-      });
-      setHashNote("");
-    } catch (error) {
-      const err = error as { shortMessage?: string; message?: string };
-      const text = `${err.shortMessage || ""} ${err.message || ""}`;
-      setHashNote(
-        /fetch|HTTP request failed|ECONN|ENOTFOUND|timeout/i.test(text)
-          ? "读不到链。换一个 RPC 地址后重试。"
-          : "这笔交易对不上当前指令。检查是否发到了链编号 97 的这场合约。",
-      );
-    } finally {
-      setHashBusy(false);
-    }
   }
 
   const failed = phase === "failed";
@@ -673,12 +663,12 @@ export function App() {
         </b>
         <span className="top-meta">
           {snap?.sources.some((item) => item.standIn) ? <span className="meta-line"><Zh text="测试网 Agent ID 为替身" /></span> : null}
-          <span className="meta-line">{demo?.localFork ? <Zh text="本地分叉，不是测试网" /> : "BSC 测试网"}</span>
+          <span className="meta-line">{localFork ? <Zh text="本地分叉，不是测试网" /> : "BSC 测试网"}</span>
           {block > 0n && <span className="meta-line">区块 {groupFull(block)}</span>}
           {rpcNote ? <span className="meta-line"><Zh text={rpcNote} /></span> : rpcError ? <span className="meta-line"><Zh text="刚刚没刷新成功，正在重试。" /></span> : null}
         </span>
       </header>
-      <p className="status-line"><Zh text={mobileStatus(demo?.localFork, snap?.sources.some((item) => item.standIn))} /></p>
+      <p className="status-line"><Zh text={mobileStatus(localFork, snap?.sources.some((item) => item.standIn))} /></p>
       <main className="screen" id="desk">
         {!launcher && !rpcError && !demoOn && params.get("network") === "testnet" && <TestnetBoard />}
         {!launcher && !rpcError && !demoOn && params.get("network") !== "testnet" && <Empty />}
@@ -711,7 +701,7 @@ export function App() {
                   <span className="unit">BNB/枚</span>
                 </div>
                 <p className="help">链上读数还没到。指令里的金额用你现在填的。</p>
-                <button className="primary" type="submit">{copied ? "已复制" : "复制出价指令"}</button>
+                <button className="primary" type="button" disabled>等待读取拍卖</button>
                 <p className="risk"><Zh text={RISK_LINE} /></p>
               </form>
             </div>
@@ -771,6 +761,10 @@ export function App() {
                   }}
                 >
                   <div className="fields">
+                    {publicTestnet && button && <label className="sender-field">代理钱包公开地址
+                      <span className="window"><input type="text" value={sender} pattern="0x[0-9a-fA-F]{40}" required
+                        autoComplete="off" spellCheck={false} placeholder="0x…" onChange={event => setSender(event.target.value.trim())} /></span>
+                    </label>}
                     {phase === "failed" ? (
                       <div className="result-card">
                         <h2>没有成交</h2>
@@ -782,9 +776,9 @@ export function App() {
                         <div className="result-row"><span>开盘价</span><b>{formatPrice(snap.clearing)} BNB/枚</b></div>
                         <div className="result-row"><span>成交量</span><b>{formatBnb(snap.previewQuote > 0n ? snap.previewQuote : snap.poolQuote)} BNB</b></div>
                         <div className="result-row"><span>入池 BNB</span><b>{formatBnb(snap.poolQuote)} BNB</b></div>
-                        {showToken && snap.token !== ZERO && <Addr label="代币" value={snap.token} local={!!demo?.localFork} />}
-                        {showPool && snap.pool !== ZERO && <Addr label="池子" value={snap.pool} local={!!demo?.localFork} swap={snap.token !== ZERO && !demo?.localFork ? pancakeSwapLink(snap.token) : ""} />}
-                        {vault && vault !== ZERO && <Addr label="金库" value={vault} local={!!demo?.localFork} />}
+                        {showToken && snap.token !== ZERO && <Addr label="代币" value={snap.token} local={!!localFork} />}
+                        {showPool && snap.pool !== ZERO && <Addr label="池子" value={snap.pool} local={!!localFork} swap={snap.token !== ZERO && !localFork ? pancakeSwapLink(snap.token) : ""} />}
+                        {vault && vault !== ZERO && <Addr label="金库" value={vault} local={!!localFork} />}
                         {vaultBal !== null && <div className="result-row"><span>金库余额</span><b>{formatBnb4(vaultBal)} BNB</b></div>}
                       </div>
                     ) : (
@@ -831,7 +825,7 @@ export function App() {
                     <label htmlFor="agent">代理编号</label>
                     {sourceTag(snap.sources[sourceIndex]?.sourceId ?? "") === "8004" ? (
                       <div className={phase === "open" ? "window" : "window ro"}>
-                        <input id="agent" value={agentIdInput} readOnly={phase !== "open"} inputMode="numeric" autoComplete="off" spellCheck={false} placeholder="你在 ERC-8004 登记的编号" onChange={(e) => setAgentIdInput(e.target.value.replace(/[^\d]/g, ""))} />
+                        <input id="agent" required={publicTestnet && phase === "open"} maxLength={78} value={agentIdInput} readOnly={phase !== "open"} inputMode="numeric" autoComplete="off" spellCheck={false} placeholder="你在 ERC-8004 登记的编号" onChange={(e) => setAgentIdInput(e.target.value.replace(/[^\d]/g, ""))} />
                       </div>
                     ) : (
                       <p className="id-lock" id="agent">按钱包地址自动识别<i>只读</i></p>
@@ -849,7 +843,7 @@ export function App() {
                     ) : phase === "closed" ? (
                       <div className="notice">已停止接单，等待结算。</div>
                     ) : button ? (
-                      <button className="primary" type="submit" aria-live="polite">
+                      <button className="primary" type="submit" aria-live="polite" disabled={previewing}>
                         <span>{copied ? "已复制" : button}</span>
                       </button>
                     ) : null}
@@ -863,35 +857,7 @@ export function App() {
                     <textarea className="paste" readOnly value={copyFail} />
                   </>
                 )}
-                <button type="button" className="hash-toggle" aria-expanded={hashOpen} onClick={() => setHashOpen((open) => !open)}>
-                  <Zh text="已发送？贴哈希核对" />
-                </button>
-                {hashOpen && (
-                  <div className="hash">
-                    <label htmlFor="txhash">交易哈希</label>
-                    <div className={hashNote.startsWith("哈希") ? "window bad" : "window"}>
-                      <input id="txhash" value={hashInput} spellCheck={false} autoComplete="off" onChange={(e) => setHashInput(e.target.value)} />
-                    </div>
-                    {hashNote && <p className="help bad" role="status"><i className="mark" />{hashNote}</p>}
-                    <button className="text-btn" type="button" onClick={() => void checkHash()} disabled={hashBusy}>
-                      {hashBusy ? "核对中…" : "核对"}
-                    </button>
-                    {hashReceipt && (
-                      <div className="result-card">
-                        <h2>交易已核对</h2>
-                        <div className="result-row"><span>交易</span><b>{hashReceipt.hash.slice(0, 6)}…{hashReceipt.hash.slice(-4)}</b></div>
-                        <div className="result-row"><span>区块</span><b>{hashReceipt.block}</b></div>
-                        <div className="result-row"><span>出价</span><b>{hashReceipt.amount} BNB</b></div>
-                        {hashReceipt.limit && <div className="result-row"><span>限价</span><b>{hashReceipt.limit} BNB/枚</b></div>}
-                        {demo?.localFork ? (
-                          <p className="help">本地分叉上的交易，BscScan 还没有这笔。</p>
-                        ) : (
-                          <a href={`https://testnet.bscscan.com/tx/${hashReceipt.hash}`} target="_blank" rel="noreferrer">BscScan</a>
-                        )}
-                      </div>
-                    )}
-                  </div>
-                )}
+                <ReceiptPanel key={`${scope}:${scene}`} rpc={rpc} local={localFork} draft={draft} tracking={tracking} />
               </div>
             </div>
             <div className="col-main">
@@ -986,7 +952,7 @@ function TestnetBoard() {
         <p className="user-line"><Zh text={USER_LINE} /></p>
       </div>
       <div className="plaque">
-        <p>工厂已部署，Flap 开通权限后开第一场。</p>
+        <p>测试网工厂已部署。公开发射回执待补。</p>
         {TESTNET_ROWS.map((row) => (
           <div className="row" key={row.address}>
             <span className="name">{row.name}</span>
