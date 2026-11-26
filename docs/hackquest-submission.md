@@ -8,7 +8,7 @@
 | English one-liner | One bid per identity. One price for every winner. A BNB Chain auction that launches through Flap or lets everyone reclaim their bid. |
 | 中文一句话 | 一个身份出价一次，所有成交者支付同一价格。达到门槛就通过 Flap 建池，未达门槛则全额退款。 |
 | Tracks | Developer Track — Build on BNB Chain · Flap Track — Build on Pool Launch |
-| Repository | [Complete submission branch](https://github.com/Jimmycoding0301/uniform-launch/tree/codex/bangkok-submission) |
+| Repository | [Public repository](https://github.com/Jimmycoding0301/uniform-launch) |
 
 ## English description
 
@@ -19,6 +19,8 @@ Each wallet and each identifier from a configured identity source can bid once. 
 We built a Solidity Launcher Factory, a launch interface using Flap’s template, and a CLI and MCP server that let an AI agent compare bids against the order book and prepare an unsigned transaction. For a 1 BNB budget, the local tool reported 50,000 tokens at a limit of 0.00003 and a full budget refund at 0.000015. The buyer chooses the limit and approves the transaction. [Recorded MCP previews](../qa/submission/agent-preview.json) We support Binance Agent ID and ERC-8004 identity sources. Our public testnet auction used a stand-in for Binance Agent ID.
 
 On BSC Testnet one bid cleared at 0.0000089 tBNB per token. Flap opened a PancakeSwap V2 pool with 500,000 UNIFORM and 4.45 tBNB. The bidder claimed the other 500,000 UNIFORM. Flap also registered our Vault. On a local fork, swap taxes reached that Vault and its owner withdrew the same amount. The interactive demo uses a separate nine-bid order book so judges can try a winning and a losing limit.
+
+Our roadmap proposes a 0.1% fee on successful auction proceeds. The net amount would still need to meet Flap’s pool minimum. Failed auctions keep full refunds. [Roadmap](roadmap.md)
 
 ## 中文备用简介
 
@@ -41,7 +43,7 @@ Flap asks teams to show a public BSC Testnet launch through their Factory, share
 | [Verified Launcher Factory](https://testnet.bscscan.com/address/0xE82642aC5c3B3B4b7D4cDeaf6a251Dc0BB7AcEfd#code) · [Launcher creation](https://testnet.bscscan.com/tx/0x5be4952fc75b9d2aec691ae0288eed53ee922e53552fce9812da24c1410ab93c) | The Factory emitted `UniformLauncherCreated` for this auction. Each bidder specified a budget and price limit. All winning allocations clear at the same price. |
 | [BSC Testnet settlement](https://testnet.bscscan.com/tx/0x56d87f21c4dbd55227d9e619986555f150c7da5ddec5db663b201a9b9985ae20) | Block 144,926,064. The pool's first reserves were 500,000 UNIFORM and 4.45 WBNB. |
 | [BSC Testnet claim](https://testnet.bscscan.com/tx/0x732353fc11a666984971d62c5b7a0016d76775145823938bf515ef776354f27f) | Block 144,927,029. The transfer delivers 500,000 UNIFORM to the bidder. |
-| [Public launch record and contracts](https://github.com/Jimmycoding0301/uniform-launch/blob/55d363cb7873094ea48a5f7bbaae37f9d837f115/docs/public-testnet-evidence.md) | Factory creation, identity, bid, settlement and claim receipts, token, pair and Vault addresses. |
+| [Public launch record and contracts](public-testnet-evidence.md) | Factory creation, identity, bid, settlement and claim receipts, token, pair and Vault addresses. |
 | [Custom Flap template UI](../flap-ui/launcher-detail) · [Official source checker results](flap-integration.md) | The Launcher detail component displays auction state through Flap's runtime. The manifest pins its Factory and chain. |
 | [Public Vault address](https://testnet.bscscan.com/address/0x18942571eE5E5642837326C2Fe18510270fEEEce) · [Vault rehearsal](e2e-evidence.md) | Flap registered the Vault on public testnet. Local-fork trades deposited 0.027516256919450703 tBNB in the rehearsal Vault. Its owner withdrew the same amount. |
 
@@ -55,6 +57,6 @@ For an offline presentation, download the checkout before the event. Open the [s
 
 - [ ] Verify organizer approval and confirm participation. Open the correct team's project.
 - [ ] Enter the project name, one-liner and description. Select **Developer Track** and **Flap Track**.
-- [ ] Open the submission branch in a signed-out window. If the repository field requires a root URL, enter the [project repository](https://github.com/Jimmycoding0301/uniform-launch) and end the description with `Submission code and evidence — https://github.com/Jimmycoding0301/uniform-launch/tree/codex/bangkok-submission`.
+- [ ] Enter the [public GitHub repository](https://github.com/Jimmycoding0301/uniform-launch) and confirm you can see the launch record from its README while signed out.
 - [ ] Check that a judge can open the Factory creation, settlement and claim receipts, the custom Flap UI and the fork Vault record from the submitted links.
 - [ ] Submit before **27 November 2026 at 09:00 Bangkok / 10:00 Beijing**. Check the HackQuest confirmation and retain the project URL and submission time. [Official submission instructions](https://www.hackquest.io/hackathons/BNB-Bangkok)

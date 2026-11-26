@@ -4,7 +4,7 @@
 
 Use the English column as the voiceover. The Chinese columns direct the screen capture and give the meaning of each line. Start each shot at the marked second and hold the result until the next cut. These timings belong to this recording. [English subtitles](video-subtitles.en.srt) · [Five-slide deck](../qa/submission/Uniform-Launch-BNB-Bangkok.pptx) · [Offline cue clock](../qa/submission/presenter-clock.html)
 
-The Flap brief asks for the Factory, a complete BSC Testnet launch, a custom Flap-template launch UI, evidence for an included Vault, source code and an explanation of the mechanism. The same public contracts and the agent CLI and MCP tools support the Developer Track entry. [Official event brief](https://www.hackquest.io/hackathons/BNB-Bangkok) · [Submission code](https://github.com/Jimmycoding0301/uniform-launch/tree/codex/bangkok-submission)
+The Flap brief asks for the Factory, a complete BSC Testnet launch, a custom Flap-template launch UI, evidence for an included Vault, source code and an explanation of the mechanism. The same public contracts and the agent CLI and MCP tools support the Developer Track entry. [Official event brief](https://www.hackquest.io/hackathons/BNB-Bangkok) · [Submission code](https://github.com/Jimmycoding0301/uniform-launch)
 
 ### Preload the five public receipts
 
@@ -83,4 +83,4 @@ Give one answer, then pause. The Chinese column is a cue for the presenter.
 | Does the launch happen by itself at the deadline? | Anyone can call settle after the window closes. If the auction qualifies, that transaction triggers issuance and creates the pool through Flap. | 到期后需有人调用 settle，一次交易内完成发币和建池。 |
 | Where can we inspect or run what you built? | Our public submission branch includes the contracts, the Flap UI, the agent CLI and MCP server, and a command to reproduce the demo. | 公开提交分支包含合约、Flap 前端、代理工具及复现命令。 |
 
-[Shared code for Flap and Developer](https://github.com/Jimmycoding0301/uniform-launch/tree/codex/bangkok-submission) · [Factory and public transactions](public-testnet-evidence.md) · [Vault buy, sell and withdrawal evidence](e2e-evidence.md) · [Flap UI and checker](flap-integration.md)
+[Shared code for Flap and Developer](https://github.com/Jimmycoding0301/uniform-launch) · [Factory and public transactions](public-testnet-evidence.md) · [Vault buy, sell and withdrawal evidence](e2e-evidence.md) · [Flap UI and checker](flap-integration.md)
