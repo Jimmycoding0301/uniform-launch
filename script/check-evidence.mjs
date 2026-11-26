@@ -28,4 +28,17 @@ if (budget.network !== "anvil-fork-of-97" || BigInt(budget.gasPaidWei) !== gasPa
     || total !== BigInt(budget.startingBalanceWei) || total !== 4_600_000_000_000_000_000n) {
   throw new Error("单人分叉回执与 4.6 tBNB 资金记录不一致");
 }
-console.log("两份分叉回执与文档一致，单人预算和历史金库余额均已核对");
+const pinned = JSON.parse(read("../deployments/bsc-testnet-e2e-pinned-fork.json"));
+const phases = ["create", "bid-1", "bid-2", "bid-3", "settle", "claim", "trade", "withdraw"];
+for (const phase of phases) {
+  if (!pinned.transactions[phase]?.length || pinned.transactions[phase].length !== pinned.blockNumbers[phase]?.length
+      || pinned.transactions[phase].some(hash => !/^0x[0-9a-f]{64}$/.test(hash))) {
+    throw new Error("原脚本缺少分叉回执 " + phase);
+  }
+}
+if (pinned.forkHash !== budget.forkHash || BigInt(pinned.poolQuoteWei) !== 40n * 10n ** 18n
+    || BigInt(pinned.vaultBeforeWithdrawWei) <= 0n || pinned.vaultAfterWithdrawWei !== "0"
+    || pinned.vaultBeforeWithdrawWei !== pinned.ownerGrossReceiptWei) {
+  throw new Error("原脚本分叉结算和提取记录不一致");
+}
+console.log("已核对三份分叉记录、单人预算、40 tBNB 入池和金库提款");
