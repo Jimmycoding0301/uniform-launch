@@ -43,11 +43,22 @@ fund "$ADMIN"
 
 healthy() {
   [ -f "$DEMO_JSON" ] || return 1
-  local open code
-  open=$(node -e 'const d=require(process.argv[1]); process.stdout.write(d.open||"")' "$DEMO_JSON")
-  [ -n "$open" ] || return 1
-  code=$(cast code "$open" --rpc-url "$ANVIL_RPC" 2>/dev/null || true)
-  [ -n "$code" ] && [ "$code" != "0x" ]
+  local addresses open done failed end buffer block
+  addresses=$(node -e '
+    const d = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"));
+    const inputs = [d.open, d.launched, d.failed];
+    if (d.sceneVersion !== 2 || d.rpc !== process.argv[2] || !inputs.every(a => /^0x[0-9a-f]{40}$/i.test(a))) process.exit(1);
+    console.log(inputs.join(" "));
+  ' "$DEMO_JSON" "$ANVIL_RPC" 2>/dev/null) || return 1
+  read -r open done failed <<<"$addresses"
+  [ "$(cast call "$open" 'statusCode()(uint8)' --rpc-url "$ANVIL_RPC")" = 0 ] || return 1
+  [ "$(cast call "$done" 'statusCode()(uint8)' --rpc-url "$ANVIL_RPC")" = 1 ] || return 1
+  [ "$(cast call "$failed" 'statusCode()(uint8)' --rpc-url "$ANVIL_RPC")" = 2 ] || return 1
+  [ "$(cast call "$failed" 'bidCount()(uint256)' --rpc-url "$ANVIL_RPC")" = 3 ] || return 1
+  end=$(cast call "$open" 'endBlock()(uint64)' --rpc-url "$ANVIL_RPC") || return 1
+  buffer=$(cast call "$open" 'CLOSE_BUFFER()(uint64)' --rpc-url "$ANVIL_RPC") || return 1
+  block=$(cast block-number --rpc-url "$ANVIL_RPC") || return 1
+  (( block + ${buffer%% *} < ${end%% *} ))
 }
 if healthy; then
   echo "演示场还在 $ANVIL_RPC"
@@ -73,7 +84,7 @@ if [ "$FAIL_END" -gt "$TARGET" ]; then TARGET=$FAIL_END; fi
 NEED=$((TARGET - NOW))
 echo "当前区块 $NOW 目标 $TARGET 还要挖 $NEED"
 if [ "$NEED" -gt 0 ]; then
-  cast rpc anvil_mine "$NEED" --rpc-url "$ANVIL_RPC" >/dev/null
+  cast rpc anvil_mine "$NEED" --rpc-url "$ANVIL_RPC" --rpc-timeout 600 >/dev/null
 fi
 CREATOR=0x00000000000000000000000000000000C0DE0001
 settle_one() {
@@ -102,6 +113,7 @@ fi
 node --input-type=module << EOF
 import { writeFileSync } from "node:fs";
 const data = {
+  sceneVersion: 2,
   localFork: true,
   rpc: "$ANVIL_RPC",
   open: "$OPEN",

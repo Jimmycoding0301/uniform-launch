@@ -4,39 +4,34 @@ set -euo pipefail
 export PATH="$HOME/.foundry/bin:$PATH"
 ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
-ANVIL_RPC="http://127.0.0.1:18545"
-WEB="http://127.0.0.1:4317"
-if ! cast block-number --rpc-url "$ANVIL_RPC" >/dev/null 2>&1; then
-  bash script/local-fork.sh
+WEB_PORT="${DEMO_WEB_PORT:-4317}"
+if [[ ! "$WEB_PORT" =~ ^[1-9][0-9]{0,4}$ ]] || (( WEB_PORT > 65535 )); then
+  echo "DEMO_WEB_PORT 应为 1 到 65535 的整数。" >&2
+  exit 1
 fi
+WEB="http://127.0.0.1:$WEB_PORT"
+if page=$(curl --noproxy '*' -s --max-time 2 "$WEB"); then
+  if [[ "$page" != *"<title>同价发射</title>"* ]]; then
+    echo "端口 $WEB_PORT 已被其他服务使用。请设置 DEMO_WEB_PORT 后再运行。" >&2
+    exit 1
+  fi
+fi
+ANVIL_PORT=18545 DEMO_JSON="$ROOT/web/public/demo.json" bash script/local-fork.sh
 if [ ! -d web/node_modules ]; then
   (cd web && npm ci)
 fi
-if ! curl -sf --max-time 2 -o /dev/null "$WEB"; then
-  nohup npm --prefix "$ROOT/web" run dev -- --host 0.0.0.0 --port 4317 >/tmp/uniform-web.log 2>&1 &
+if ! curl --noproxy '*' -sf --max-time 2 -o /dev/null "$WEB"; then
+  nohup npm --prefix "$ROOT/web" run dev -- --host 127.0.0.1 --port "$WEB_PORT" --strictPort >/tmp/uniform-web-"$WEB_PORT".log 2>&1 &
   disown || true
   for _ in $(seq 1 30); do
-    curl -sf --max-time 2 -o /dev/null "$WEB" && break
+    curl --noproxy '*' -sf --max-time 2 -o /dev/null "$WEB" && break
     sleep 1
   done
 fi
-if ! curl -sf --max-time 2 -o /dev/null "$WEB"; then
-  echo "页面没有起来。看 /tmp/uniform-web.log" >&2
+if ! curl --noproxy '*' -sf --max-time 3 "$WEB/demo.json" | cmp -s - web/public/demo.json; then
+  echo "端口 $WEB_PORT 没有提供本次演示数据。请查看 /tmp/uniform-web-$WEB_PORT.log 或更换 DEMO_WEB_PORT。" >&2
   exit 1
 fi
-OPEN=$(node -e 'const d=require("./web/public/demo.json"); process.stdout.write(d.open||"")' 2>/dev/null || true)
-CODE=$(cast code "${OPEN:-0x0000000000000000000000000000000000000000}" --rpc-url "$ANVIL_RPC" 2>/dev/null || true)
-if [ -z "$OPEN" ] || [ -z "$CODE" ] || [ "$CODE" = "0x" ]; then
-  bash script/local-fork.sh
-  OPEN=$(node -e 'const d=require("./web/public/demo.json"); process.stdout.write(d.open||"")')
-fi
-node --input-type=module << EOF
-import { readFileSync, writeFileSync } from "node:fs";
-const path = "web/public/demo.json";
-const data = JSON.parse(readFileSync(path, "utf8"));
-data.localFork = true;
-data.rpc = "$ANVIL_RPC";
-writeFileSync(path, JSON.stringify(data, null, 2) + "\n");
-EOF
+OPEN=$(node -p 'require("./web/public/demo.json").open')
 echo "页面 $WEB/?launcher=$OPEN"
 echo "演示 $WEB/?demo=1"

@@ -63,7 +63,7 @@ contract LocalForkScript is Script {
         console.log("LAUNCH_FAIL", address(failL));
     }
 
-    /// @notice 造演示六幕要用的三场：9 笔接单、一笔可发射、一笔会失败。结算由外壳脚本推进区块后完成。
+    /// @notice 造演示六幕要用的三场。结算由外壳脚本推进区块后完成。
     function runScenes() external {
         (IPortal portal, UniformLauncherFactory launcherFactory, uint256 fee) = _boot();
         bytes32 tag = bytes32(block.number);
@@ -91,10 +91,17 @@ contract LocalForkScript is Script {
         // 40 BNB 单笔成交后清算价是 0.00008，入池 40。和演示稿里这一幕看到的数一样。
         doneL.bid{value: 40 ether}(1e16, 0, uint160(alice));
         vm.stopBroadcast();
-        UniformLauncher failL = _create(portal, launcherFactory, fee, 1 ether, 200, "FAIL9", keccak256(abi.encode("fail9", tag)));
-        vm.startBroadcast(bob);
-        failL.bid{value: 0.01 ether}(1 ether, 0, uint160(bob));
-        vm.stopBroadcast();
+        UniformLauncher failL = _create(portal, launcherFactory, fee, 4e12, 200, "FAIL3", keccak256(abi.encode("fail3", tag)));
+        uint256[3] memory failBudgets = [uint256(1.2 ether), 1 ether, 0.8 ether];
+        uint256[3] memory failLimits = [uint256(16e12), 10e12, 7e12];
+        for (uint256 i; i < failBudgets.length; ++i) {
+            address who = address(uint160(0xC0DE0010 + i));
+            vm.startBroadcast(who);
+            failL.bid{value: failBudgets[i]}(failLimits[i], 0, uint160(who));
+            vm.stopBroadcast();
+        }
+        (bool matches, uint256 price, uint256 quote) = failL.preview();
+        require(matches && price == 6e12 && quote == 3 ether && quote < failL.minPoolQuote(), "failed-scene-book");
         console.log("LAUNCH_OPEN", address(openL));
         console.log("LAUNCH_DONE", address(doneL));
         console.log("LAUNCH_FAIL", address(failL));
