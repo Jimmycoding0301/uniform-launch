@@ -1,13 +1,13 @@
 import { language, languageHref, localizedHref, t } from "./locale";
 import { useEffect, useMemo, useRef, useState } from "react";
-import { createPublicClient, http, isAddress, parseAbi, keccak256, toBytes, type Address } from "viem";
+import { createPublicClient, http, isAddress, parseAbi, parseEther, keccak256, toBytes, type Address } from "viem";
 import { formatBnb, formatBnb4, formatPrice, formatRemain, formatTokens, parseBnb, tokensFor } from "./curve";
 import { agentLabel } from "./names";
 import { Roller, useReducedMotion, Zh } from "./motion";
 import { PlotStage } from "./PlotStage";
 import { pancakeSwapLink } from "./dex";
 // @ts-expect-error 共享模拟器是普通 JavaScript，返回值在调用处收窄。
-import { MAX_PRICE, settle as settleBids } from "../../shared/settle.mjs";
+import { MAX_PRICE, SELL_AMOUNT, settle as settleBids } from "../../shared/settle.mjs";
 import { ADDR_STAGGER_MS, COPY_MS, RISK_LINE, SETTLE_MS, SWEEP_MS, USER_LINE } from "./theme";
 import { ReceiptPanel } from "./ReceiptPanel";
 import type { Action, Intent, Tracking } from "./receipts";
@@ -516,7 +516,7 @@ export function App() {
         budgetWei < 10n ** 16n || budgetWei > 100n * 10n ** 18n || priceWei < snap.floor || priceWei > MAX_PRICE || snap.bids.length >= snap.maxBids) return null;
     const rows = snap.bids.map((row, index) => ({ index: BigInt(index), budget: row.budget, maxPrice: row.maxPrice }));
     rows.push({ index: BigInt(rows.length), budget: budgetWei, maxPrice: priceWei });
-    return settleBids(500_000n * 10n ** 18n, snap.floor, rows) as {
+    return settleBids(SELL_AMOUNT, snap.floor, rows) as {
       clearingPrice: bigint;
       poolQuote: bigint;
       fills: { tokens: bigint; spend: bigint; refund: bigint }[];
@@ -1015,6 +1015,41 @@ const WALKTHROUGH = [
   t("失败与退款", "Below target, full refund"), t("比较发射机制", "Compare launch prices"),
 ];
 
+function PublicBidPreview() {
+  const [limit, setLimit] = useState("0.00003");
+  const [book, setBook] = useState<{ floor: string; bids: { budget: string; maxPrice: string }[] } | null>(null);
+  const [unavailable, setUnavailable] = useState(false);
+  useEffect(() => {
+    const request = new AbortController();
+    fetch(`${import.meta.env.BASE_URL}why.json`, { signal: request.signal }).then((response) => {
+      if (!response.ok) throw new Error("Missing demo order book");
+      return response.json();
+    }).then((data) => setBook(data)).catch(() => {
+      if (!request.signal.aborted) setUnavailable(true);
+    });
+    return () => request.abort();
+  }, []);
+
+  if (!book) return <p role="status">{unavailable
+    ? t("演示订单簿暂不可用，可以查看下方操作截图。", "The example order book is unavailable. See the walkthrough screenshot below.")
+    : t("正在读取演示订单簿。", "Loading the example order book.")}</p>;
+
+  const rows = book.bids.map((bid, index) => ({ index, budget: parseEther(bid.budget), maxPrice: parseEther(bid.maxPrice) }));
+  const selectedPrice = parseEther(limit);
+  rows.push({ index: rows.length, budget: parseEther("1"), maxPrice: selectedPrice });
+  const simulation = settleBids(SELL_AMOUNT, parseEther(book.floor), rows);
+  return (
+    <section className="public-preview" aria-labelledby="public-preview-title">
+      <h2 id="public-preview-title">{t("试算一笔出价", "Try a bid preview")}</h2>
+      <p>{t("用九笔示例订单，试算代理会返回的结果。", "Use the nine-bid example to reproduce the agent’s preview.")}</p>
+      <SimulationSummary simulation={simulation.ok ? simulation : null} selectedPrice={selectedPrice} onPreset={setLimit} />
+      <a href="https://github.com/Jimmycoding0301/uniform-launch/blob/main/qa/submission/agent-preview.json" target="_blank" rel="noreferrer">
+        {t("查看 MCP 实测结果 ↗", "See the recorded MCP responses ↗")}
+      </a>
+    </section>
+  );
+}
+
 function PublicGallery() {
   const requested = Number(new URLSearchParams(location.search).get("scene"));
   const [scene, setScene] = useState(Number.isInteger(requested) && requested >= 1 && requested <= WALKTHROUGH.length ? requested : 1);
@@ -1025,6 +1060,7 @@ function PublicGallery() {
         {WALKTHROUGH.map((label, index) => <button type="button" key={label} aria-pressed={scene === index + 1}
           onClick={() => setScene(index + 1)}>{label}</button>)}
       </div>
+      {scene === 3 && <PublicBidPreview />}
       <img width="1440" height="900" src={`${import.meta.env.BASE_URL}walkthrough/${language}/scene-${scene}.png`}
         alt={WALKTHROUGH[scene - 1]} />
       <div className="public-launch-links">
@@ -1046,6 +1082,8 @@ function TestnetBoard() {
         <p>{t("出价者已领取 500,000 枚。", "The bidder claimed 500,000 tokens.")}</p>
         <a className="public-launch-primary" href={localizedHref(`/?network=testnet&launcher=${launch.launcher}`)}>{t("查看公开拍卖 ", "View public auction ")}<span aria-hidden="true">↗</span></a>
         <div className="public-launch-links">
+          <a href={localizedHref("/?demo=1&scene=3")}>{t("试算出价 ↗", "Try a bid preview ↗")}</a>
+          <a href="https://jimmycoding0301.github.io/uniform-launch/demo-video.html">{t("播放演示视频 ↗", "Watch the demo video ↗")}</a>
           <a href={`${TESTNET.explorer}/tx/${launch.createTx}`} target="_blank" rel="noreferrer">{t("BscScan 创建回执 ↗", "Creation receipt ↗")}</a>
           <a href={`${TESTNET.explorer}/tx/${launch.bidTx}`} target="_blank" rel="noreferrer">{t("BscScan 出价回执 ↗", "Bid receipt ↗")}</a>
           <a href={`${TESTNET.explorer}/tx/${launch.settlementTx}`} target="_blank" rel="noreferrer">{t("BscScan 发射回执 ↗", "Launch receipt ↗")}</a>

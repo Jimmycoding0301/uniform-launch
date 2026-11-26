@@ -2,7 +2,7 @@
 
 A buyer chooses a budget and a maximum price. When bidding closes, everyone who fills pays the same price. If the auction meets its funding conditions, Flap issues the token and seeds a PancakeSwap V2 pool in the settlement transaction. Otherwise, every bidder can claim their full bid back.
 
-[Watch the 2:12 demo video](https://jimmycoding0301.github.io/uniform-launch/demo-video.html) · [Live website in English](https://jimmycoding0301.github.io/uniform-launch/?lang=en) · [中文网站](https://jimmycoding0301.github.io/uniform-launch/?lang=zh) · [Six-scene walkthrough](https://jimmycoding0301.github.io/uniform-launch/?demo=1&lang=en)
+[Watch the 2:12 demo video](https://jimmycoding0301.github.io/uniform-launch/demo-video.html) · [Live website in English](https://jimmycoding0301.github.io/uniform-launch/?lang=en) · [中文网站](https://jimmycoding0301.github.io/uniform-launch/?lang=zh) · [Try a bid preview](https://jimmycoding0301.github.io/uniform-launch/?demo=1&scene=3&lang=en)
 
 **Public BSC Testnet launch, chain 97.** The auction cleared at **0.0000089 tBNB per token**. Flap created a PancakeSwap V2 pool with **500,000 tokens and 4.45 tBNB**. The bidder claimed the other **500,000 tokens**. [Complete public record](docs/marketing-testnet-evidence.md) · [Settlement](https://testnet.bscscan.com/tx/0x5cc2056b689db1a422e5dfbdbd7017a23f86fa9a764effaa6cc82c9c1051ec02) · [Claim](https://testnet.bscscan.com/tx/0x5e1f06bfce8e6ee3dd379c82593ad35330639f169d22fd189493ec7f42f6bbd9)
 
@@ -34,7 +34,7 @@ cd uniform-launch
 bash script/demo.sh
 ```
 
-Open the local demo URL printed by the script. Append `&lang=en` for English. In scene 3, keep the budget at **1 BNB** and switch the limit from **0.00003** to **0.000015**. The first preview fills 50,000 tokens. The second fills zero and returns the 1 BNB budget. A later bid can change either preview. The agent reads the book, compares the outcomes and prepares an unsigned transaction. The buyer reviews and authorizes it. [Recorded MCP responses](qa/submission/agent-preview.json) · [Agent commands](agent/README.md)
+In the [public bid preview](https://jimmycoding0301.github.io/uniform-launch/?demo=1&scene=3&lang=en), switch a **1 BNB** bid from **0.00003** to **0.000015**. The first preview fills 50,000 tokens. The second fills zero and returns the 1 BNB budget. The browser runs the shared simulator against the nine-bid example. For the live local order book, use scene 3 at the URL printed by the demo script. The agent reads that book and can prepare an unsigned transaction for the buyer to review. Later bids can change the preview. [Recorded MCP responses](qa/submission/agent-preview.json) · [Agent commands](agent/README.md)
 
 To inspect the actual launch in the desk, use `/?network=testnet&launcher=0xADD4e8b95B194D457611b4754e53c45A6E2A41d6&lang=en` on the same local web origin. The [saved public-launch screen](qa/submission/public-launch.png) and [six-scene walkthrough](qa/submission/README.md) also open without an RPC connection.
 

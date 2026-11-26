@@ -1,4 +1,4 @@
-import { createPublicClient, encodeFunctionData, getAddress, http, keccak256, toBytes } from "viem";
+import { createPublicClient, encodeFunctionData, formatEther, getAddress, http, keccak256, toBytes } from "viem";
 import { launcherAbi } from "./abi.mjs";
 import { explain } from "./errors.mjs";
 import { SELL_AMOUNT, MAX_PRICE, settle } from "../shared/settle.mjs";
@@ -18,12 +18,7 @@ export function parseBnb(text) {
 }
 
 export function formatBnb(wei) {
-  const neg = wei < 0n;
-  const v = neg ? -wei : wei;
-  const whole = v / WAD;
-  const frac = (v % WAD).toString().padStart(18, "0").slice(0, 6).replace(/0+$/, "");
-  const body = frac ? `${whole}.${frac}` : `${whole}`;
-  return neg ? `-${body}` : body;
+  return formatEther(wei);
 }
 
 function clientOf(rpc) {

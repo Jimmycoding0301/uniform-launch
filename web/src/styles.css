@@ -797,6 +797,10 @@ button.primary:focus-visible { outline: 0; box-shadow: inset 0 0 0 3px var(--tex
 .public-gallery-nav button[aria-pressed="true"] { color: var(--accent); border-color: var(--accent); }
 .public-gallery img { display: block; width: min(100%, 1160px); height: auto; border: 1px solid var(--edge); }
 .public-gallery .public-launch-links { margin-top: 12px; }
+.public-preview { width: min(100%, 1160px); padding: 18px 20px; margin-bottom: 22px; border: 1px solid var(--edge); background: var(--surface); }
+.public-preview h2 { margin: 0; font-size: 24px; }
+.public-preview > p { color: var(--text-2); margin: 6px 0 16px; }
+.public-preview > a { display: inline-block; margin-top: 14px; color: var(--accent); }
 .demo-bar { border-top-color: var(--edge); }
 .demo-bar .scene-track { display: flex; gap: 3px; }
 .demo-bar .scene-track button {
