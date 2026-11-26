@@ -124,9 +124,9 @@ Run the demo script to create and validate three local auctions. The printed URL
 
 ## 测试网
 
-2026 年 11 月 26 日，Uniform Launch 在 BSC 公共测试网（链 97）通过 Flap 完成发射。清算价为每枚 0.0000089 tBNB，实际入池 4.45 tBNB。发射交易为 [0x56d87f21c4dbd55227d9e619986555f150c7da5ddec5db663b201a9b9985ae20](https://testnet.bscscan.com/tx/0x56d87f21c4dbd55227d9e619986555f150c7da5ddec5db663b201a9b9985ae20)。
+2026 年 11 月 26 日，Uniform Launch 在 BSC 公共测试网（链 97）通过 Flap 完成发射。清算价为每枚 0.0000089 tBNB，实际入池 4.45 tBNB，出价者领取了 500,000 UNIFORM。发射交易为 [0x56d87f21c4dbd55227d9e619986555f150c7da5ddec5db663b201a9b9985ae20](https://testnet.bscscan.com/tx/0x56d87f21c4dbd55227d9e619986555f150c7da5ddec5db663b201a9b9985ae20)。
 
-The auction launched through Flap at block 144,926,064 on BSC Testnet. One bid cleared at 0.0000089 tBNB per token and supplied 4.45 tBNB to the pool. [Public transaction receipts and contract addresses](docs/public-testnet-evidence.md) · [Local fork rehearsal and operator steps](docs/e2e-evidence.md)
+The auction launched through Flap at block 144,926,064 on BSC Testnet. One bid cleared at 0.0000089 tBNB per token and supplied 4.45 tBNB to the pool. The bidder claimed 500,000 UNIFORM. [Public transaction receipts and contract addresses](docs/public-testnet-evidence.md) · [Local fork rehearsal and operator steps](docs/e2e-evidence.md)
 
 ## 代理接口
 
