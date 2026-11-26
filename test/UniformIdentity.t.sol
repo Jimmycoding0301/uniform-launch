@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {FixtureNamePolicy} from "./FixtureNamePolicy.sol";
+import {FixtureNamePolicy, FixtureLauncherFactory} from "./FixtureNamePolicy.sol";
 import {Test} from "forge-std/Test.sol";
 import {LaunchVaultAddresses} from "src/flap/LaunchVaultAddresses.sol";
 import {UniformLauncher, LaunchConfig} from "src/uniform/UniformLauncher.sol";
@@ -80,11 +80,13 @@ contract UniformIdentityTest is Test {
         address portal = LaunchVaultAddresses.hub();
         vm.etch(portal, address(new FeePortal()).code);
         vm.deal(portal, 1 ether);
-        address namePolicy = address(new FixtureNamePolicy());
+        bytes memory screening = address(new FixtureNamePolicy()).code;
+        vm.etch(0x5CfbE713d070e87F67D1bc84312B7eB8Fe4F2B5E, screening);
+        vm.etch(0xfFb69d59f62454f3B8322Bc1a9FCE6E171a5264f, screening);
         uint256 nonce = vm.getNonce(address(this));
         address predicted = vm.computeCreateAddress(address(this), nonce + 1);
         UniformVaultFactory vaultFactory = new UniformVaultFactory(predicted);
-        launcherFactory = new UniformLauncherFactory(address(vaultFactory), namePolicy);
+        launcherFactory = new FixtureLauncherFactory(address(vaultFactory));
         listed = new ListedNft();
         balanceOnly = new BalanceOnlyNft();
         listedSource = new BinanceAgentIdSource(address(listed));

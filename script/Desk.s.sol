@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {FixtureNamePolicy} from "../test/FixtureNamePolicy.sol";
+import {FixtureLauncherFactory} from "../test/FixtureNamePolicy.sol";
 import {Script, console} from "forge-std/Script.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
 import {IPortal} from "src/flap/IPortal.sol";
@@ -26,12 +26,11 @@ contract DeskScript is Script {
         IPortal portal = IPortal(LaunchVaultAddresses.hub());
         address admin = IProxyAdminLike(PROXY_ADMIN).owner();
         vm.startBroadcast(creator);
-        address namePolicy = address(new FixtureNamePolicy());
         uint256 nonce = vm.getNonce(creator);
         address predicted = vm.computeCreateAddress(creator, nonce + 1);
 
         UniformVaultFactory vaultFactory = new UniformVaultFactory(predicted);
-        UniformLauncherFactory launcherFactory = new UniformLauncherFactory(address(vaultFactory), namePolicy);
+        UniformLauncherFactory launcherFactory = new FixtureLauncherFactory(address(vaultFactory));
         vm.stopBroadcast();
 
         vm.startBroadcast(admin);

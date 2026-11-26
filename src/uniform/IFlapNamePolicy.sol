@@ -1,7 +1,9 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-/// @notice Adapter for the Flap-approved name screening service, configured per deployment.
 interface IFlapNamePolicy {
-    function isScamWord(string calldata value) external view returns (bool);
+    function isScamWord(string calldata name, string calldata symbol)
+        external
+        view
+        returns (bool nameScam, bool symbolScam);
 }

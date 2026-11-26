@@ -1,16 +1,22 @@
 # Flap 预审答复与四笔出价验算
 
-本分支是 128 笔安全加固候选版。公开 BSC 测试网收据记录的是此前的 32 笔版本。本轮分叉合约使用本地筛查和身份测试件。新版的发布脚本只部署 Launcher Factory，使用 Flap 的 `MARKETING` 槽将项目侧交易税直接付给创建者。公开部署要先确定 Flap 名称筛查服务和新 Launcher Factory 的审核状态。[公开发射](public-testnet-evidence.md) · [Flap 工厂接入要求](https://docs.flap.sh/en/flap/v2/developers/pool-launch/build-on-pool-launch)
+候选版每场最多 128 笔。生产脚本部署单一 Launcher Factory，使用 Flap 的 `MARKETING` 槽将项目侧交易税支付给创建者。此前 32 笔 Vault 版本的公网回执保留。[公开发射](public-testnet-evidence.md) · [Flap 工厂接入](https://docs.flap.sh/en/flap/v2/developers/pool-launch/build-on-pool-launch)
 
-| 预审项 | 候选版改动 | 验收或依赖 |
-| --- | --- | --- |
-| 名称和符号 | 工厂在创建 Launcher、锁 salt 前分别通过不可变名称策略检查名称和符号。命中拒绝创建，服务调用失败也会回滚。 | 本地测试覆盖两类命中和服务不可用。Flap 的正式 `isScamWord` 合约、API 或适配方式待官方核对。部署必须给出有代码的 `FLAP_NAME_POLICY`。 |
-| Binance Agent ID | 主网按 NFT 的真实 `tokenId` 调用 `ownerOf` 并按该编号去重。地址编号只供链 97 的历史测试替身兼容使用。 | Binance 公告说明该产品是不可转让 ERC-721。合约仍依赖真实 token ID 来去重。[Binance 公告](https://www.binance.com/en/square/post/389517582957261) |
-| ERC-8004 和席位 | 128 笔容量。创建时固定最多 128 个合格钱包，同一钱包只占一席。主网必须配置名单。测试网可运行名单场和开放测试场。 | 自注册 ERC-8004 仅能证明某个代理编号。入选要另经组织者核验。名单场能为每个入选钱包保留一个席位，无法证明每个钱包背后都是不同的人。[ERC-8004](https://eips.ethereum.org/EIPS/eip-8004) |
-| 报价与 gas | 使用 Portal 当前原生币报价、创建线、毕业线。把较大门槛向上折算为 BNB，再加 0.05 BNB 的业务余量。报价不可用时继续开放结算重试。 | 保留 13M 入口防误判门槛和 14M 客户端建议。分别使用测试网、主网分叉测量 128 笔，主网测试的工厂启用只发生在分叉中。 |
-| 税款与销售余量 | 新版用 `MARKETING` 直付创建者。需要兼容 Vault 的版本使用 owner 提名、接收人主动接受的两步交接，Guardian 只能把余额转给时任 owner。销售配额余量可单独转到固定销毁地址。 | 验证范围覆盖税款接收、余量与领取余额、遗留 Vault 权限切换。 [Flap 税槽说明](https://docs.flap.sh/en/flap/v2/developers/pool-launch/build-on-pool-launch) |
+| 预审项 | 候选版改动 |
+| --- | --- |
+| R1 限价与结算 | 拒绝高于 `1e36` wei/枚的限价，按比例和边际价计算使用全精度乘除。结算遇到确定性算术错误进入 Failed，允许各人退回本金。其他错误回滚，保留重试。 |
+| R2 名称和符号 | Launcher 初始化在锁 salt 前调用 `isScamWord(string,string)`。名称或符号命中就拒绝，接口不可用也拒绝。在链 97 和 56 都已用官方地址验证。 |
+| O1 名额 | 主网固定 1–128 个提前准入的钱包。获准钱包各占一个名额。测试网 Mini App 创建场次也要求填名单。 |
+| O2 来源授权 | 工厂亲自部署链别绑定的适配器并固定地址。建场时检查每个选择的来源。主网只接受官方 Binance Agent ID，测试网接受工厂配置的替身或 ERC-8004。 |
+| O3 身份保障 | 主网 Binance Agent ID 按 ERC-721 实际 token ID 验证和去重。ERC-8004 是测试网可选身份来源。名单资格仍由创建者核验。[ERC-8004](https://eips.ethereum.org/EIPS/eip-8004) |
+| Gas | 128 笔版保留 13M 入口门槛。普通客户端建议 14M，Flap Mini App 使用 15M。两个数都低于 BSC 的单笔交易上限。 |
+| 时长和募资展示 | 200–20,000 区块按 0.45 秒估算约 90 秒至 2.5 小时，实际以区块为准。description.targetRaise 取保留价募额与实时最低入池额中较大者。详情页也读最低入池额。[BNB Chain 出块说明](https://docs.bnbchain.org/bnb-smart-chain/overview/) |
+| Portal 倍率 | 直接读取 Portal 当前原生币报价及两道 USD 门槛，向上折为 BNB 再加 0.05 BNB 余量。分叉测试启用倍率 10,000 bps。公开旧场使用当时实际倍率。 |
+| Vault 与文档 | 兼容代码支持 Vault 两步交接。Guardian 只能将余额提给当时的 owner。新版默认以 MARKETING 直付。README 将真实公网旧场与新版分叉记录分别列明。 |
 
-在 BSC 测试网和主网分叉分别以 128 个测试钱包各出价 0.2 BNB。两个场次均通过 Flap 建池，池中本金 25.6 BNB，末位出价者完成领取。测试网结算调用使用 **8,413,449 gas**，主网结算调用使用 **9,675,086 gas**。两次满场测试都用 MARKETING 路径。另在测试网分叉执行买卖和 Flap 税款分发，创建者收到 **0.256374987296341299 tBNB**，Portal 的 Vault 记录为零地址。工厂启用均由测试环境模拟，正式上链仍需 Flap 审核。全套 Forge 测试结果为 **76 通过、0 失败**。[分叉测试](../test/Uniform.fork.t.sol)
+筛查地址固定为链 97 的 `0x5CfbE713d070e87F67D1bc84312B7eB8Fe4F2B5E` 和链 56 的 `0xfFb69d59f62454f3B8322Bc1a9FCE6E171a5264f`。两条链均以 `Tongjia/TJ` 验证正常值，并分别验证 `USDT/TJ` 命中名称、`Tongjia/BNB` 命中简称。UI 提示和合约判断都以实际运行时的词库为准。
+
+满 128 笔时，MARKETING 发射的结算调用在测试网分叉用了 **8,468,497 gas**，在主网分叉用了 **9,735,134 gas**。测试网另用严格生产工厂和真实 Flap 测试网合约完成名称筛查、创建、出价、到期结算、建池和领取。合约预先预测的代币地址与发射地址一致。[分叉测试](../test/Uniform.fork.t.sol)
 
 ## 四笔出价
 
@@ -39,8 +45,8 @@
 如日后从 7 BNB 成交款扣 0.007 BNB，固定 50 万枚池配额对应的初始储备比率就是 **0.000013986 BNB/枚**。要保留 **开盘现货比率等于清算价**，可以让创建者从独立资金付 0.1% 成功费，或调整初始池的代币配额。当前合约按零协议费结算，本分支不启用收费。收费设计要先明确资金来源、失败处理和入池比率，再纳入下一轮审查。[收费路线图](roadmap.md)
 
 
-## 待 Flap 确认
+## 复审和测试网回执
 
-> For Pool Launch on BSC Testnet (chain 97), what is the supported `isScamWord` integration for a custom Launcher Factory? Please send the contract address and verified ABI (or the official API), the expected name and symbol inputs, and the distinction between a blocked value and an unavailable service. Our factory checks both fields before the salt lock and reverts if the check is unavailable.
->
-> We’ve incorporated your MARKETING recommendation. The release config uses one MARKETING slot with 10,000 bps of the configured tax allocation for the launch creator, and no Vault. The single Launcher Factory still creates auctions through Pool Launch. Once the name-screen integration is confirmed, we can send the new factory for testnet review.
+- 复审源码 ZIP 包含 `shared/vectors.json`、`script/LocalRpc.sol`、固定版本的 Foundry 依赖、Launcher 详情页和 Mini App 源码。
+- 新版需要 Flap 启用新的 Launcher Factory。部署后用已经核对的工厂地址、代码哈希和真实 Launcher 地址制作 Flap 绑定包。
+- 详情从 Flap 跳转到 `/apps/uniform-launch/launcher/<address>`。Mini App 负责创建、出价、结算、领取、退款。历史 Launcher 可查看旧版回执。

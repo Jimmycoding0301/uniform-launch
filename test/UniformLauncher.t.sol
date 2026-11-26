@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {FixtureNamePolicy} from "./FixtureNamePolicy.sol";
+import {FixtureNamePolicy, FixtureLauncherFactory} from "./FixtureNamePolicy.sol";
 import {Test} from "forge-std/Test.sol";
 import {LibClone} from "solady/utils/LibClone.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
@@ -99,11 +99,13 @@ contract UniformLauncherTest is Test {
         portal = LaunchVaultAddresses.hub();
         vm.etch(portal, address(new MockPortal()).code);
         vm.deal(portal, 10 ether);
-        address namePolicy = address(new FixtureNamePolicy());
+        bytes memory screening = address(new FixtureNamePolicy()).code;
+        vm.etch(0x5CfbE713d070e87F67D1bc84312B7eB8Fe4F2B5E, screening);
+        vm.etch(0xfFb69d59f62454f3B8322Bc1a9FCE6E171a5264f, screening);
         uint256 nonce = vm.getNonce(address(this));
         address predicted = vm.computeCreateAddress(address(this), nonce + 1);
         vaultFactory = new UniformVaultFactory(predicted);
-        launcherFactory = new UniformLauncherFactory(address(vaultFactory), namePolicy);
+        launcherFactory = new FixtureLauncherFactory(address(vaultFactory));
         vm.deal(address(this), 10 ether);
         vm.deal(alice, 100 ether);
         vm.deal(bob, 100 ether);
@@ -133,21 +135,21 @@ contract UniformLauncherTest is Test {
         LaunchConfig memory c = _config("TJ", 1e13);
         c.name = "BLOCKED";
         vm.prank(portal);
-        vm.expectRevert(UniformLauncherFactory.ScamNameOrSymbol.selector);
+        vm.expectRevert(UniformLauncher.ScamNameOrSymbol.selector);
         launcherFactory.newLauncher{value: 0.005 ether}(creator, abi.encode(c));
 
         c.name = "Tongjia";
         c.symbol = "BLOCKED";
         vm.prank(portal);
-        vm.expectRevert(UniformLauncherFactory.ScamNameOrSymbol.selector);
+        vm.expectRevert(UniformLauncher.ScamNameOrSymbol.selector);
         launcherFactory.newLauncher{value: 0.005 ether}(creator, abi.encode(c));
 
         c.symbol = "TJ";
-        FixtureNamePolicy(address(launcherFactory.namePolicy())).setUnavailable(true);
+        FixtureNamePolicy(0x5CfbE713d070e87F67D1bc84312B7eB8Fe4F2B5E).setUnavailable(true);
         vm.prank(portal);
-        vm.expectRevert(UniformLauncherFactory.NameScreenUnavailable.selector);
+        vm.expectRevert(UniformLauncher.NameScreenUnavailable.selector);
         launcherFactory.newLauncher{value: 0.005 ether}(creator, abi.encode(c));
-        FixtureNamePolicy(address(launcherFactory.namePolicy())).setUnavailable(false);
+        FixtureNamePolicy(0x5CfbE713d070e87F67D1bc84312B7eB8Fe4F2B5E).setUnavailable(false);
         assertTrue(address(_new("TJ", 1e13)) != address(0));
     }
 
@@ -289,6 +291,19 @@ contract UniformLauncherTest is Test {
         assertEq(issued.balanceOf(alice), owed[0]);
         assertEq(issued.balanceOf(bob), owed[1]);
         assertEq(issued.balanceOf(address(launcher)), 0);
+    }
+
+    function test_factoryRejectsUnapprovedIdentityAdapter() public {
+        UniformLauncherFactory strictFactory = new UniformLauncherFactory(address(0));
+        LaunchConfig memory c = _config("TJ", 1e13);
+        vm.prank(portal);
+        vm.expectRevert(abi.encodeWithSelector(UniformLauncherFactory.InvalidIdentitySource.selector, sources[0]));
+        strictFactory.newLauncher{value: 0.005 ether}(creator, abi.encode(c));
+
+        c.identitySources[0] = strictFactory.agentIdSource();
+        vm.prank(portal);
+        address launcher = strictFactory.newLauncher{value: 0.005 ether}(creator, abi.encode(c));
+        assertEq(UniformLauncher(payable(launcher)).identitySources(0), strictFactory.agentIdSource());
     }
 
     function test_versionsAndDescription() public {

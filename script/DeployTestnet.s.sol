@@ -7,9 +7,7 @@ import {UniformLauncherFactory} from "src/uniform/UniformLauncherFactory.sol";
 import {IPortal} from "src/flap/IPortal.sol";
 import {LaunchVaultAddresses} from "src/flap/LaunchVaultAddresses.sol";
 import {AgentIdentityAddresses} from "src/uniform/AgentIdentityAddresses.sol";
-import {AgentIdStandIn} from "src/uniform/AgentIdStandIn.sol";
 import {BinanceAgentIdSource} from "src/uniform/BinanceAgentIdSource.sol";
-import {Erc8004Source} from "src/uniform/Erc8004Source.sol";
 
 /// @notice 按 chainId 部署 MARKETING 版 Launcher Factory 和身份适配器。
 ///         56：Agent ID 与 ERC-8004 都指向官方合约。
@@ -29,28 +27,13 @@ contract DeployTestnet is Script {
             require(erc8004Registry.code.length > 0, "8004");
         }
 
-        address namePolicy = vm.envAddress("FLAP_NAME_POLICY");
         vm.startBroadcast(key);
-        UniformLauncherFactory launcherFactory = new UniformLauncherFactory(address(0), namePolicy);
+        UniformLauncherFactory launcherFactory = new UniformLauncherFactory(address(0));
 
-        address agentNft;
-        bool standIn;
-        if (chainId == 56) {
-            agentNft = AgentIdentityAddresses.AGENT_ID_MAINNET;
-            standIn = false;
-        } else if (AgentIdentityAddresses.AGENT_ID_MAINNET.code.length > 0) {
-            agentNft = AgentIdentityAddresses.AGENT_ID_MAINNET;
-            standIn = false;
-        } else {
-            agentNft = address(new AgentIdStandIn());
-            standIn = true;
-        }
-        BinanceAgentIdSource agentIdSource = new BinanceAgentIdSource(agentNft);
-        Erc8004Source erc8004Source = new Erc8004Source(erc8004Registry);
-        vm.stopBroadcast();
-
-        require(agentIdSource.standIn() == standIn, "stand-in flag");
-        require(address(erc8004Source.registry()) == erc8004Registry, "8004 registry");
+        address agentIdSource = launcherFactory.agentIdSource();
+        address erc8004Source = launcherFactory.erc8004Source();
+        address agentNft = address(BinanceAgentIdSource(agentIdSource).nft());
+        bool standIn = BinanceAgentIdSource(agentIdSource).standIn();
 
         string memory json = string.concat(
             "{\n",
@@ -64,9 +47,6 @@ contract DeployTestnet is Script {
             LibString.toHexStringChecksummed(address(0)),
             '",\n',
             '  "taxRoute": "marketing",\n',
-            '  "namePolicy": "',
-            LibString.toHexStringChecksummed(namePolicy),
-            '",\n',
             '  "launcherFactory": "',
             LibString.toHexStringChecksummed(address(launcherFactory)),
             '",\n',
@@ -94,7 +74,6 @@ contract DeployTestnet is Script {
             chainId == 56 ? "deployments/bsc-mainnet-release.json" : "deployments/bsc-testnet-release.json";
         vm.writeFile(out, json);
         console2.log("chainId", chainId);
-        console2.log("namePolicy", namePolicy);
         console2.log("launcherFactory", address(launcherFactory));
         console2.log("agentIdNft", agentNft);
         console2.log("agentIdStandIn", standIn);

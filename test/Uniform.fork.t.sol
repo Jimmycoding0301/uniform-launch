@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
-import {FixtureNamePolicy} from "./FixtureNamePolicy.sol";
+import {FixtureLauncherFactory} from "./FixtureNamePolicy.sol";
 import {Test, console2} from "forge-std/Test.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
@@ -110,11 +110,10 @@ abstract contract ForkBase is Test {
         vm.deal(bob, 80 ether);
         vm.deal(trader, 80 ether);
 
-        address namePolicy = address(new FixtureNamePolicy());
         uint256 nonce = vm.getNonce(address(this));
         address predicted = vm.computeCreateAddress(address(this), nonce + 1);
         vaultFactory = new UniformVaultFactory(predicted);
-        launcherFactory = new UniformLauncherFactory(address(vaultFactory), namePolicy);
+        launcherFactory = new FixtureLauncherFactory(address(vaultFactory));
 
         vm.startPrank(admin);
         portal.setCreationPaused(true);
@@ -124,7 +123,7 @@ abstract contract ForkBase is Test {
     }
 
     function _useMarketingFactory() internal {
-        launcherFactory = new UniformLauncherFactory(address(0), address(new FixtureNamePolicy()));
+        launcherFactory = new FixtureLauncherFactory(address(0));
         vm.prank(admin);
         portal.setLauncherFactoryMultiplier(address(launcherFactory), 10_000, true);
     }
@@ -317,6 +316,57 @@ contract UniformForkTest is ForkBase {
         UniformVault(payable(vault)).withdrawAll();
         assertEq(creator.balance - before, accrued);
         assertEq(address(vault).balance, 0);
+    }
+
+    function test_certifiedFactoryScreensAndResolvesOnRealPortal() public {
+        UniformLauncherFactory strictFactory = new UniformLauncherFactory(address(0));
+        vm.prank(admin);
+        portal.setLauncherFactoryMultiplier(address(strictFactory), 10_000, true);
+        LaunchConfig memory c;
+        c.name = "USDT";
+        c.symbol = "TJ";
+        c.meta = "bafkreig4y5nwb4izyilbbmiydumvkld446d4k7j4ohg3x3q2lfel3fo4yq";
+        c.salt = _mineSalt("real-screen");
+        c.floorPrice = 1e13;
+        c.durationBlocks = 200;
+        c.identitySources = new address[](1);
+        c.identitySources[0] = strictFactory.agentIdSource();
+        c.admittedWallets = new address[](1);
+        c.admittedWallets[0] = alice;
+        uint256 fee = portal.SALT_LOCK_FEE();
+
+        vm.prank(creator);
+        vm.expectRevert(UniformLauncher.ScamNameOrSymbol.selector);
+        portal.newLauncher{value: fee}(address(strictFactory), abi.encode(c));
+        c.name = "Tongjia";
+        c.symbol = "BNB";
+        vm.prank(creator);
+        vm.expectRevert(UniformLauncher.ScamNameOrSymbol.selector);
+        portal.newLauncher{value: fee}(address(strictFactory), abi.encode(c));
+        c.symbol = "TJ";
+
+        vm.prank(creator);
+        address deployed = portal.newLauncher{value: fee}(address(strictFactory), abi.encode(c));
+        assertEq(strictFactory.resolveLauncher(deployed), deployed);
+        vm.expectRevert(abi.encodeWithSelector(UniformLauncherFactory.UnrecognizedLauncher.selector, address(1)));
+        strictFactory.resolveLauncher(address(1));
+        UniformLauncher launcher = UniformLauncher(payable(deployed));
+        address expected = launcher.expectedToken();
+        assertEq(uint16(uint160(expected)), 0x7777);
+        assertEq(launcher.token(), address(0));
+
+        vm.startPrank(alice);
+        (bool registered,) = 0x89c60E8E5aF13508900152e5FEE149bf5708d8a0.call(abi.encodeWithSignature("claim()"));
+        assertTrue(registered);
+        launcher.bid{value: 8 ether}(1e16, 0, uint160(alice));
+        vm.stopPrank();
+        vm.roll(launcher.endBlock());
+        launcher.settle();
+        assertEq(launcher.statusCode(), uint8(UniformLauncher.Status.Succeeded));
+        assertEq(launcher.token(), expected);
+        vm.prank(alice);
+        launcher.claim();
+        assertEq(IERC20(expected).balanceOf(alice), launcher.SELL_AMOUNT());
     }
 
     function test_marketingLaunchPaysCreatorDirectly() public {

@@ -2,7 +2,7 @@
 
 A buyer chooses a budget and a maximum price. When bidding closes, everyone who fills pays the same price. If the auction meets its funding conditions, Flap issues the token and seeds a PancakeSwap V2 pool in the settlement transaction. Otherwise, every bidder can claim their full bid back.
 
-**Launched on public BSC Testnet, chain 97.** One bid cleared at **0.0000089 tBNB per UNIFORM**. The pool opened with **500,000 UNIFORM and 4.45 WBNB**. The bidder claimed the other **500,000 UNIFORM**. [Settlement & pool creation](https://testnet.bscscan.com/tx/0x56d87f21c4dbd55227d9e619986555f150c7da5ddec5db663b201a9b9985ae20) · [Bidder’s claim](https://testnet.bscscan.com/tx/0x732353fc11a666984971d62c5b7a0016d76775145823938bf515ef776354f27f)
+**Public BSC Testnet launch, chain 97, original Vault release.** One bid cleared at **0.0000089 tBNB per UNIFORM**. The pool opened with **500,000 UNIFORM and 4.45 WBNB**. The bidder claimed the other **500,000 UNIFORM**. The 128-bid candidate with direct marketing payouts has completed local fork tests and awaits its own public testnet launch. [Public settlement](https://testnet.bscscan.com/tx/0x56d87f21c4dbd55227d9e619986555f150c7da5ddec5db663b201a9b9985ae20) · [Bidder’s claim](https://testnet.bscscan.com/tx/0x732353fc11a666984971d62c5b7a0016d76775145823938bf515ef776354f27f) · [Candidate evidence](docs/preaudit-response.md)
 
 ## 问题与机制 · Why auction the opening price?
 
@@ -15,7 +15,7 @@ On a rising bonding curve, buying earlier can get you more tokens for the same b
 | 要求 · Deliverable | Open this |
 | --- | --- |
 | Launcher Factory and complete testnet launch | [Verified Factory source](https://testnet.bscscan.com/address/0xE82642aC5c3B3B4b7D4cDeaf6a251Dc0BB7AcEfd#code) · [All five public receipts and contract addresses](docs/public-testnet-evidence.md) |
-| Our custom Flap interface | [Flap runtime component and manifest](flap-ui/launcher-detail/) · [Rendered component with sample data](qa/r15/flap-mock-1.png) · [Official source checker result](docs/flap-integration.md) |
+| Our custom Flap interface | [Launcher detail component and manifest](flap-ui/launcher-detail/) · [Mini App source for create, bid, settle, claim and refund](flap-ui/mini-app/) · [Flap integration](docs/flap-integration.md) |
 | Open code and mechanism | [Auction contracts](src/uniform/) · [Agent CLI and MCP tools](agent/) · [Short submission brief](docs/hackquest-submission.md) |
 
 [English–Chinese pitch deck](qa/submission/Uniform-Launch-BNB-Bangkok.pptx) · [60-second walkthrough](docs/judge-demo.md) · [Six demo screens](qa/submission/README.md) · [Pitch script and judge Q&A](docs/pitch-runbook.md)
@@ -66,17 +66,17 @@ The browser tests use installed Google Chrome or Playwright Chromium. For the la
 
 | Criterion | What to inspect |
 | --- | --- |
-| Design and usability | The bilingual desk lets the buyer compare a fill and a refund before copying the instruction to their agent. The Flap component shows a bid, claim or refund instruction according to the launch state. [Desk screens](qa/submission/README.md) · [Custom Flap component](flap-ui/launcher-detail/Component.tsx) |
-| Scalability | A shared Factory creates a separate Launcher per auction. This implementation supports 128 bids per auction. With the MARKETING fee route, 128-bid settlement used 8,413,449 gas on a BSC testnet fork and 9,675,086 on a BSC mainnet fork. The public Launcher in the receipts above supports 32 bids. [Factory](src/uniform/UniformLauncherFactory.sol) · [Gas measurement and limits](docs/security.md) |
+| Design and usability | The bilingual desk lets the buyer compare a fill and a refund before copying the instruction to their agent. The Flap detail page shows the live auction state and opens the Mini App for transactions. [Desk screens](qa/submission/README.md) · [Custom Flap component](flap-ui/launcher-detail/Component.tsx) |
+| Scalability | A shared Factory creates a separate Launcher per auction. This implementation supports 128 bids per auction. With the MARKETING fee route, 128-bid settlement used 8,468,497 gas on a BSC testnet fork and 9,735,134 on a BSC mainnet fork. The public Launcher in the receipts above supports 32 bids. [Factory](src/uniform/UniformLauncherFactory.sol) · [Gas measurement and limits](docs/security.md) |
 | Innovation | Two local buyers each budgeted 2.5 BNB. The simulated curve allocated about 181,000 and 153,000 tokens. The batch allocated 125,000 each at a price discovered from bids. The first-to-last unit-price ratio was 1.7789 on the simulated curve and 1 on the batch. A fixed presale at the eventual clearing price gave the same fills and required choosing the price beforehand. [Assumptions and calculations](docs/why-uniform.md) |
 | Open source | MIT-licensed contracts, Flap component, web desk, agent tools and a one-command local demo. [License](LICENSE) · [Demo script](script/demo.sh) · [Flap integration](docs/flap-integration.md) |
 | Use of BNB Chain | The public testnet launch used Flap Portal and our Factory, created a PancakeSwap V2 pair, registered the Vault and delivered the bidder’s allocation. [Token, pool, Vault and receipts](docs/public-testnet-evidence.md) |
 
-Each auction can use one to four identity sources. A wallet and a given identifier within its source can each bid once. The public launch used a Binance Agent ID stand-in. Protection against one person obtaining several identities depends on issuer policy. [Binance Agent ID and ERC-8004 adapters](src/) · [Deployment addresses](deployments/bsc-testnet.json)
+The candidate factory only accepts its built-in identity sources. BNB mainnet uses Binance Agent ID and requires a fixed roster of 1–128 eligible wallets. On testnet the factory provides an Agent ID stand-in and an ERC-8004 option. Each eligible wallet and each identity within its source can bid once per auction. The public launch used the stand-in. [Identity policy and review evidence](docs/preaudit-response.md) · [Deployment addresses](deployments/bsc-testnet.json)
 
 ## Roadmap and business model · 路线图与收入
 
-Uniform currently charges no protocol fee. The roadmap proposes a **0.1% protocol fee on successful auction proceeds**. For example, on 100 BNB of filled bids, 0.1 BNB would go to the protocol and 99.9 BNB would seed the pool. The amount added to liquidity must still meet Flap’s minimum. Failed auctions would keep full refunds of bid principal. The creator’s configured post-launch trading tax continues to go to their Vault. [Roadmap and accounting](docs/roadmap.md)
+Uniform currently charges no protocol fee. The roadmap proposes a **0.1% protocol fee on successful auction proceeds**. If the fee comes from 100 BNB in filled bids, 0.1 BNB would go to the protocol and 99.9 BNB would seed the pool. This changes the initial reserve ratio when the pool token allocation is fixed. The fee design will be reviewed before activation. Failed auctions keep full refunds of bid principal. The candidate routes the creator’s post-launch trading tax through Flap’s MARKETING slot. [Roadmap and accounting](docs/roadmap.md) · [Worked fee example](docs/preaudit-response.md#01-收费路线)
 
 收入计划是成功发射时，按实际成交额收取 **0.1% 协议费**。未成交的预算不计费，失败场仍可领回全部出价本金。公开测试网这次发射的 4.45 tBNB 全部入池。
 

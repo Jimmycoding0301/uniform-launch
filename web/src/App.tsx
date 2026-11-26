@@ -7,7 +7,7 @@ import { Roller, useReducedMotion, Zh } from "./motion";
 import { PlotStage } from "./PlotStage";
 import { pancakeSwapLink } from "./dex";
 // @ts-expect-error 共享模拟器是普通 JavaScript，返回值在调用处收窄。
-import { settle as settleBids } from "../../shared/settle.mjs";
+import { MAX_PRICE, settle as settleBids } from "../../shared/settle.mjs";
 import { ADDR_STAGGER_MS, COPY_MS, RISK_LINE, SETTLE_MS, SWEEP_MS, USER_LINE } from "./theme";
 import { ReceiptPanel } from "./ReceiptPanel";
 import type { Action, Intent, Tracking } from "./receipts";
@@ -508,7 +508,7 @@ export function App() {
   const priceWei = parseBnb(maxPrice);
   const sim = useMemo(() => {
     if (!demoOn || scene !== 2 || !snap || budgetWei == null || priceWei == null ||
-        budgetWei < 10n ** 16n || budgetWei > 100n * 10n ** 18n || priceWei < snap.floor || snap.bids.length >= snap.maxBids) return null;
+        budgetWei < 10n ** 16n || budgetWei > 100n * 10n ** 18n || priceWei < snap.floor || priceWei > MAX_PRICE || snap.bids.length >= snap.maxBids) return null;
     const rows = snap.bids.map((row, index) => ({ index: BigInt(index), budget: row.budget, maxPrice: row.maxPrice }));
     rows.push({ index: BigInt(rows.length), budget: budgetWei, maxPrice: priceWei });
     return settleBids(500_000n * 10n ** 18n, snap.floor, rows) as {
@@ -524,7 +524,7 @@ export function App() {
     snap !== null &&
     budgetWei >= 10n ** 16n &&
     budgetWei <= 100n * 10n ** 18n &&
-    priceWei >= snap.floor;
+    priceWei >= snap.floor && priceWei <= MAX_PRICE;
   const button =
     phase === "open" ? t("复制出价指令", "Copy bid instruction") : phase === "ready" ? t("复制结算指令", "Copy settlement instruction") : phase === "failed" ? t("复制退款指令", "Copy refund instruction") : phase === "done" ? t("复制领取指令", "Copy claim instruction") : "";
 
@@ -1182,6 +1182,7 @@ function notePrice(raw: string, floor: bigint): { error: boolean; text: string; 
   if (!raw.trim()) return { error: false, text: t(`不能低于保留价 ${formatPrice(floor)}。`, `Minimum order price: ${formatPrice(floor)}.`), wei: "" };
   const value = parseBnb(raw);
   if (value === null) return { error: true, text: t("用十进制数字，例如 0.00003。", "Enter a decimal price, e.g. 0.00003."), wei: "" };
+  if (value > MAX_PRICE) return { error: true, text: t("限价超过合约允许范围。", "Limit exceeds the contract cap."), wei: "" };
   if (value < floor) return { error: true, text: t("低于保留价，这笔不会入场。", "Below reserve. This bid cannot enter."), wei: "" };
   return { error: false, text: t(`不能低于保留价 ${formatPrice(floor)}。`, `Minimum order price: ${formatPrice(floor)}.`), wei: groupFull(value) };
 }
@@ -1218,6 +1219,7 @@ function Skeleton() {
 function quoteLine(snap: Snap | null, budgetWei: bigint | null, priceWei: bigint | null, clearing: bigint) {
   if (!snap) return "";
   if (budgetWei === null || priceWei === null) return t("按 BNB 填写预算和最高价。", "Enter your budget and limit in BNB.");
+  if (priceWei > MAX_PRICE) return t("限价超过合约允许范围。", "Limit exceeds the contract cap.");
   if (priceWei < snap.floor) return t("低于保留价，这笔不会入场。", "Below reserve. This bid cannot enter.");
   if (clearing === 0n) return t("清算价未形成。", "No clearing price yet.");
   if (priceWei < clearing) return t("低于当前清算价，按现价不会成交。", "Below the current clearing price. No fill at this price.");

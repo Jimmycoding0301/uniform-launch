@@ -1,0 +1,19 @@
+{
+  "schemaVersion": 2,
+  "mode": "mini-app",
+  "appModel": "standalone",
+  "slug": "uniform-launch",
+  "artifactId": "vaultui_uniform-launch_01M8CNCHTH5SVTKNMBPFD7YW1A",
+  "name": "Uniform Launch",
+  "displayTitle": {
+    "en": "Uniform Launch · One-Price Auctions",
+    "zh": "同价发射 · 统一价格拍卖"
+  },
+  "match": {
+    "bindings": []
+  },
+  "i18n": [
+    "en",
+    "zh"
+  ]
+}
