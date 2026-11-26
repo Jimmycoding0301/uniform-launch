@@ -6,6 +6,7 @@ import {Test} from "forge-std/Test.sol";
 import {LibClone} from "solady/utils/LibClone.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
 import {IPortal, IPortalTypes} from "src/flap/IPortal.sol";
+import {LauncherDataSchema} from "src/flap/IVaultSchemas.sol";
 import {Distribution} from "src/flap/Distribution.sol";
 import {IStrategy} from "src/flap/IStrategy.sol";
 import {LaunchVaultAddresses} from "src/flap/LaunchVaultAddresses.sol";
@@ -304,14 +305,32 @@ contract UniformLauncherTest is Test {
         vm.prank(portal);
         address launcher = strictFactory.newLauncher{value: 0.005 ether}(creator, abi.encode(c));
         assertEq(UniformLauncher(payable(launcher)).identitySources(0), strictFactory.agentIdSource());
+        string memory description = UniformLauncher(payable(launcher)).description();
+        assertTrue(_contains(description, "bidding requires Binance Agent ID and a wallet on the auction allowlist"));
+        assertTrue(_contains(description, "3% buy and 3% sell tax goes directly to the creator for 30 days"));
+        assertTrue(_contains(description, unicode"买卖各收 3% 交易税，直接支付给创建者"));
     }
 
     function test_versionsAndDescription() public {
         assertEq(launcherFactory.factorySpecVersion(), "lf-v1");
         assertEq(vaultFactory.factorySpecVersion(), "pl-v1");
+        LauncherDataSchema memory schema = launcherFactory.launcherDataSchema();
+        assertFalse(schema.isArray);
+        assertEq(schema.fields.length, 8);
+        string[8] memory names =
+            ["name", "symbol", "meta", "salt", "floorPrice", "durationBlocks", "identitySources", "admittedWallets"];
+        string[8] memory types_ =
+            ["string", "string", "string", "bytes32", "uint256", "uint64", "address[]", "address[]"];
+        for (uint256 i; i < names.length; ++i) {
+            assertEq(schema.fields[i].name, names[i]);
+            assertEq(schema.fields[i].fieldType, types_[i]);
+            assertEq(schema.fields[i].decimals, i == 4 ? 18 : 0);
+        }
         UniformLauncher launcher = _new("TJ", 1e13);
-        assertTrue(bytes(launcher.description()).length > 0);
-        assertTrue(_contains(launcher.description(), "Uniform-price auction"));
+        string memory description = launcher.description();
+        assertLt(bytes(description).length, 4096);
+        assertTrue(_contains(description, "Uniform-price auction"));
+        assertTrue(_contains(description, "3% buy and 3% sell tax goes to the launch vault for 30 days"));
     }
 
     function test_bidWindowAndLimits() public {

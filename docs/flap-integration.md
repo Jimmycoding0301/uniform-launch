@@ -14,6 +14,8 @@
 
 公共测试网已通过同价 Launcher 发射代币，4.45 tBNB 入池。[实际 Launcher 与发射回执](marketing-testnet-evidence.md) · [固定分叉与签名步骤](e2e-evidence.md)
 
+复审后，源码的 `launcherDataSchema()` 补齐了 `identitySources`、`admittedWallets` 两项 `address[]`，字段顺序与 `LaunchConfig` 一致。新版中英 `description()` 说明主网出价需要同时通过 Binance Agent ID 和准入名单检查，以及 MARKETING 版 30 天内买卖各收 3% 的税并直接归创建者。详情组件也展示这条税率说明。上方已有测试网地址用于核对真实发射及预览绑定。现有链上工厂的 schema 和创建事件中的历史摘要仍为部署时版本。[Flap 的工厂与摘要规范](https://docs.flap.sh/en/flap/v2/developers/pool-launch/build-on-pool-launch)
+
 ## 检查器
 
 环境是 Node v22.23.4、Yarn 1.22.22。模板仓库只克隆在本机临时目录，没有拷进本仓库。Node 24 不是当前默认版本；用现成的 Node 22 跑，检查器通过了。
