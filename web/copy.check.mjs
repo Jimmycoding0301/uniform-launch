@@ -26,12 +26,12 @@ for (const path of pages) {
   if (path === "/?network=testnet") {
     const launch = page.getByRole("region", { name: "公开测试网发射" });
     assert.match(await launch.innerText(), /4\.45 tBNB/);
-    assert.equal(await launch.getByRole("link", { name: "查看已结算拍卖" }).getAttribute("href"),
-      "/?network=testnet&launcher=0xEc6410ACea44ac8aaD7f048f68CE45D3c113c59e");
-    assert.equal(await launch.getByRole("link", { name: /BscScan 发射回执/ }).getAttribute("href"),
-      "https://testnet.bscscan.com/tx/0x56d87f21c4dbd55227d9e619986555f150c7da5ddec5db663b201a9b9985ae20");
-    assert.equal(await launch.getByRole("link", { name: /BscScan 领取回执/ }).getAttribute("href"),
-      "https://testnet.bscscan.com/tx/0x732353fc11a666984971d62c5b7a0016d76775145823938bf515ef776354f27f");
+    assert.equal(await launch.getByRole("link", { name: "查看公开拍卖" }).getAttribute("href"),
+      "/?network=testnet&launcher=0xADD4e8b95B194D457611b4754e53c45A6E2A41d6");
+    assert.equal(await launch.getByRole("link", { name: /BscScan 创建回执/ }).getAttribute("href"),
+      "https://testnet.bscscan.com/tx/0x45c339b0d4a62da600714bd411f1d7ab966b51907a5b61379f2b09e4b362bb41");
+    assert.equal(await launch.getByRole("link", { name: /BscScan 出价回执/ }).getAttribute("href"),
+      "https://testnet.bscscan.com/tx/0xad339052f8b9e34197476bfd1defffd126373c7b87af77fd74ad0a5a5e4b8ed9");
   }
   const words = await page.evaluate(() => {
     const root = document.body.cloneNode(true);

@@ -1,6 +1,6 @@
 # Flap 对接
 
-**新版候选。** 发布脚本部署 Launcher Factory，用一个 `MARKETING` 槽把项目侧交易税支付给创建者。下文的 Vault 工厂和源文件属于历史公开部署及兼容测试。新版发射仍从 Flap Pool Launch Portal 创建和结算。详情组件显示实时出价笔数。详情组件的 manifest 已绑定经核对的新版测试网工厂。[预审答复及新版记录](preaudit-response.md)
+**新版候选。** 发布脚本部署 Launcher Factory，用一个 `MARKETING` 槽把项目侧交易税支付给创建者。新版发射仍从 Flap Pool Launch Portal 创建和结算。详情组件显示实时出价笔数。详情组件的 manifest 已绑定经核对的新版测试网工厂。[预审答复及新版记录](preaudit-response.md)
 
 新版使用只读 Launcher 详情组件和 Flap Mini App。详情页用 `host.redirect` 打开 `/apps/uniform-launch/launcher/<address>`。Mini App 通过官方钱包 SDK 模拟创建、出价、结算、领取和退款，由用户确认签名。
 
@@ -12,7 +12,7 @@
 - Mini App 源码在 `flap-ui/mini-app/uniform-launch`。将新版工厂地址、链上 runtime code 的 keccak256 传给 `node flap-ui/mini-app/prepare.mjs <新目录> <工厂> <代码哈希>`，生成候选签名权限配置。使用 Flap 官方模板 main 的 `app:check` 和 `app:package`。将两份 UI 包与链编号、确认后的工厂和实际 Launcher 地址交给 Flap。
 - 预览地址路径：`/launcher/<launcher 地址>?chain=bnb-testnet`。主机域名以 Flap 文档为准，这里只写路径
 
-公共测试网已通过同价 Launcher 发射代币，4.45 tBNB 入池。[实际 Launcher 与发射回执](public-testnet-evidence.md) · [固定分叉与签名步骤](e2e-evidence.md)
+公共测试网已通过同价 Launcher 发射代币，4.45 tBNB 入池。[实际 Launcher 与发射回执](marketing-testnet-evidence.md) · [固定分叉与签名步骤](e2e-evidence.md)
 
 ## 检查器
 
@@ -75,10 +75,9 @@ node /tmp/flap-template/scripts/launcher-check-source.mjs \
 | 锁 salt，代币地址尾号 `7777` | 脚本把 salt 挖到预测代币地址尾号 `0x7777`，`initialize` 里调用 `lockSalt` |
 | 只发射一次 | `status` 离开 Open 之后不能再 `settle` |
 | `encodeCreator` | `UniformLauncher` 调 `LaunchExtensionHelper.encodeCreator` |
-| Guardian 只能把实现升级或把金库提到 owner | 工厂 `upgradeVaultImplementation` 是 `onlyGuardian`；金库 `withdrawAll` 对 Guardian 只提到 owner |
+| Guardian 控制实现升级 | 工厂 `upgradeVaultImplementation` 是 `onlyGuardian` |
 | `description()` JSON | 基类把 `LauncherDescription` 编成 JSON。`targetRaise` 取 `softCap()` 与 `minPoolQuote()` 中较大值 |
 | 真正的发射门槛 | `minPoolQuote()` 读取 Portal 的实时创建线和毕业线，加 0.05 BNB 余量。低于门槛或 Portal 返回预检不通过时，可全额退款 |
-| Vault `pl-v1` | `UniformVaultFactory` 返回 `pl-v1` |
-| 项目税路径 | 新版由 Flap 的 MARKETING 槽直接支付给创建者。历史 Vault 版支持 owner 提取。 |
+| 项目税路径 | 新版由 Flap 的 MARKETING 槽直接支付给创建者。 |
 
 历史四种渲染见 `qa/r15/flap-mock-null.png`、`flap-mock-0.png`、`flap-mock-1.png`、`flap-mock-2.png`。地址用的是本机分叉上的三场。卡片上的读数是为了空、接单、已发射、失败四种状态摆的，不是那一刻的链上快照。

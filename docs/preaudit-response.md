@@ -1,6 +1,6 @@
 # Flap 预审答复与四笔出价验算
 
-候选版每场最多 128 笔。生产脚本部署单一 Launcher Factory，使用 Flap 的 `MARKETING` 槽将项目侧交易税支付给创建者。此前 32 笔 Vault 版本的公网回执保留。[公开发射](public-testnet-evidence.md) · [Flap 工厂接入](https://docs.flap.sh/en/flap/v2/developers/pool-launch/build-on-pool-launch)
+候选版每场最多 128 笔。生产脚本部署单一 Launcher Factory，使用 Flap 的 `MARKETING` 槽将项目侧交易税支付给创建者。[现行公开测试网发射](marketing-testnet-evidence.md)。[公开发射](marketing-testnet-evidence.md) · [Flap 工厂接入](https://docs.flap.sh/en/flap/v2/developers/pool-launch/build-on-pool-launch)
 
 | 预审项 | 候选版改动 |
 | --- | --- |
@@ -12,7 +12,7 @@
 | Gas | 128 笔版保留 13M 入口门槛。普通客户端建议 14M，Flap Mini App 使用 15M。两个数都低于 BSC 的单笔交易上限。 |
 | 时长和募资展示 | 200–20,000 区块按 0.45 秒估算约 90 秒至 2.5 小时，实际以区块为准。description.targetRaise 取保留价募额与实时最低入池额中较大者。详情页也读最低入池额。[BNB Chain 出块说明](https://docs.bnbchain.org/bnb-smart-chain/overview/) |
 | Portal 倍率 | 直接读取 Portal 当前原生币报价及两道 USD 门槛，向上折为 BNB 再加 0.05 BNB 余量。分叉测试启用倍率 10,000 bps。公开旧场使用当时实际倍率。 |
-| Vault 与文档 | 兼容代码支持 Vault 两步交接。Guardian 只能将余额提给当时的 owner。新版默认以 MARKETING 直付。README 将真实公网旧场与新版分叉记录分别列明。 |
+| Vault 与文档 | 兼容代码支持 Vault 两步交接。Guardian 只能将余额提给当时的 owner。新版默认以 MARKETING 直付。README 链接现行公网回执和本机分叉测试。 |
 
 筛查地址固定为链 97 的 `0x5CfbE713d070e87F67D1bc84312B7eB8Fe4F2B5E` 和链 56 的 `0xfFb69d59f62454f3B8322Bc1a9FCE6E171a5264f`。两条链均以 `Tongjia/TJ` 验证正常值，并分别验证 `USDT/TJ` 命中名称、`Tongjia/BNB` 命中简称。UI 提示和合约判断都以实际运行时的词库为准。
 
@@ -31,7 +31,7 @@
 
 **资金合计为 10 BNB = 7 BNB 入池 + 3 BNB 待领回。** A+B 的全额前缀给出 **0.000014 BNB/枚**。把 C 加进去得到 0.000018，超过 C 的限价。卡在 C 的 0.000012 时，A+B 已足以买超过 50 万枚，因此 C 也进不了边际成交。两位成交者使用同一清算价，实际分配向下取整，剩下 **1 个最小代币单位（10⁻¹⁸ 枚）**。此例限价各异。遇到全额前缀的同价边界时，下单顺序仍可能改变分配。
 
-成功结算且通过 Flap 时，**7 BNB + 500,000 枚**是初始池储备，初始储备现货比率为 **0.000014**。首次实际买卖的成交价格还受价格冲击、DEX 手续费和代币税影响。采用新版税槽时，买卖税率各 3%，期限 30 天。Flap 的税处理器在税款换为报价资产并分发时，直接把分配到 `MARKETING` 的税款交给创建者。旧 Vault 版由当时的 owner 提取。
+成功结算且通过 Flap 时，**7 BNB + 500,000 枚**是初始池储备，初始储备现货比率为 **0.000014**。首次实际买卖的成交价格还受价格冲击、DEX 手续费和代币税影响。采用新版税槽时，买卖税率各 3%，期限 30 天。Flap 的税处理器在税款换为报价资产并分发时，直接把分配到 `MARKETING` 的税款交给创建者。
 
 ### 买家确认前
 
@@ -48,5 +48,5 @@
 ## 复审和测试网回执
 
 - 复审源码 ZIP 包含 `shared/vectors.json`、`script/LocalRpc.sol`、固定版本的 Foundry 依赖、Launcher 详情页和 Mini App 源码。
-- 新版需要 Flap 启用新的 Launcher Factory。部署后用已经核对的工厂地址、代码哈希和真实 Launcher 地址制作 Flap 绑定包。
+- 新版已完成公开测试网发射。Flap 绑定包使用已核对的工厂地址、代码哈希和真实 Launcher 地址。
 - 详情从 Flap 跳转到 `/apps/uniform-launch/launcher/<address>`。Mini App 负责创建、出价、结算、领取、退款。历史 Launcher 可查看旧版回执。

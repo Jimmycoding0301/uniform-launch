@@ -29,8 +29,6 @@ for (const key of ["launcherFactory", "agentIdNft", "agentIdSource", "erc8004Reg
   assert.ok(networks.includes(deployed[key]), `${key} 与部署文件不一致`);
 }
 assert.ok(networks.includes(deployed.publicAuction.launcher), "测试网拍卖地址与部署文件不一致");
-const historical = JSON.parse(readFileSync(join(root, "../deployments/bsc-testnet.json"), "utf8"));
-assert.ok(networks.includes(historical.launcherFactory), "旧版工厂应仍可查询");
 assert.equal(deployed.chainId, 97);
 assert.equal(deployed.agentIdStandIn, true);
 assert.equal(deployed.saltLockFeeWei, "5000000000000000");

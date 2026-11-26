@@ -1,5 +1,5 @@
 import { useEffect, useRef } from "react";
-import { formatBnb, formatBnb4, formatPrice, formatTokens, parseBnb } from "./curve";
+import { formatBnb, formatPrice, formatTokens, parseBnb } from "./curve";
 import { t } from "./locale";
 
 type Preview = {
@@ -67,7 +67,7 @@ export function SimulationSummary({ simulation, selectedPrice, onPreset }: {
   );
 }
 
-export function SettlementSummary({ price, proceeds, vault }: { price: bigint; proceeds: bigint; vault: bigint | null }) {
+export function SettlementSummary({ price, proceeds }: { price: bigint; proceeds: bigint }) {
   return (
     <section className="settlement" aria-label={t("发射结算", "Launch settlement")}>
       <div className="kicker">{t("统一开盘价 ", "Uniform launch price")}<span>{t("BNB / 枚", "BNB / token")}</span></div>
@@ -75,7 +75,7 @@ export function SettlementSummary({ price, proceeds, vault }: { price: bigint; p
       <ol className="settlement-flow">
         <li><span>{t("同价成交", "Sold at one price")}</span><strong>500,000 <small>{t("枚", "tokens")}</small></strong><p>{t("本场出售的代币", "Tokens sold in this auction")}</p></li>
         <li><span>{t("创建流动池", "Initial pool liquidity")}</span><strong>{formatBnb(proceeds)} <small>BNB</small></strong><p>{t("与另 500,000 枚配对", "Paired with 500,000 more tokens")}</p></li>
-        <li><span>{t("金库余额", "Vault balance")}</span><strong>{vault === null ? "—" : formatBnb4(vault)} <small>BNB</small></strong><p>{t("建池后的买卖税收入", "Trading tax collected after launch")}</p></li>
+        <li><span>{t("买卖交易税", "Trading tax")}</span><strong>3% <small>{t("各", "each")}</small></strong><p>{t("发射后 30 天内支付给创建者", "Paid to the creator for 30 days")}</p></li>
       </ol>
     </section>
   );

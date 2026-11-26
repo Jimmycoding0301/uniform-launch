@@ -122,7 +122,7 @@ const SCENES = [
   t("接单与清算价", "Bids and clearing price"),
   t("填写限价委托", "Set a bid limit"),
   t("模拟本笔出价", "Simulate your bid"),
-  t("发射与金库", "Launch and vault"),
+  t("发射与交易税", "Launch and trading tax"),
   t("未达门槛，全额退款", "Below target, full refund"),
   t("对照两种发行价格", "Compare launch prices"),
 ];
@@ -162,7 +162,6 @@ type Snap = {
 const ZERO = "0x0000000000000000000000000000000000000000";
 const trustedTestnetFactories = new Set<string>([
   TESTNET.launcherFactory.toLowerCase(),
-  TESTNET.legacyLauncherFactory.toLowerCase(),
 ]);
 const marketingFactory = import.meta.env.VITE_MARKETING_LAUNCHER_FACTORY?.trim().toLowerCase();
 if (marketingFactory && marketingFactory !== ZERO && isAddress(marketingFactory)) {
@@ -709,7 +708,7 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
 
   const failed = phase === "failed";
   const marketing = snap?.vaultFactory === ZERO;
-  const sceneLabels = SCENES.map((label, i) => marketing && i === 3 ? t("发射与交易税", "Launch and trading tax") : label);
+  const sceneLabels = SCENES;
   const estimate = quoteLine(snap, budgetWei, priceWei, clearingNow);
 
   const budgetNote = noteBudget(budget);
@@ -929,8 +928,8 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
             <div className="col-chart">
               {demoOn && scene === 5 ? (
                 <PriceComparison data={why} />
-              ) : demoOn && scene === 3 && phase === "done" && !marketing ? (
-                <SettlementSummary price={snap.clearing} proceeds={snap.poolQuote} vault={vaultBal} />
+              ) : demoOn && scene === 3 && phase === "done" ? (
+                <SettlementSummary price={snap.clearing} proceeds={snap.poolQuote} />
               ) : failed ? (
                 <FundingProgress raised={raised} eligible={snap.previewOk ? snap.previewQuote : 0n} minimum={snap.minPoolQuote} />
               ) : (
@@ -978,7 +977,7 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
                 <li><span>{t("买入税 / 卖出税", "Buy / sell tax")}</span><span>3% / 3%</span></li>
                 {marketing && <li><span>{t("税款分配", "Tax allocation")}</span><span>{t("100% 付给创建者用于营销", "100% to the creator for marketing")}</span></li>}
               </ul>
-              {marketing && snap.marketingRecipient && snap.marketingRecipient !== ZERO && (
+              {phase === "done" && marketing && snap.marketingRecipient && snap.marketingRecipient !== ZERO && (
                 <Addr label={t("营销收款人", "Marketing recipient")} value={snap.marketingRecipient} local={localFork} />
               )}
               <BidTable rows={snap.bids} phase={phase} clearing={clearingNow} />
@@ -1011,23 +1010,20 @@ function TestnetBoard() {
   return (
     <div className="grid testnet-board">
       <section className="public-launch" aria-labelledby="public-launch-title">
-        <h1 id="public-launch-title">{t("旧版公开测试网发射", "Original public testnet launch")}</h1>
+        <h1 id="public-launch-title">{t("公开测试网发射", "Public testnet launch")}</h1>
         <p className="public-launch-amount">4.45 <span>tBNB</span></p>
-        <p className="public-launch-caption">{t("实际入池，区块 144,926,064", "Added to the pool at block 144,926,064")}</p>
-        <p>{t("出价者已领取 500,000 UNIFORM。", "The bidder claimed 500,000 UNIFORM.")}</p>
-        <a className="public-launch-primary" href={localizedHref(`/?network=testnet&launcher=${launch.launcher}`)}>{t("查看已结算拍卖 ", "View settled auction ")}<span aria-hidden="true">↗</span></a>
+        <p className="public-launch-caption">{t("实际入池，区块 145,040,241", "Added to the pool at block 145,040,241")}</p>
+        <p>{t("出价者已领取 500,000 枚。", "The bidder claimed 500,000 tokens.")}</p>
+        <a className="public-launch-primary" href={localizedHref(`/?network=testnet&launcher=${launch.launcher}`)}>{t("查看公开拍卖 ", "View public auction ")}<span aria-hidden="true">↗</span></a>
         <div className="public-launch-links">
+          <a href={`${TESTNET.explorer}/tx/${launch.createTx}`} target="_blank" rel="noreferrer">{t("BscScan 创建回执 ↗", "Creation receipt ↗")}</a>
+          <a href={`${TESTNET.explorer}/tx/${launch.bidTx}`} target="_blank" rel="noreferrer">{t("BscScan 出价回执 ↗", "Bid receipt ↗")}</a>
           <a href={`${TESTNET.explorer}/tx/${launch.settlementTx}`} target="_blank" rel="noreferrer">{t("BscScan 发射回执 ↗", "Launch receipt ↗")}</a>
           <a href={`${TESTNET.explorer}/tx/${launch.claimTx}`} target="_blank" rel="noreferrer">{t("BscScan 领取回执 ↗", "Claim receipt ↗")}</a>
         </div>
       </section>
       <section className="plaque" aria-labelledby="testnet-contract-title">
         <h2 id="testnet-contract-title">{t("测试网合约", "Testnet contracts")}</h2>
-        <p><a href={localizedHref(`/?network=testnet&launcher=${TESTNET.currentAuction.launcher}`)}>{t("查看新版公开测试网拍卖 ↗", "View the current public testnet auction ↗")}</a></p>
-        <div className="public-launch-links">
-          <a href={`${TESTNET.explorer}/tx/${TESTNET.currentAuction.createTx}`} target="_blank" rel="noreferrer">{t("新版创建回执 ↗", "Current creation receipt ↗")}</a>
-          <a href={`${TESTNET.explorer}/tx/${TESTNET.currentAuction.bidTx}`} target="_blank" rel="noreferrer">{t("新版出价回执 ↗", "Current bid receipt ↗")}</a>
-        </div>
         {TESTNET_ROWS.map((row) => (
           <div className="row" key={row.address}>
             <span className="name">{row.name}</span>

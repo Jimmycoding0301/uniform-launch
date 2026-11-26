@@ -2,7 +2,7 @@
 
 A buyer chooses a budget and a maximum price. When bidding closes, everyone who fills pays the same price. If the auction meets its funding conditions, Flap issues the token and seeds a PancakeSwap V2 pool in the settlement transaction. Otherwise, every bidder can claim their full bid back.
 
-**Public BSC Testnet launch, chain 97, original Vault release.** One bid cleared at **0.0000089 tBNB per UNIFORM**. The pool opened with **500,000 UNIFORM and 4.45 WBNB**. The bidder claimed the other **500,000 UNIFORM**. The 128-bid MARKETING factory has been deployed on BSC Testnet and its first public auction has accepted a bid. Settlement and claim receipts are tracked separately. [New public auction](docs/marketing-testnet-evidence.md) [Public settlement](https://testnet.bscscan.com/tx/0x56d87f21c4dbd55227d9e619986555f150c7da5ddec5db663b201a9b9985ae20) · [Bidder’s claim](https://testnet.bscscan.com/tx/0x732353fc11a666984971d62c5b7a0016d76775145823938bf515ef776354f27f) · [Candidate evidence](docs/preaudit-response.md)
+**Public BSC Testnet launch, chain 97.** The auction cleared at **0.0000089 tBNB per token**. Flap created a PancakeSwap V2 pool with **500,000 tokens and 4.45 tBNB**. The bidder claimed the other **500,000 tokens**. [Complete public record](docs/marketing-testnet-evidence.md) · [Settlement](https://testnet.bscscan.com/tx/0x5cc2056b689db1a422e5dfbdbd7017a23f86fa9a764effaa6cc82c9c1051ec02) · [Claim](https://testnet.bscscan.com/tx/0x5e1f06bfce8e6ee3dd379c82593ad35330639f169d22fd189493ec7f42f6bbd9)
 
 ## 问题与机制 · Why auction the opening price?
 
@@ -14,23 +14,11 @@ On a rising bonding curve, buying earlier can get you more tokens for the same b
 
 | 要求 · Deliverable | Open this |
 | --- | --- |
-| Launcher Factory and complete testnet launch | [Verified Factory source](https://testnet.bscscan.com/address/0xE82642aC5c3B3B4b7D4cDeaf6a251Dc0BB7AcEfd#code) · [All five public receipts and contract addresses](docs/public-testnet-evidence.md) |
+| Launcher Factory and complete testnet launch | [Deployed Factory](https://testnet.bscscan.com/address/0x5A995C7ee958a631FDD151C9582604d347D7799A) · [Five public receipts and contract addresses](docs/marketing-testnet-evidence.md) |
 | Our custom Flap interface | [Launcher detail component and manifest](flap-ui/launcher-detail/) · [Mini App source for create, bid, settle, claim and refund](flap-ui/mini-app/) · [Flap integration](docs/flap-integration.md) |
 | Open code and mechanism | [Auction contracts](src/uniform/) · [Agent CLI and MCP tools](agent/) · [Short submission brief](docs/hackquest-submission.md) |
 
-[English–Chinese pitch deck](qa/submission/Uniform-Launch-BNB-Bangkok.pptx) · [60-second walkthrough](docs/judge-demo.md) · [Six demo screens](qa/submission/README.md) · [Pitch script and judge Q&A](docs/pitch-runbook.md)
-
-## Follow the five public transactions
-
-| BSC Testnet · 26 Nov 2026 | What the receipt shows |
-| --- | --- |
-| [1 · Register test identity](https://testnet.bscscan.com/tx/0x4df7fbf222c358de87017d42267aabf006c525abdc505634369b1c6cfc78b2d0) | The bidder received the test Agent ID used by this auction. |
-| [2 · Create the auction](https://testnet.bscscan.com/tx/0x5be4952fc75b9d2aec691ae0288eed53ee922e53552fce9812da24c1410ab93c) | Flap Portal called our Factory. The Factory emitted `UniformLauncherCreated`. The creation transaction carried the 0.005 tBNB salt-lock fee. |
-| [3 · Bid](https://testnet.bscscan.com/tx/0xac2f7be859199de2d0fc11c57fcdf59308b5f856b5928afa75aaecde40dafa01) | One buyer committed 4.45 tBNB with a maximum price of 0.000009 tBNB per token. |
-| [4 · Settle, issue and add liquidity](https://testnet.bscscan.com/tx/0x56d87f21c4dbd55227d9e619986555f150c7da5ddec5db663b201a9b9985ae20#eventlog) | At block 144,926,064 the Launcher cleared the auction. The pair recorded its opening reserves and the Vault Factory created the project Vault. |
-| [5 · Claim](https://testnet.bscscan.com/tx/0x732353fc11a666984971d62c5b7a0016d76775145823938bf515ef776354f27f#eventlog) | The Launcher emitted `Claimed` and the token transferred 500,000 UNIFORM to the bidder. |
-
-**Which results came from the fork?** The nine-bid pricing example, the three-bid refund scenario and the buy/sell tax withdrawal were separate local rehearsals. In the refund scene, 3 BNB falls short of the roughly 4.34 BNB pool minimum and all three bidders can reclaim their budgets. In the Vault rehearsal, trades generated 0.027516256919450703 tBNB and the owner withdrew that amount. [Local fork evidence](docs/e2e-evidence.md)
+[60-second walkthrough](docs/judge-demo.md) · [Six demo screens](qa/submission/README.md) · [Pitch script and judge Q&A](docs/pitch-runbook.md)
 
 ## Try the bidding desk
 
@@ -46,7 +34,7 @@ bash script/demo.sh
 
 Open the local demo URL printed by the script. Append `&lang=en` for English. In scene 3, keep the budget at **1 BNB** and switch the limit from **0.00003** to **0.000015**. The first preview fills 50,000 tokens. The second fills zero and returns the 1 BNB budget. A later bid can change either preview. The agent reads the book, compares the outcomes and prepares an unsigned transaction. The buyer reviews and authorizes it. [Recorded MCP responses](qa/submission/agent-preview.json) · [Agent commands](agent/README.md)
 
-To inspect the actual launch in the desk, use `/?network=testnet&launcher=0xEc6410ACea44ac8aaD7f048f68CE45D3c113c59e&lang=en` on the same local web origin. The [saved public-launch screen](qa/submission/public-launch.png) and [six-scene walkthrough](qa/submission/README.md) also open without an RPC connection.
+To inspect the actual launch in the desk, use `/?network=testnet&launcher=0xADD4e8b95B194D457611b4754e53c45A6E2A41d6&lang=en` on the same local web origin. The [saved public-launch screen](qa/submission/public-launch.png) and [six-scene walkthrough](qa/submission/README.md) also open without an RPC connection.
 
 After the demo script returns, leave its local services running. From the repository root:
 
@@ -67,10 +55,10 @@ The browser tests use installed Google Chrome or Playwright Chromium. For the la
 | Criterion | What to inspect |
 | --- | --- |
 | Design and usability | The bilingual desk lets the buyer compare a fill and a refund before copying the instruction to their agent. The Flap detail page shows the live auction state and opens the Mini App for transactions. [Desk screens](qa/submission/README.md) · [Custom Flap component](flap-ui/launcher-detail/Component.tsx) |
-| Scalability | A shared Factory creates a separate Launcher per auction. This implementation supports 128 bids per auction. With the MARKETING fee route, 128-bid settlement used 8,468,497 gas on a BSC testnet fork and 9,735,134 on a BSC mainnet fork. The public Launcher in the receipts above supports 32 bids. [Factory](src/uniform/UniformLauncherFactory.sol) · [Gas measurement and limits](docs/security.md) |
+| Scalability | A shared Factory creates a separate Launcher per auction. This implementation supports 128 bids per auction. With the MARKETING fee route, 128-bid settlement used 8,468,497 gas on a BSC testnet fork and 9,735,134 on a BSC mainnet fork. [Factory](src/uniform/UniformLauncherFactory.sol) · [Gas measurement and limits](docs/security.md) |
 | Innovation | Two local buyers each budgeted 2.5 BNB. The simulated curve allocated about 181,000 and 153,000 tokens. The batch allocated 125,000 each at a price discovered from bids. The first-to-last unit-price ratio was 1.7789 on the simulated curve and 1 on the batch. A fixed presale at the eventual clearing price gave the same fills and required choosing the price beforehand. [Assumptions and calculations](docs/why-uniform.md) |
 | Open source | MIT-licensed contracts, Flap component, web desk, agent tools and a one-command local demo. [License](LICENSE) · [Demo script](script/demo.sh) · [Flap integration](docs/flap-integration.md) |
-| Use of BNB Chain | The public testnet launch used Flap Portal and our Factory, created a PancakeSwap V2 pair, registered the Vault and delivered the bidder’s allocation. [Token, pool, Vault and receipts](docs/public-testnet-evidence.md) |
+| Use of BNB Chain | The public testnet launch used Flap Portal and our Factory, created a PancakeSwap V2 pair and delivered the bidder’s allocation. [Token, pool and receipts](docs/marketing-testnet-evidence.md) |
 
 The candidate factory only accepts its built-in identity sources. BNB mainnet uses Binance Agent ID and requires a fixed roster of 1–128 eligible wallets. On testnet the factory provides an Agent ID stand-in and an ERC-8004 option. Each eligible wallet and each identity within its source can bid once per auction. The public launch used the stand-in. [Identity policy and review evidence](docs/preaudit-response.md) · [Current deployment addresses](deployments/bsc-testnet-marketing.json)
 

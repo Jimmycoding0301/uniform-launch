@@ -11,7 +11,7 @@ const {
   createPublicClient, decodeEventLog, getAddress, http, parseAbi, parseEther, toHex, zeroAddress,
 } = require("viem");
 const root = fileURLToPath(new URL("../", import.meta.url));
-const deployment = require("../deployments/bsc-testnet.json");
+const deployment = require("../test/fixtures/bsc-testnet-vault.json");
 const portal = "0x000042108465206185A077Edc3F3fd2b49060000";
 const budget = parseEther("4.6");
 const defaultRpc = "https://bsc-testnet-dataseed.bnbchain.org";

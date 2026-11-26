@@ -6,16 +6,16 @@
 
 - 链：BNB Smart Chain 测试网，链编号 97
 - 出价：`bid`，预算是转账金额，最少 0.01 BNB，最多 100 BNB
-- 读本场 `MAX_BIDS()` 确认容量。当前公开测试网是 32 笔，新合约是 128 笔。每个地址一笔，每个身份来源加身份编号一笔。主网只使用 Binance Agent ID 的真实 NFT 编号。名单场还要用 `admittedWallet(address)` 确认钱包已入选。
+- 读本场 `MAX_BIDS()` 确认容量。当前合约每场上限为 128 笔。每个地址一笔，每个身份来源加身份编号一笔。主网只使用 Binance Agent ID 的真实 NFT 编号。名单场还要用 `admittedWallet(address)` 确认钱包已入选。
 - 最高价不能低于保留价，也不得高于 `MAX_PRICE()`（新版为 1e36 报价 wei/枚）
 - 窗口结束后任何人可以结算。为当前 Launcher 读取 `minPoolQuote()`。未满足门槛时结算失败，可全退出价本金。读不到门槛时先检查 Portal 报价服务。
 - 成功后，竞拍者调用 Launcher 的 `claim()` 领取成交代币和剩余预算。买入税和卖出税各 3%。
-- 税款去向按当前 Launcher 的 `vaultFactory()` 判断。零地址表示新版使用 Flap 的 MARKETING 费项，100% 的交易税付给 `creator()` 返回的发射创建者。非零地址表示旧版使用 Vault 费项，100% 的交易税进该场的 Vault。
+- 公开测试网投产配置通过 Flap 的 MARKETING 槽将项目侧交易税支付给 `creator()` 返回的创建者。
 - 结算的交易 gas 上限用本场 `MIN_SETTLE_GAS()` 加 1,000,000。若进入结算时剩余 gas 低于合约门槛，调用回滚，拍卖保持开放
 
 ## 合约
 
-- 发射工厂：https://testnet.bscscan.com/address/0xE82642aC5c3B3B4b7D4cDeaf6a251Dc0BB7AcEfd
+- 发射工厂：https://testnet.bscscan.com/address/0x5A995C7ee958a631FDD151C9582604d347D7799A
 - 旧版公开发射的金库工厂：https://testnet.bscscan.com/address/0x2EF7a93b2fE4FBF520D5210b3ea39a72E5133dc6
 - Agent ID 来源：https://testnet.bscscan.com/address/0xe4f7B9aBA67FEDAbF9B9a151C604466D448DAb09
 - ERC-8004 来源：https://testnet.bscscan.com/address/0x0526f00B99e952cE55F1b7BDaf9E6Ae42b42cf22

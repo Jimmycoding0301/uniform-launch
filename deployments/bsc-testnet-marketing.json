@@ -24,6 +24,15 @@
     "maxPriceWei": "9000000000000",
     "expectedToken": "0x81fD4df6F9E4De108C7790961856D92690867777",
     "endBlock": 145040138,
-    "admittedWalletCount": 0
+    "admittedWalletCount": 0,
+    "settlementTx": "0x5cc2056b689db1a422e5dfbdbd7017a23f86fa9a764effaa6cc82c9c1051ec02",
+    "settlementBlock": 145040241,
+    "claimTx": "0x5e1f06bfce8e6ee3dd379c82593ad35330639f169d22fd189493ec7f42f6bbd9",
+    "claimBlock": 145040258,
+    "clearingPriceWei": "8900000000000",
+    "poolQuoteWei": "4450000000000000000",
+    "tokensClaimedWei": "500000000000000000000000",
+    "token": "0x81fD4df6F9E4De108C7790961856D92690867777",
+    "pool": "0x597e3a231D6bDDba2123A3055D854dc53Db17683"
   }
 }

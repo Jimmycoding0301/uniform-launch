@@ -10,7 +10,7 @@ try {
     reducedMotion: "reduce",
   });
   const page = await context.newPage();
-  const labels = ["Bids and clearing price", "Set a bid limit", "Simulate your bid", "Launch and vault", "Below target, full refund", "Compare launch prices"];
+  const labels = ["Bids and clearing price", "Set a bid limit", "Simulate your bid", "Launch and trading tax", "Below target, full refund", "Compare launch prices"];
   await page.goto(`${demoOrigin}/?demo=1`);
   assert.equal(await page.locator("html").getAttribute("lang"), "zh-CN");
   await page.getByRole("button", { name: "下一幕" }).click();

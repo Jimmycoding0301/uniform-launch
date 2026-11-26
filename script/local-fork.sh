@@ -53,7 +53,7 @@ healthy() {
   addresses=$(node -e '
     const d = JSON.parse(require("node:fs").readFileSync(process.argv[1], "utf8"));
     const inputs = [d.open, d.launched, d.failed];
-    if (d.sceneVersion !== 2 || d.rpc !== process.argv[2] || !inputs.every(a => /^0x[0-9a-f]{40}$/i.test(a))) process.exit(1);
+    if (d.sceneVersion !== 3 || d.rpc !== process.argv[2] || !inputs.every(a => /^0x[0-9a-f]{40}$/i.test(a))) process.exit(1);
     console.log(inputs.join(" "));
   ' "$DEMO_JSON" "$ANVIL_RPC" 2>/dev/null) || return 1
   read -r open done failed <<<"$addresses"
@@ -121,7 +121,7 @@ fi
 node --input-type=module << EOF
 import { writeFileSync } from "node:fs";
 const data = {
-  sceneVersion: 2,
+  sceneVersion: 3,
   localFork: true,
   rpc: "$ANVIL_RPC",
   open: "$OPEN",
@@ -139,46 +139,6 @@ DONE=$(node -e 'const d=require(process.argv[1]); process.stdout.write(d.launche
 FAIL=$(node -e 'const d=require(process.argv[1]); process.stdout.write(d.failed||"")' "$DEMO_JSON")
 test -n "$OPEN" && test -n "$DONE" && test -n "$FAIL"
 
-seed_if_empty() {
-  local launcher="$1"
-  local token vault accrued shown
-  token=$(cast call "$launcher" "token()(address)" --rpc-url "$ANVIL_RPC")
-  token=${token%% *}
-  if [ -z "$token" ] || [ "$token" = "0x0000000000000000000000000000000000000000" ]; then
-    echo "已发射场还没有代币" >&2
-    exit 1
-  fi
-  vault=$(cast call 0x000042108465206185A077Edc3F3fd2b49060000 "getLaunchVault(address)(address,address)" "$token" --rpc-url "$ANVIL_RPC" | awk 'NR==1{print $1}')
-  accrued=$(cast call "$vault" "accrued()(uint256)" --rpc-url "$ANVIL_RPC")
-  accrued=${accrued%% *}
-  if [ "$accrued" = "0" ]; then
-    forge script script/LocalFork.s.sol --sig "seedVault(address)" "$launcher" \
-      --rpc-url "$ANVIL_RPC" --broadcast --unlocked \
-      --sender 0x00000000000000000000000000000000C0DE0004
-    accrued=$(cast call "$vault" "accrued()(uint256)" --rpc-url "$ANVIL_RPC")
-    accrued=${accrued%% *}
-  else
-    echo "金库已有余额 $accrued"
-  fi
-  if [ -z "$accrued" ] || [ "$accrued" = "0" ]; then
-    echo "买卖之后金库仍是 0" >&2
-    exit 1
-  fi
-  shown=$(python3 - "$accrued" << 'PY'
-import sys
-w = int(sys.argv[1])
-frac = f"{w % 10**18:018d}"[:4]
-print(f"{w // 10**18}.{frac}")
-PY
-)
-  if [ "$shown" = "0.0000" ]; then
-    echo "金库四位小数仍是 0（$accrued wei）" >&2
-    exit 1
-  fi
-  echo "金库余额 $shown BNB"
-}
-
-seed_if_empty "$DONE"
 echo "接单 $OPEN"
 echo "已发射 $DONE"
 echo "失败 $FAIL"
