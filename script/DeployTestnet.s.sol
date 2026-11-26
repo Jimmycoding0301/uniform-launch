@@ -4,13 +4,14 @@ pragma solidity ^0.8.26;
 import {Script, console2} from "forge-std/Script.sol";
 import {LibString} from "solady/utils/LibString.sol";
 import {UniformLauncherFactory} from "src/uniform/UniformLauncherFactory.sol";
-import {UniformVaultFactory} from "src/uniform/UniformVaultFactory.sol";
+import {IPortal} from "src/flap/IPortal.sol";
+import {LaunchVaultAddresses} from "src/flap/LaunchVaultAddresses.sol";
 import {AgentIdentityAddresses} from "src/uniform/AgentIdentityAddresses.sol";
 import {AgentIdStandIn} from "src/uniform/AgentIdStandIn.sol";
 import {BinanceAgentIdSource} from "src/uniform/BinanceAgentIdSource.sol";
 import {Erc8004Source} from "src/uniform/Erc8004Source.sol";
 
-/// @notice 按 chainId 部署两个工厂和身份适配器。
+/// @notice 按 chainId 部署 MARKETING 版 Launcher Factory 和身份适配器。
 ///         56：Agent ID 与 ERC-8004 都指向官方合约。
 ///         97：ERC-8004 指向官方 Identity Registry。Agent ID 真合约不在这条链上时，部署只含 balanceOf 的替身。
 ///         私钥只从环境变量 DEPLOYER_PRIVATE_KEY 读取，任何日志都不打印它。
@@ -30,10 +31,7 @@ contract DeployTestnet is Script {
 
         address namePolicy = vm.envAddress("FLAP_NAME_POLICY");
         vm.startBroadcast(key);
-        uint256 nonce = vm.getNonce(deployer);
-        address predictedLauncher = vm.computeCreateAddress(deployer, nonce + 1);
-        UniformVaultFactory vaultFactory = new UniformVaultFactory(predictedLauncher);
-        UniformLauncherFactory launcherFactory = new UniformLauncherFactory(address(vaultFactory), namePolicy);
+        UniformLauncherFactory launcherFactory = new UniformLauncherFactory(address(0), namePolicy);
 
         address agentNft;
         bool standIn;
@@ -51,7 +49,6 @@ contract DeployTestnet is Script {
         Erc8004Source erc8004Source = new Erc8004Source(erc8004Registry);
         vm.stopBroadcast();
 
-        require(address(launcherFactory) == predictedLauncher, "launcher factory nonce");
         require(agentIdSource.standIn() == standIn, "stand-in flag");
         require(address(erc8004Source.registry()) == erc8004Registry, "8004 registry");
 
@@ -64,7 +61,11 @@ contract DeployTestnet is Script {
             LibString.toHexStringChecksummed(deployer),
             '",\n',
             '  "vaultFactory": "',
-            LibString.toHexStringChecksummed(address(vaultFactory)),
+            LibString.toHexStringChecksummed(address(0)),
+            '",\n',
+            '  "taxRoute": "marketing",\n',
+            '  "namePolicy": "',
+            LibString.toHexStringChecksummed(namePolicy),
             '",\n',
             '  "launcherFactory": "',
             LibString.toHexStringChecksummed(address(launcherFactory)),
@@ -84,13 +85,16 @@ contract DeployTestnet is Script {
             '  "erc8004Source": "',
             LibString.toHexStringChecksummed(address(erc8004Source)),
             '",\n',
-            '  "saltLockFeeWei": "5000000000000000"\n',
+            '  "saltLockFeeWei": "',
+            vm.toString(IPortal(LaunchVaultAddresses.hub()).SALT_LOCK_FEE()),
+            '"\n',
             "}\n"
         );
-        string memory out = chainId == 56 ? "deployments/bsc-mainnet.json" : "deployments/bsc-testnet.json";
+        string memory out =
+            chainId == 56 ? "deployments/bsc-mainnet-release.json" : "deployments/bsc-testnet-release.json";
         vm.writeFile(out, json);
         console2.log("chainId", chainId);
-        console2.log("vaultFactory", address(vaultFactory));
+        console2.log("namePolicy", namePolicy);
         console2.log("launcherFactory", address(launcherFactory));
         console2.log("agentIdNft", agentNft);
         console2.log("agentIdStandIn", standIn);

@@ -1,6 +1,6 @@
 # Flap 预审答复与四笔出价验算
 
-本分支是 128 笔安全加固候选版。公开 BSC 测试网收据记录的是此前的 32 笔版本。本轮分叉合约使用本地筛查和身份测试件。公开部署要先确定 Flap 名称筛查服务和新工厂审核状态。[公开发射](public-testnet-evidence.md) · [Flap 工厂接入要求](https://docs.flap.sh/en/flap/v2/developers/pool-launch/build-on-pool-launch)
+本分支是 128 笔安全加固候选版。公开 BSC 测试网收据记录的是此前的 32 笔版本。本轮分叉合约使用本地筛查和身份测试件。新版的发布脚本只部署 Launcher Factory，使用 Flap 的 `MARKETING` 槽将项目侧交易税直接付给创建者。公开部署要先确定 Flap 名称筛查服务和新 Launcher Factory 的审核状态。[公开发射](public-testnet-evidence.md) · [Flap 工厂接入要求](https://docs.flap.sh/en/flap/v2/developers/pool-launch/build-on-pool-launch)
 
 | 预审项 | 候选版改动 | 验收或依赖 |
 | --- | --- | --- |
@@ -8,9 +8,9 @@
 | Binance Agent ID | 主网按 NFT 的真实 `tokenId` 调用 `ownerOf` 并按该编号去重。地址编号只供链 97 的历史测试替身兼容使用。 | Binance 公告说明该产品是不可转让 ERC-721。合约仍依赖真实 token ID 来去重。[Binance 公告](https://www.binance.com/en/square/post/389517582957261) |
 | ERC-8004 和席位 | 128 笔容量。创建时固定最多 128 个合格钱包，同一钱包只占一席。主网必须配置名单。测试网可运行名单场和开放测试场。 | 自注册 ERC-8004 仅能证明某个代理编号。入选要另经组织者核验。名单场能为每个入选钱包保留一个席位，无法证明每个钱包背后都是不同的人。[ERC-8004](https://eips.ethereum.org/EIPS/eip-8004) |
 | 报价与 gas | 使用 Portal 当前原生币报价、创建线、毕业线。把较大门槛向上折算为 BNB，再加 0.05 BNB 的业务余量。报价不可用时继续开放结算重试。 | 保留 13M 入口防误判门槛和 14M 客户端建议。分别使用测试网、主网分叉测量 128 笔，主网测试的工厂启用只发生在分叉中。 |
-| Vault 和募集余量 | Vault owner 先提名，新 owner 主动接收。Guardian 的紧急提现仍只转给当时的 owner。销售配额余量可单独转到固定销毁地址。 | 验证了提名取消、权限切换、Guardian 受益人、余量处理前后领取余额。请 Flap 确认两步交接的受益人权限设计。 |
+| 税款与销售余量 | 新版用 `MARKETING` 直付创建者。需要兼容 Vault 的版本使用 owner 提名、接收人主动接受的两步交接，Guardian 只能把余额转给时任 owner。销售配额余量可单独转到固定销毁地址。 | 验证范围覆盖税款接收、余量与领取余额、遗留 Vault 权限切换。 [Flap 税槽说明](https://docs.flap.sh/en/flap/v2/developers/pool-launch/build-on-pool-launch) |
 
-在 BSC 测试网和主网分叉分别以 128 个测试钱包各出价 0.2 BNB。两个场次均通过 Flap 建池，池中本金 25.6 BNB，末位出价者完成领取。测试网结算调用使用 **8,700,891 gas**，主网结算调用使用 **9,949,826 gas**。这两次启用工厂均由测试环境模拟，正式上链仍需 Flap 审核。全套 Forge 测试结果为 **75 通过、0 失败**。[分叉测试](../test/Uniform.fork.t.sol)
+在 BSC 测试网和主网分叉分别以 128 个测试钱包各出价 0.2 BNB。两个场次均通过 Flap 建池，池中本金 25.6 BNB，末位出价者完成领取。测试网结算调用使用 **8,413,449 gas**，主网结算调用使用 **9,675,086 gas**。两次满场测试都用 MARKETING 路径。另在测试网分叉执行买卖和 Flap 税款分发，创建者收到 **0.256374987296341299 tBNB**，Portal 的 Vault 记录为零地址。工厂启用均由测试环境模拟，正式上链仍需 Flap 审核。全套 Forge 测试结果为 **76 通过、0 失败**。[分叉测试](../test/Uniform.fork.t.sol)
 
 ## 四笔出价
 
@@ -25,7 +25,7 @@
 
 **资金合计为 10 BNB = 7 BNB 入池 + 3 BNB 待领回。** A+B 的全额前缀给出 **0.000014 BNB/枚**。把 C 加进去得到 0.000018，超过 C 的限价。卡在 C 的 0.000012 时，A+B 已足以买超过 50 万枚，因此 C 也进不了边际成交。两位成交者使用同一清算价，实际分配向下取整，剩下 **1 个最小代币单位（10⁻¹⁸ 枚）**。此例限价各异。遇到全额前缀的同价边界时，下单顺序仍可能改变分配。
 
-成功结算且通过 Flap 时，**7 BNB + 500,000 枚**是初始池储备，初始储备现货比率为 **0.000014**。首次实际买卖的成交价格还受价格冲击、DEX 手续费和代币税影响。Vault owner 可以提取后续到账的税，Guardian 只能把 Vault 余额转给当时的 owner。
+成功结算且通过 Flap 时，**7 BNB + 500,000 枚**是初始池储备，初始储备现货比率为 **0.000014**。首次实际买卖的成交价格还受价格冲击、DEX 手续费和代币税影响。采用新版税槽时，买卖税率各 3%，期限 30 天。Flap 的税处理器在税款换为报价资产并分发时，直接把分配到 `MARKETING` 的税款交给创建者。旧 Vault 版由当时的 owner 提取。
 
 ### 买家确认前
 
@@ -43,4 +43,4 @@
 
 > For Pool Launch on BSC Testnet (chain 97), what is the supported `isScamWord` integration for a custom Launcher Factory? Please send the contract address and verified ABI (or the official API), the expected name and symbol inputs, and the distinction between a blocked value and an unavailable service. Our factory checks both fields before the salt lock and reverts if the check is unavailable.
 >
-> For the Vault, the current owner nominates a new owner and the nominee must accept. The Guardian can send the full balance only to the current owner. Can you confirm how this two-step ownership policy should satisfy your Guardian requirements?
+> We’ve incorporated your MARKETING recommendation. The release config uses one MARKETING slot with 10,000 bps of the configured tax allocation for the launch creator, and no Vault. The single Launcher Factory still creates auctions through Pool Launch. Once the name-screen integration is confirmed, we can send the new factory for testnet review.

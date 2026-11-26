@@ -1,5 +1,7 @@
 # Flap 对接
 
+**新版候选。** 发布脚本部署 Launcher Factory，用一个 `MARKETING` 槽把项目侧交易税支付给创建者。下文的 Vault 工厂和源文件属于历史公开部署及兼容测试。新版发射仍从 Flap Pool Launch Portal 创建和结算。[预审答复及新版记录](preaudit-response.md)
+
 我们走的是 Flap 说明里的「项目用脚本经 Portal 创建的一次性 Launcher」。用户在 Flap 上看到的入口只要 `Launcher` 详情组件。出价、结算、领取、退款不放在 Flap 页面里签名，交给代理用 baw 预览，再由用户在币安 App 确认。
 
 ## 交给 Flap 的东西

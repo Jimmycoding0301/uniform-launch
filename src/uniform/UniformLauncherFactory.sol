@@ -22,7 +22,6 @@ contract UniformLauncherFactory is LauncherFactoryBase {
     error NameScreenUnavailable();
 
     constructor(address vaultFactory_, address namePolicy_) {
-        if (vaultFactory_ == address(0)) revert ZeroAddress();
         if (namePolicy_.code.length == 0) revert InvalidNamePolicy();
         vaultFactory = vaultFactory_;
         namePolicy = IFlapNamePolicy(namePolicy_);

@@ -151,7 +151,7 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         initializer
         nonReentrant
     {
-        if (hub_ == address(0) || creator_ == address(0) || vaultFactory_ == address(0)) revert InvalidConfig();
+        if (hub_ == address(0) || creator_ == address(0)) revert InvalidConfig();
         if (bytes(c.name).length == 0 || bytes(c.name).length > 32) revert InvalidConfig();
         if (bytes(c.symbol).length == 0 || bytes(c.symbol).length > 8) revert InvalidConfig();
         if (bytes(c.meta).length == 0 || c.salt == bytes32(0)) revert InvalidConfig();
@@ -513,6 +513,14 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
 
     function _fees() internal view returns (IPortalTypes.FeeConfig[] memory fees) {
         fees = new IPortalTypes.FeeConfig[](1);
+        if (vaultFactory == address(0)) {
+            fees[0] = IPortalTypes.FeeConfig({
+                feeType: IPortalTypes.FeeSlotType.MARKETING,
+                bps: 10_000,
+                configData: abi.encode(IPortalTypes.FeeConfigMarket({marketingAddress: creator}))
+            });
+            return fees;
+        }
         fees[0] = IPortalTypes.FeeConfig({
             feeType: IPortalTypes.FeeSlotType.VAULT,
             bps: 10_000,

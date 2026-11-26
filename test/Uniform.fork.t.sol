@@ -123,6 +123,12 @@ abstract contract ForkBase is Test {
         vm.stopPrank();
     }
 
+    function _useMarketingFactory() internal {
+        launcherFactory = new UniformLauncherFactory(address(0), address(new FixtureNamePolicy()));
+        vm.prank(admin);
+        portal.setLauncherFactoryMultiplier(address(launcherFactory), 10_000, true);
+    }
+
     function _taxLiquidated(address proc) internal view returns (bool) {
         ITaxProcessorLike t = ITaxProcessorLike(proc);
         return t.feeQuoteBalance() > 0 || t.marketQuoteBalance() > 0 || t.pendingDividendQuoteTokenBalance() > 0
@@ -313,6 +319,29 @@ contract UniformForkTest is ForkBase {
         assertEq(address(vault).balance, 0);
     }
 
+    function test_marketingLaunchPaysCreatorDirectly() public {
+        _useMarketingFactory();
+        UniformLauncher launcher = _create(1e13, 200, "MARK", bytes32(uint256(77001)));
+        vm.prank(alice);
+        launcher.bid{value: 40 ether}(1e16, 0, uint160(alice));
+        vm.roll(launcher.endBlock());
+        launcher.settle();
+        assertEq(launcher.statusCode(), uint8(UniformLauncher.Status.Succeeded));
+        assertEq(launcher.poolQuote(), 40 ether);
+        assertEq(launcher.vaultFactory(), address(0));
+        (address vault, address factory) = portal.getLaunchVault(launcher.token());
+        assertEq(vault, address(0));
+        assertEq(factory, address(0));
+
+        vm.prank(alice);
+        launcher.claim();
+        assertEq(IERC20(launcher.token()).balanceOf(alice), launcher.SELL_AMOUNT());
+        uint256 quoteBefore = creator.balance;
+        _generateTaxAndDispatch(launcher.token());
+        assertGt(creator.balance - quoteBefore, 0, "creator must receive native quote");
+        console2.log("MARKETING_QUOTE_RECEIVED_WEI", creator.balance - quoteBefore);
+    }
+
     function test_failedAuctionRefundsWithoutToken() public {
         UniformLauncher launcher = _create(1 ether, 200, "FAIL", bytes32(uint256(22)));
         vm.prank(alice);
@@ -346,6 +375,7 @@ contract UniformForkTest is ForkBase {
     }
 
     function test_maxBidsSettleGas() public {
+        _useMarketingFactory();
         UniformLauncher launcher = _create(1e13, 200, "GAS", bytes32(uint256(88001)));
         uint256 cap = launcher.MAX_BIDS();
         for (uint256 i; i < cap; ++i) {
@@ -485,6 +515,7 @@ contract UniformForkTest is ForkBase {
         vm.createSelectFork(rpc);
         require(block.chainid == 56, "rpc is not chain 56");
         _deployFixtureFactories();
+        _useMarketingFactory();
 
         LaunchConfig memory c;
         c.name = "Uniform Fork";
