@@ -225,7 +225,7 @@ export function buildStepPath(
   }
   const corners = dedupe(pts);
   const painted = pathFromPoints(corners, bottom);
-  const rounded = roundPolyline(corners, 2);
+  const rounded = roundPolyline(corners, 10);
   const clearingY = clearing && clearing > 0n ? yOf(clearing) : null;
   const crossX = clearingY == null ? null : xOf(filled);
   const split = splitAt(corners, crossX);
@@ -236,9 +236,9 @@ export function buildStepPath(
       : null;
   return {
     stroke: rounded || painted.stroke,
-    fill: painted.fill,
-    inStroke: roundPolyline(split.left, 2),
-    outStroke: roundPolyline(split.right, 2),
+    fill: rounded && corners.length ? `${rounded} L ${corners.at(-1)!.x} ${bottom} L ${corners[0].x} ${bottom} Z` : painted.fill,
+    inStroke: roundPolyline(split.left, 10),
+    outStroke: roundPolyline(split.right, 10),
     pts: corners,
     reserveY: yOf(floor),
     clearingY,
@@ -313,7 +313,10 @@ function splitAt(pts: Pt[], x: number | null): { left: Pt[]; right: Pt[] } {
       const mid = { x, y: prev.y + (p.y - prev.y) * t };
       left.push(mid);
       right.push(mid, p);
-    } else right.push(p);
+    } else {
+      if (prev && prev.x < x && Math.abs(p.x - x) < 0.01) left.push(p);
+      right.push(p);
+    }
   }
   return { left, right };
 }

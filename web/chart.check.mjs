@@ -1,6 +1,7 @@
+import { demoOrigin } from "./demo-origin.mjs";
 import assert from "node:assert/strict";
 import { inflateSync } from "node:zlib";
-import { chromium } from "playwright";
+import { openBrowser } from "./test-browser.mjs";
 
 function pngRows(buf) {
   let offset = 8;
@@ -53,9 +54,9 @@ function pngRows(buf) {
   return { width, height, rows, bpp };
 }
 
-const url = process.env.CHART_URL ?? "http://127.0.0.1:4317/";
+const url = process.env.CHART_URL ?? `${demoOrigin}/`;
 
-const browser = await chromium.launch();
+const browser = await openBrowser();
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
 await page.goto(url, { waitUntil: "domcontentloaded" });
 await page.waitForSelector("svg.plot .tick", { timeout: 8000 });
@@ -82,7 +83,7 @@ assert.ok(measured.font >= 12, `刻度计算字号 ${measured.font}px，小于 1
 assert.ok(Math.abs(measured.boxW - measured.viewW) <= 1, `横向被缩放 ${measured.boxW} vs ${measured.viewW}`);
 assert.ok(Math.abs(measured.boxH - measured.viewH) <= 1, `纵向被缩放 ${measured.boxH} vs ${measured.viewH}`);
 const extra = await (async () => {
-  const browser2 = await chromium.launch();
+  const browser2 = await openBrowser();
   const page = await browser2.newPage({ viewport: { width: 390, height: 844 } });
   await page.goto(url, { waitUntil: "domcontentloaded" });
   await page.waitForSelector(".uniform-rect", { timeout: 8000 });
@@ -112,11 +113,12 @@ assert.ok(extra.xs >= 3, `横轴刻度 ${extra.xs}`);
 assert.equal(extra.filters, 0);
 assert.ok(extra.blur === "none" || extra.blur === "", `模糊 ${extra.blur}`);
 assert.ok(extra.cornerX <= 1 && extra.cornerY <= 1, `同价矩形角点 ${extra.cornerX}, ${extra.cornerY}`);
-const shotBrowser = await chromium.launch();
+const shotBrowser = await openBrowser();
 const shotPage = await shotBrowser.newPage({ viewport: { width: 390, height: 844 } });
 await shotPage.goto(url, { waitUntil: "domcontentloaded" });
 await shotPage.waitForSelector("svg.plot");
 const plotBox = await shotPage.locator("svg.plot").boundingBox();
+const background = await shotPage.locator(".page").evaluate((el) => getComputedStyle(el).backgroundColor.match(/\d+/g).slice(0, 3).map(Number));
 const png = await shotPage.screenshot({ clip: { x: plotBox.x, y: plotBox.y, width: plotBox.width, height: plotBox.height } });
 await shotBrowser.close();
 const image = pngRows(png);
@@ -125,7 +127,7 @@ for (let y = 6; y < image.height - 6 && blank.length < 5; y += 10) {
   for (let x = 70; x < image.width - 6 && blank.length < 5; x += 20) {
     const i = x * image.bpp;
     const px = [image.rows[y][i], image.rows[y][i + 1], image.rows[y][i + 2]];
-    if (px[0] === 11 && px[1] === 11 && px[2] === 13) blank.push([x, y]);
+    if (px.every((v, j) => v === background[j])) blank.push([x, y]);
   }
 }
 assert.ok(blank.length >= 5, `绘图区空白没有落在页面底色上，只找到 ${blank.length} 个`);

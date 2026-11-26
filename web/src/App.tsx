@@ -11,11 +11,13 @@ import { ADDR_STAGGER_MS, COPY_MS, MIN_SETTLE_GAS, RISK_LINE, SETTLE_GAS_LIMIT, 
 import { ReceiptPanel } from "./ReceiptPanel";
 import type { Action, Intent, Tracking } from "./receipts";
 import { TESTNET, TESTNET_ROWS } from "./networks";
+import { FundingProgress, PriceComparison, SettlementSummary, SimulationSummary, type Comparison } from "./AuctionFigures";
 
 const ABI = [
   { type: "function", name: "status", stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
   { type: "function", name: "floorPrice", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "clearingPrice", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
+  { type: "function", name: "minPoolQuote", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "softCap", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "startBlock", stateMutability: "view", inputs: [], outputs: [{ type: "uint64" }] },
   { type: "function", name: "endBlock", stateMutability: "view", inputs: [], outputs: [{ type: "uint64" }] },
@@ -110,14 +112,14 @@ const PORTAL_ABI = [
 ] as const;
 
 type DemoFile = { localFork?: boolean; rpc?: string; open?: string; launched?: string; settle?: string; failed?: string };
-type WhyFile = { clearing?: string; sameRaise?: { ratio: number; firstAvg: string; lastAvg: string; gap: string } };
+type WhyFile = Comparison;
 const SCENES = [
-  "接单场。看清算价和需求阶梯。",
-  "填预算和最高价，点复制出价指令。",
-  "代理接口。这一笔如果现在加进去。",
-  "已发射。看开盘价、入池和金库。",
-  "没有成交。全额退款。",
-  "为什么同价。同一组出价的对照。",
+  "接单与清算价",
+  "填写限价委托",
+  "模拟本笔出价",
+  "发射与金库",
+  "未达门槛，全额退款",
+  "对照两种发行价格",
 ];
 type Row = {
   agent: Address;
@@ -134,6 +136,7 @@ type Snap = {
   floor: bigint;
   clearing: bigint;
   softCap: bigint;
+  minPoolQuote: bigint | null;
   start: bigint;
   end: bigint;
   token: Address;
@@ -284,11 +287,12 @@ export function App() {
           verifiedNetwork = true;
         }
         const b = await client.getBlockNumber();
-        const [status, floor, clearing, softCap, start, end, token, pool, poolQuote, vaultFactory, preview, fills] = await Promise.all([
+        const [status, floor, clearing, softCap, minPoolQuote, start, end, token, pool, poolQuote, vaultFactory, preview, fills] = await Promise.all([
           client.readContract({ address: launcher, abi: ABI, functionName: "status" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "floorPrice" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "clearingPrice" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "softCap" }),
+          client.readContract({ address: launcher, abi: ABI, functionName: "minPoolQuote" }).catch(() => null),
           client.readContract({ address: launcher, abi: ABI, functionName: "startBlock" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "endBlock" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "token" }),
@@ -349,6 +353,7 @@ export function App() {
           floor: floor as bigint,
           clearing: clearing as bigint,
           softCap: softCap as bigint,
+          minPoolQuote,
           start: start as bigint,
           end: end as bigint,
           token: token as Address,
@@ -478,7 +483,8 @@ export function App() {
   const budgetWei = parseBnb(budget);
   const priceWei = parseBnb(maxPrice);
   const sim = useMemo(() => {
-    if (!demoOn || scene !== 2 || !snap || budgetWei == null || priceWei == null) return null;
+    if (!demoOn || scene !== 2 || !snap || budgetWei == null || priceWei == null ||
+        budgetWei < 10n ** 16n || budgetWei > 100n * 10n ** 18n || priceWei < snap.floor || snap.bids.length >= 32) return null;
     const rows = snap.bids.map((row, index) => ({ index: BigInt(index), budget: row.budget, maxPrice: row.maxPrice }));
     rows.push({ index: BigInt(rows.length), budget: budgetWei, maxPrice: priceWei });
     return settleBids(500_000n * 10n ** 18n, snap.floor, rows) as {
@@ -499,7 +505,8 @@ export function App() {
     phase === "open" ? "复制出价指令" : phase === "ready" ? "复制结算指令" : phase === "failed" ? "复制退款指令" : phase === "done" ? "复制领取指令" : "";
 
   const raised = snap ? snap.bids.reduce((sum, row) => sum + row.budget, 0n) : 0n;
-  const capPct = snap && snap.softCap > 0n ? Math.min(100, Number((raised * 10000n) / snap.softCap) / 100) : 0;
+  const poolSetsTarget = snap?.minPoolQuote != null && snap.minPoolQuote > snap.softCap;
+  const targetRaise = poolSetsTarget ? snap.minPoolQuote! : snap?.softCap ?? 0n;
   const remain = snap ? (block >= snap.end ? 0n : snap.end - block) : 0n;
 
   useEffect(() => {
@@ -653,17 +660,23 @@ export function App() {
   const showIntro = intro && !reduced && !!snap;
 
   return (
-    <div className={["page", showIntro ? "intro" : "", demoOn ? "demo" : ""].filter(Boolean).join(" ")}>
+    <div className={["page", showIntro ? "intro" : "", demoOn ? "demo" : ""].filter(Boolean).join(" ")} data-scene={demoOn ? scene + 1 : undefined} data-phase={phase}>
       {snap ? <div className="dock-fade" aria-hidden="true" /> : null}
       <a className="skip" href="#desk">跳到拍卖</a>
       <header className="top">
-        <b>
-          同价发射
-          <a className="script-link" href="/?demo=1">演示脚本</a>
-        </b>
+        <div className="mast-brand">
+          <svg className="brand-symbol" viewBox="0 0 32 32" aria-hidden="true">
+            <path d="M2 4h6v15l4 4h6v6h-9l-7-7zm11 0h6v12h5V4h6v16l-3 3h-8l-6-6z" />
+          </svg>
+          <b>Uniform Launch</b>
+          <nav className="mast-links" aria-label="工作台导航">
+            <a className="script-link" href="/?demo=1" aria-current={demoOn ? "page" : undefined}>演示脚本</a>
+            <a className="script-link" href="/?network=testnet" aria-current={testnetBoard ? "page" : undefined}>测试网合约</a>
+          </nav>
+        </div>
         <span className="top-meta">
           {snap?.sources.some((item) => item.standIn) ? <span className="meta-line"><Zh text="测试网 Agent ID 为替身" /></span> : null}
-          <span className="meta-line">{localFork ? <Zh text="本地分叉，不是测试网" /> : "BSC 测试网"}</span>
+          <span className="meta-line network-label">{localFork ? <Zh text="本地分叉，不是测试网" /> : "BSC 测试网"}</span>
           {block > 0n && <span className="meta-line">区块 {groupFull(block)}</span>}
           {rpcNote ? <span className="meta-line"><Zh text={rpcNote} /></span> : rpcError ? <span className="meta-line"><Zh text="刚刚没刷新成功，正在重试。" /></span> : null}
         </span>
@@ -711,43 +724,31 @@ export function App() {
           </div>
         )}
         {snap && (
-          <div className="grid">
-            <div className="brand-mobile">
-              <h1 className="brand-title">同价发射</h1>
-              <p className="user-line"><Zh text={USER_LINE} /></p>
+          <div className="grid auction">
+            <div className="auction-head">
+              <div>
+                <h1>同价发射</h1>
+                <p className="user-line">基于代理身份的统一价格拍卖。窗口结束时，所有成交者以同一价格结算。</p>
+              </div>
+              <ol className="phases" aria-label="拍卖阶段">
+                {PHASES.map((item) => (
+                  <li key={item.id} className={phaseClass(item.id, phase)} aria-current={phaseClass(item.id, phase) === "now" ? "step" : undefined}>
+                    {item.label}
+                  </li>
+                ))}
+              </ol>
             </div>
             <div className="col-form">
-              <div>
-                <div className="brand-desk">
-                <h1>同价发射</h1>
-                <p className="en">Uniform Launch</p>
-                <p className="user-line"><Zh text={USER_LINE} /></p>
-                </div>
-                <ol className="phases">
-                  {PHASES.map((item) => (
-                    <li key={item.id} className={phaseClass(item.id, phase)} aria-current={phaseClass(item.id, phase) === "now" ? "step" : undefined}>
-                      {item.label}
-                    </li>
-                  ))}
-                </ol>
-                <div className="cap">
-                  <span>已募</span>
-                  <span>
-                    {formatBnb(raised)} / {formatBnb(snap.softCap)} BNB
-                  </span>
-                </div>
-                <div className="bar" aria-hidden="true">
-                  <i style={{ transform: `scaleX(${capPct / 100})` }} />
+              <section className="order-panel" aria-label="拍卖操作">
+                <div className="panel-title">
+                  <h2>{failed ? "退款" : phase === "done" ? "领取" : "出价委托"}</h2>
+                  <span>{PHASES.find((item) => item.id === phase)?.label}</span>
                 </div>
                 <div className="metrics">
-                <div>
-                  <b className="clock"><Roller text={formatRemain(remain)} /></b>
-                  <small>剩余 {groupFull(remain)} 块，每块 0.75 秒</small>
-                </div>
-                  <div className="floor">
-                    <b>{formatPrice(snap.floor)}</b>
-                    <small>保留价 BNB/枚</small>
+                  <div><small>{phase === "done" || failed ? "拍卖窗口" : "距截拍"}</small>
+                    {phase === "done" || failed ? <b>已结束</b> : <b className="clock"><Roller text={formatRemain(remain)} /></b>}
                   </div>
+                  <div className="floor"><small>保留价 BNB/枚</small><b>{formatPrice(snap.floor)}</b></div>
                 </div>
                 <form
                   className="ticket"
@@ -767,14 +768,16 @@ export function App() {
                     </label>}
                     {phase === "failed" ? (
                       <div className="result-card">
-                        <h2>没有成交</h2>
-                        <p className="help">出价按原数退回。退回后这一行会写成已退回。</p>
+                        <h2>退款回执</h2>
+                        <div className="result-row"><span>没有成交</span><b>{snap.bids.length} 笔出价</b></div>
+                        <div className="result-row"><span>可退总额</span><b>{formatBnb(snap.bids.reduce((sum, bid) => sum + (bid.pulled ? 0n : bid.budget), 0n))} BNB</b></div>
+                        <div className="result-row"><span>实际入池</span><b>{formatBnb(snap.poolQuote)} BNB</b></div>
+                        <p className="help">每位出价者可取回自己的全部预算。</p>
                       </div>
                     ) : phase === "done" ? (
                       <div className="result-card">
                         <h2>成交回执</h2>
                         <div className="result-row"><span>开盘价</span><b>{formatPrice(snap.clearing)} BNB/枚</b></div>
-                        <div className="result-row"><span>成交量</span><b>{formatBnb(snap.previewQuote > 0n ? snap.previewQuote : snap.poolQuote)} BNB</b></div>
                         <div className="result-row"><span>入池 BNB</span><b>{formatBnb(snap.poolQuote)} BNB</b></div>
                         {showToken && snap.token !== ZERO && <Addr label="代币" value={snap.token} local={!!localFork} />}
                         {showPool && snap.pool !== ZERO && <Addr label="池子" value={snap.pool} local={!!localFork} swap={snap.token !== ZERO && !localFork ? pancakeSwapLink(snap.token) : ""} />}
@@ -783,18 +786,20 @@ export function App() {
                       </div>
                     ) : (
                       <>
-                    <label htmlFor="budget">预算</label>
+                    <div className="order-input"><label htmlFor="budget">预算</label>
                     <div className={`${budgetNote.error && phase === "open" ? "window bad" : "window"}${phase === "open" ? "" : " ro"}`}>
                       <input id="budget" value={budget} readOnly={phase !== "open"} inputMode="decimal" autoComplete="off" spellCheck={false} aria-invalid={phase === "open" && budgetNote.error} aria-describedby="budget-help" onChange={(e) => setBudget(e.target.value)} />
                       <span className="unit">BNB</span>
                     </div>
                     <p id="budget-help" className={phase === "open" && budgetNote.error ? "help bad" : "help"} role={phase === "open" && budgetNote.error ? "alert" : undefined}><Zh text={phase === "open" ? budgetNote.text : " "} /></p>
-                    <label htmlFor="price">最高价</label>
+                    </div>
+                    <div className="order-input"><label htmlFor="price">最高价</label>
                     <div className={`${priceNote.error && phase === "open" ? "window bad" : "window"}${phase === "open" ? "" : " ro"}`}>
                       <input id="price" value={maxPrice} readOnly={phase !== "open"} inputMode="decimal" autoComplete="off" spellCheck={false} placeholder={formatPrice(snap.floor)} aria-invalid={phase === "open" && priceNote.error} aria-describedby="price-help" onChange={(e) => setMaxPrice(e.target.value)} />
                       <span className="unit">BNB/枚</span>
                     </div>
                     <p id="price-help" className={phase === "open" && priceNote.error ? "help bad" : "help"} role={phase === "open" && priceNote.error ? "alert" : undefined}><Zh text={phase === "open" ? priceNote.text : " "} /></p>
+                    </div>
                     <label id="source-label">身份来源</label>
                     <div
                       className="seg"
@@ -831,7 +836,6 @@ export function App() {
                       <p className="id-lock" id="agent">按钱包地址自动识别<i>只读</i></p>
                     )}
                     <p className="estimate"><Zh text={phase === "open" ? estimate : " "} /></p>
-                    {phase === "open" && <p className="field-help"><Zh text="编号怎么填，写在复制出的指令里。" /></p>}
                       </>
                     )}
                   </div>
@@ -858,85 +862,80 @@ export function App() {
                   </>
                 )}
                 <ReceiptPanel key={`${scope}:${scene}`} rpc={rpc} local={localFork} draft={draft} tracking={tracking} />
-              </div>
+              </section>
             </div>
             <div className="col-main">
             <div className="col-chart">
-              <div className="chart-head">
-                <div>
-                  <div className="kicker">{failed ? "结果" : phase === "done" ? "开盘价 BNB/枚" : "当前清算价 BNB/枚"}</div>
-                  <div className={phase !== "wait" && clearingNow > 0n && !failed ? "chart-price" : "chart-price dim"}>
-                    {failed ? "没有成交" : phase === "wait" ? "未形成" : clearingNow > 0n ? <Roller text={formatPrice(clearingNow)} /> : "未形成"}
-                  </div>
-                  {failed && <p className="fail-line"><Zh text="没有成交，出价全额退回。" /></p>}
-                  {clearingNow === 0n && snap.bids.length > 0 && !failed && phase !== "wait" && (
-                    <p className="fail-line">已募还没到保留所需，清算价还没形成。</p>
+              {demoOn && scene === 5 ? (
+                <PriceComparison data={why} />
+              ) : demoOn && scene === 3 && phase === "done" ? (
+                <SettlementSummary price={snap.clearing} proceeds={snap.poolQuote} vault={vaultBal} />
+              ) : failed ? (
+                <FundingProgress raised={raised} eligible={snap.previewOk ? snap.previewQuote : 0n} minimum={snap.minPoolQuote} />
+              ) : (
+                <>
+                  {demoOn && scene === 2 ? <SimulationSummary simulation={sim} /> : (
+                    <div className="chart-head">
+                      <div>
+                        <div className="kicker">{phase === "done" ? "统一开盘价" : "当前清算价"}<span>BNB / 枚</span></div>
+                        <div className={clearingNow > 0n ? "chart-price" : "chart-price dim"}>
+                          {phase !== "wait" && clearingNow > 0n ? <Roller text={formatPrice(clearingNow)} /> : "未形成"}
+                        </div>
+                      </div>
+                      <div className="market-note">
+                        <div><strong>已募 {formatBnb(raised)} BNB</strong><span aria-hidden="true"> · </span>
+                          <span title={poolSetsTarget ? "最低入池额" : "按保留价售完所需的最低预算"}>门槛 {formatBnb(targetRaise)} BNB</span></div>
+                        <small>{poolSetsTarget ? "按最低入池额" : "按保留价售完"}，{phase === "done" ? "实际入池" : "预计入池"} {formatBnb(phase === "done" ? snap.poolQuote : snap.previewQuote)} BNB</small>
+                      </div>
+                    </div>
                   )}
-                </div>
-                <div className="axis-note">{previewing ? "画面预览。链上这场不是这个阶段。" : ""}</div>
-              </div>
-              <div className="plot-wrap">
-                <PlotStage
-                  bids={phase === "wait" ? [] : snap.bids}
-                  floor={snap.floor}
-                  clearing={phase === "wait" || failed ? null : clearingNow > 0n ? clearingNow : null}
-                  failed={failed}
-                  settle={snap.status === 1}
-                  intro={showIntro}
-                  reduced={reduced}
-                  yourPrice={phase === "open" ? priceWei : null}
-                  hideEmpty={phase === "wait"}
-                />
-                {phase === "wait" && <div className="empty note">接单还没开始，开始区块 {groupFull(snap.start)}。</div>}
-              </div>
+                  {previewing && <p className="fail-line">画面预览。链上这场处于其他阶段。</p>}
+                  {clearingNow === 0n && snap.bids.length > 0 && phase !== "wait" && (
+                    <p className="fail-line">已提交预算尚不能按保留价售完，清算价未形成。</p>
+                  )}
+                  <div className="plot-wrap">
+                    <PlotStage
+                      bids={phase === "wait" ? [] : snap.bids}
+                      floor={snap.floor}
+                      clearing={phase === "wait" || failed ? null : clearingNow > 0n ? clearingNow : null}
+                      failed={failed}
+                      settle={snap.status === 1}
+                      intro={showIntro}
+                      reduced={reduced}
+                      yourPrice={phase === "open" ? priceWei : null}
+                      hideEmpty={phase === "wait"}
+                    />
+                    {phase === "wait" && <div className="empty note">接单还没开始，开始区块 {groupFull(snap.start)}。</div>}
+                  </div>
+                </>
+              )}
             </div>
             <div className="col-bids">
-              <h2 className="group-title">本场参数</h2>
+              <div className="ledger-heading"><h2>出价簿</h2><span>{snap.bids.length} / 32 笔</span></div>
               <ul className="facts">
                 <li><span>出售</span><span>500,000 枚</span></li>
                 <li><span>入池代币</span><span>500,000 枚</span></li>
                 <li><span>买入税 / 卖出税</span><span>3% / 3%</span></li>
-                <li><span>本场出价</span><span>{snap.bids.length} / 32</span></li>
               </ul>
               <BidTable rows={snap.bids} phase={phase} clearing={clearingNow} />
             </div>
             </div>
           </div>
         )}
-        {demoOn && scene === 3 && (
-          vaultBal !== null ? (
-            <div className="slip metric" role="status">
-              <div className="result-row"><span>金库余额</span><b>{formatBnb4(vaultBal)} BNB</b></div>
-            </div>
-          ) : (
-            <pre className="slip">金库余额还没读到。换一个能读到链的地址再看。</pre>
-          )
-        )}
-        {demoOn && scene === 2 && (
-          <pre className="slip">
-            {!snap
-              ? "正在读这一场。"
-              : sim
-                ? `清算价 ${formatPrice(sim.clearingPrice)}\n成交 ${formatTokens(sim.fills.at(-1)?.tokens ?? 0n)} 枚\n实付 ${formatBnb(sim.fills.at(-1)?.spend ?? 0n)} BNB\n退回 ${formatBnb(sim.fills.at(-1)?.refund ?? 0n)} BNB\n入池 ${formatBnb(sim.poolQuote)} BNB`
-                : "预算或最高价还不能算。单笔 0.01 到 100 BNB，最高价不低于保留价。"}
-          </pre>
-        )}
-        {demoOn && scene === 5 && (
-          <pre className="slip">
-            {why?.sameRaise
-              ? `同价单价比 1\n曲线单价比 ${why.sameRaise.ratio}\n价差 ${why.sameRaise.gap} BNB/枚\n模拟，参数见脚本`
-              : "对照数字还没生成。先跑对照脚本，再刷新这个页面。"}
-          </pre>
-        )}
       </main>
       {demoOn && (
-        <div className="demo-bar">
+        <nav className="demo-bar" aria-label="演示导航">
+          <div className="scene-track" role="group" aria-label="跳转到演示场景">
+            {SCENES.map((text, index) => <button type="button" key={text} aria-label={`第 ${index + 1} 幕，${text}`}
+              aria-current={scene === index ? "step" : undefined} className={scene === index ? "on" : ""} disabled={demoState === "missing"}
+              onClick={() => setScene(index)}>{String(index + 1).padStart(2, "0")}</button>)}
+          </div>
           <p aria-live="polite">{demoState === "missing" ? "还没有演示场。先跑演示命令。" : `第 ${scene + 1} / ${SCENES.length} 幕 ${SCENES[scene]}`}</p>
           <div>
             <button type="button" onClick={() => setScene((n) => Math.max(0, n - 1))} disabled={demoState === "missing" || scene === 0}>上一幕</button>
             <button type="button" className="next" onClick={() => setScene((n) => Math.min(SCENES.length - 1, n + 1))} disabled={demoState === "missing" || scene === SCENES.length - 1}>下一幕</button>
           </div>
-        </div>
+        </nav>
       )}
     </div>
   );
@@ -1075,13 +1074,13 @@ function rowMark(row: Row, phase: string, clearing: bigint): { label: string; do
   }
   if (phase === "done") {
     if (row.pulled && row.tokensOwed === 0n && row.quoteOwed === 0n) {
-      return { label: "已领取", dot: "dot in", tone: "tone-gold" };
+      return { label: "已领取", dot: "dot in", tone: "tone-active" };
     }
-    if (row.tokensOwed > 0n) return { label: "待领取", dot: "dot in", tone: "tone-gold" };
+    if (row.tokensOwed > 0n) return { label: "待领取", dot: "dot in", tone: "tone-active" };
     return { label: "未成交", dot: "dot off", tone: "tone-mute" };
   }
   if (clearing === 0n) return { label: "待定", dot: "dot off", tone: "tone-mute" };
-  if (row.maxPrice > clearing) return { label: "价内", dot: "dot in", tone: "tone-gold" };
+  if (row.maxPrice > clearing) return { label: "价内", dot: "dot in", tone: "tone-active" };
   if (row.maxPrice === clearing) return { label: "边际", dot: "dot mid", tone: "tone-text" };
   return { label: "价外", dot: "dot off", tone: "tone-mute" };
 }
@@ -1123,7 +1122,7 @@ function groupFull(value: bigint): string {
 }
 
 function sameSnap(a: Snap, b: Snap) {
-  if (a.status !== b.status || a.floor !== b.floor || a.clearing !== b.clearing || a.softCap !== b.softCap) return false;
+  if (a.status !== b.status || a.floor !== b.floor || a.clearing !== b.clearing || a.softCap !== b.softCap || a.minPoolQuote !== b.minPoolQuote) return false;
   if (a.start !== b.start || a.end !== b.end || a.token !== b.token || a.pool !== b.pool || a.poolQuote !== b.poolQuote) return false;
   if (a.vaultFactory !== b.vaultFactory || a.previewQuote !== b.previewQuote) return false;
   if (a.previewOk !== b.previewOk || a.previewPrice !== b.previewPrice || a.bids.length !== b.bids.length) return false;

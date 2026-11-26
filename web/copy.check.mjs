@@ -1,10 +1,11 @@
+import { demoOrigin } from "./demo-origin.mjs";
 import assert from "node:assert/strict";
-import { chromium } from "playwright";
+import { openBrowser } from "./test-browser.mjs";
 import { demoBook } from "./demo-book.mjs";
 
 const book = await demoBook();
-const allow = new Set(["uniform", "launch", "agent", "id", "erc", "bnb", "chain", "flap", "vault", "bscscan", "pancakeswap", "binance"]);
-const base = process.env.CHART_URL || "http://127.0.0.1:4317";
+const allow = new Set(["uniform", "launch", "agent", "id", "erc", "bnb", "chain", "flap", "vault", "bscscan", "bsc", "pancakeswap", "binance"]);
+const base = process.env.CHART_URL || demoOrigin;
 const pages = [
   `/?launcher=${book.open}`,
   `/?launcher=${book.open}&preview=wait`,
@@ -17,7 +18,7 @@ const pages = [
   "/?view=script",
 ];
 
-const browser = await chromium.launch();
+const browser = await openBrowser();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 for (const path of pages) {
   await page.goto(base + path, { waitUntil: "domcontentloaded" });
@@ -25,7 +26,7 @@ for (const path of pages) {
   const words = await page.evaluate(() => {
     const root = document.body.cloneNode(true);
     root.querySelectorAll(".bid, textarea, .paste, .roller").forEach((node) => node.remove());
-    root.querySelectorAll("svg text").forEach((node) => {
+    root.querySelectorAll("svg text, .scene-track button").forEach((node) => {
       node.textContent = `${node.textContent}\n`;
     });
     return root.innerText;
@@ -36,7 +37,8 @@ for (const path of pages) {
   const found = [...new Set(stripped.match(/[a-z]{2,}/g) || [])];
   const extra = found.filter((word) => !allow.has(word) && !/^[0-9a-f]+$/.test(word));
   assert.deepEqual(extra, [], `${path} 界面英文：${extra.join(", ")}`);
-  assert.equal(words.includes("·"), false, `${path} 还有中点拼接`);
+  const offLabel = words.replace(/已募 [\d.,]+ BNB\s*·\s*门槛 [\d.,]+ BNB/g, "");
+  assert.equal(offLabel.includes("·"), false, `${path} 出价门槛之外出现中点拼接`);
   const bareNumbers = words.match(/(?<![\d.,])\d{5,}(?![\d.,])/g) ?? [];
   assert.deepEqual(bareNumbers, [], `${path} 缺千分位：${bareNumbers.join(", ")}`);
   const sizes = await page.evaluate(() => {
