@@ -1,0 +1,53 @@
+{
+  "network": "anvil-fork-of-97",
+  "forkBlock": 144915595,
+  "forkHash": "0x6fe1d57e3fea840d8d8e9a054c667bfad630c346223cf5fcdd5f7e9967d3f193",
+  "factoryMultiplier": [
+    true,
+    1
+  ],
+  "vaultFactoryMultiplier": [
+    false,
+    10000
+  ],
+  "featureFlags": "0",
+  "createFeeWei": "5000000000000000",
+  "signer": "0x00000000000000000000000000000000C0DE0001",
+  "startingBalanceWei": "4600000000000000000",
+  "transactions": {
+    "create": {
+      "hash": "0x4c4b8f9fd9cbe04dd9b99350e0c24788c4a12a1223f1093c76c6b57f41ee2dd9",
+      "gasUsed": "565029",
+      "effectiveGasPrice": "1000000000"
+    },
+    "identity": {
+      "hash": "0x20289787279cc229288bb838bc6076115b8532105ad2a7f3b5466e71329ed929",
+      "gasUsed": "43355",
+      "effectiveGasPrice": "1000000000"
+    },
+    "bid": {
+      "hash": "0x7662266ba786885f801329e3ca7631f2212c722ead564919237ed6eab61a5c2c",
+      "gasUsed": "265883",
+      "effectiveGasPrice": "1000000000"
+    },
+    "settle": {
+      "hash": "0xe35e8f7d441c6959076b03752f3f899f7692aa10b73b6c400cf343b11599be0a",
+      "gasUsed": "4604207",
+      "effectiveGasPrice": "1000000000"
+    },
+    "claim": {
+      "hash": "0xa2a5cf70b41d7a63df90a1e7f4649e81aec6fe1845d48ed246e190f9fbc25aff",
+      "gasUsed": "197316",
+      "effectiveGasPrice": "1000000000"
+    }
+  },
+  "launcher": "0x7aEfac9D2CCFbbd404a52835Ddbf425521cA0b9A",
+  "token": "0xB4af4710e273655F823858372C115191941d7777",
+  "pool": "0x302C745a908aA018d36f2234A5A7f3D8f2b7471c",
+  "vault": "0x72E0c8eD10D9DA6806060F6556f205dFE53c0E41",
+  "poolQuoteWei": "4450000000000000000",
+  "clearingPriceWei": "8900000000000",
+  "tokensClaimedWei": "500000000000000000000000",
+  "gasPaidWei": "5675790000000000",
+  "remainingBalanceWei": "139324210000000000"
+}

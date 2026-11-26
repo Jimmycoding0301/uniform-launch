@@ -1,10 +1,11 @@
+import { demoOrigin } from "./demo-origin.mjs";
 import assert from "node:assert/strict";
-import { chromium } from "playwright";
+import { openBrowser } from "./test-browser.mjs";
 import { demoBook } from "./demo-book.mjs";
 
 const book = await demoBook();
-const allow = new Set(["uniform", "launch", "agent", "id", "erc", "bnb", "chain", "flap", "vault", "bscscan", "pancakeswap", "binance"]);
-const base = process.env.CHART_URL || "http://127.0.0.1:4317";
+const allow = new Set(["uniform", "launch", "agent", "id", "erc", "bnb", "chain", "flap", "vault", "bscscan", "bsc", "pancakeswap", "binance"]);
+const base = process.env.CHART_URL || demoOrigin;
 const pages = [
   `/?launcher=${book.open}`,
   `/?launcher=${book.open}&preview=wait`,
@@ -17,15 +18,25 @@ const pages = [
   "/?view=script",
 ];
 
-const browser = await chromium.launch();
+const browser = await openBrowser();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 for (const path of pages) {
   await page.goto(base + path, { waitUntil: "domcontentloaded" });
   await page.waitForTimeout(400);
+  if (path === "/?network=testnet") {
+    const launch = page.getByRole("region", { name: "公开测试网发射" });
+    assert.match(await launch.innerText(), /4\.45 tBNB/);
+    assert.equal(await launch.getByRole("link", { name: "查看已结算拍卖" }).getAttribute("href"),
+      "/?network=testnet&launcher=0xEc6410ACea44ac8aaD7f048f68CE45D3c113c59e");
+    assert.equal(await launch.getByRole("link", { name: /BscScan 发射回执/ }).getAttribute("href"),
+      "https://testnet.bscscan.com/tx/0x56d87f21c4dbd55227d9e619986555f150c7da5ddec5db663b201a9b9985ae20");
+    assert.equal(await launch.getByRole("link", { name: /BscScan 领取回执/ }).getAttribute("href"),
+      "https://testnet.bscscan.com/tx/0x732353fc11a666984971d62c5b7a0016d76775145823938bf515ef776354f27f");
+  }
   const words = await page.evaluate(() => {
     const root = document.body.cloneNode(true);
-    root.querySelectorAll(".bid, textarea, .paste, .roller").forEach((node) => node.remove());
-    root.querySelectorAll("svg text").forEach((node) => {
+    root.querySelectorAll(".bid, textarea, .paste, .roller, .language-switch").forEach((node) => node.remove());
+    root.querySelectorAll("svg text, .scene-track button").forEach((node) => {
       node.textContent = `${node.textContent}\n`;
     });
     return root.innerText;
@@ -36,7 +47,8 @@ for (const path of pages) {
   const found = [...new Set(stripped.match(/[a-z]{2,}/g) || [])];
   const extra = found.filter((word) => !allow.has(word) && !/^[0-9a-f]+$/.test(word));
   assert.deepEqual(extra, [], `${path} 界面英文：${extra.join(", ")}`);
-  assert.equal(words.includes("·"), false, `${path} 还有中点拼接`);
+  const offLabel = words.replace(/已募 [\d.,]+ BNB\s*·\s*门槛 [\d.,]+ BNB/g, "");
+  assert.equal(offLabel.includes("·"), false, `${path} 出价门槛之外出现中点拼接`);
   const bareNumbers = words.match(/(?<![\d.,])\d{5,}(?![\d.,])/g) ?? [];
   assert.deepEqual(bareNumbers, [], `${path} 缺千分位：${bareNumbers.join(", ")}`);
   const sizes = await page.evaluate(() => {

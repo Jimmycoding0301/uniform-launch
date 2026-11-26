@@ -1,7 +1,8 @@
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 
-const dir = path.resolve(process.argv[2] ?? new URL("./launcher-detail/", import.meta.url).pathname);
+const dir = path.resolve(process.argv[2] ?? fileURLToPath(new URL("./launcher-detail/", import.meta.url)));
 const files = ["Component.tsx", "manifest.json", "i18n.json"];
 const names = fs.readdirSync(dir);
 if (names.length !== 3 || files.some((name) => !names.includes(name))) {

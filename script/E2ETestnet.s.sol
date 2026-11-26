@@ -73,19 +73,16 @@ contract E2ETestnet is Script {
         }
         uint256 fee = portal.SALT_LOCK_FEE();
         uint256 gasReserve = 0.02 ether;
-        uint256 minPool = 4335714285714285715;
+        // The historical three-bid fixture funds each bidder separately.
         if (CREATOR.balance < fee + gasReserve) {
             console2.log(unicode"余额不够");
             console2.log(unicode"差额");
             console2.log(fee + gasReserve - CREATOR.balance);
             revert("short-creator");
         }
-        if (ALICE.balance + BOB.balance + CAROL.balance < minPool) {
-            console2.log(unicode"余额不够");
-            console2.log(unicode"差额");
-            console2.log(minPool - (ALICE.balance + BOB.balance + CAROL.balance));
-            revert("short-pool");
-        }
+        require(ALICE.balance >= 20 ether, "short-alice");
+        require(BOB.balance >= 20 ether, "short-bob");
+        require(CAROL.balance >= 1 ether, "short-carol");
         console2.log(unicode"预计花费");
         console2.log(fee + gasReserve);
 
@@ -107,6 +104,71 @@ contract E2ETestnet is Script {
         console2.log(launcher);
         _put("launcher", LibString.toHexStringChecksummed(launcher));
         _put("createFee", vm.toString(fee));
+    }
+
+    /// @notice Produce one unsigned step for a single-signer, 4.6 tBNB testnet launch.
+    ///         The same builder is used by the operator and the local fork rehearsal.
+    function prepareBudget(string calldata stage, address signer, address instance, uint256 runNumber)
+        external
+        view
+        returns (address to, uint256 value, uint256 gasLimit, bytes memory data)
+    {
+        return prepareBudget(stage, signer, instance, runNumber, 200);
+    }
+
+    function prepareBudget(string calldata stage, address signer, address instance, uint256 runNumber, uint64 durationBlocks)
+        public
+        view
+        returns (address to, uint256 value, uint256 gasLimit, bytes memory data)
+    {
+        require(!vm.isContext(VmSafe.ForgeContext.ScriptBroadcast), "unsigned-only");
+        require(block.chainid == 97 && signer != address(0), "wrong-chain-or-signer");
+        bytes32 action = keccak256(bytes(stage));
+        if (action == keccak256("create")) {
+            IPortal portal = IPortal(PORTAL);
+            (bool enabled,) = portal.launcherFactoryMultiplier(FACTORY);
+            require(enabled, "factory-authorization-required");
+            require((portal.featureFlags() & 1) == 0, "creation-paused");
+            uint256 fee = portal.SALT_LOCK_FEE();
+            require(fee <= 0.005 ether && signer.balance >= 4.45 ether + fee + 0.123 ether, "budget-preflight");
+            LaunchConfig memory c;
+            c.name = "Uniform Launch";
+            c.symbol = "UNIFORM";
+            c.meta = "bafkreig4y5nwb4izyilbbmiydumvkld446d4k7j4ohg3x3q2lfel3fo4yq";
+            c.salt = _mine(keccak256(abi.encode("uniform-budget", block.chainid, signer, runNumber)));
+            c.floorPrice = 8e12; // 500,000 tokens at the reserve require 4 tBNB.
+            c.durationBlocks = durationBlocks;
+            c.identitySources = new address[](1);
+            c.identitySources[0] = AGENT_SOURCE;
+            return (PORTAL, fee, 3_000_000, abi.encodeCall(portal.newLauncher, (FACTORY, abi.encode(c))));
+        }
+
+        UniformLauncher l = UniformLauncher(payable(instance));
+        // Registration belongs to the signing account and can be prepared before an auction exists.
+        if (instance != address(0) || action != keccak256("identity")) {
+            require(IPortal(PORTAL).getLauncher(instance).launcherFactory == FACTORY, "wrong-factory");
+            require(l.creator() == signer && l.hub() == PORTAL && l.floorPrice() == 8e12, "wrong-auction");
+            require(l.identitySourceCount() == 1 && l.identitySources(0) == AGENT_SOURCE, "wrong-identity");
+        }
+        if (action == keccak256("identity")) {
+            return (STAND_IN, 0, 100_000, abi.encodeCall(IStandIn.claim, ()));
+        }
+        if (action == keccak256("bid")) {
+            require(l.bidCount() == 0 && l.status() == UniformLauncher.Status.Open, "book-changed");
+            require(block.number < l.endBlock() - l.CLOSE_BUFFER(), "bidding-closed");
+            return (instance, 4.45 ether, 900_000, abi.encodeCall(l.bid, (9e12, 0, uint160(signer))));
+        }
+        if (action == keccak256("settle")) {
+            require(block.number >= l.endBlock() && l.status() == UniformLauncher.Status.Open, "not-ready");
+            (bool ok, uint256 price, uint256 quote) = l.preview();
+            require(ok && price == 8.9e12 && quote == 4.45 ether && quote >= l.minPoolQuote(), "book-changed");
+            return (instance, 0, 8_000_000, abi.encodeCall(l.settle, ()));
+        }
+        if (action == keccak256("claim")) {
+            require(l.status() == UniformLauncher.Status.Succeeded && l.bidOf(signer) > 0, "not-claimable");
+            return (instance, 0, 300_000, abi.encodeCall(l.claim, ()));
+        }
+        revert("unknown-stage");
     }
 
     function bid() external {

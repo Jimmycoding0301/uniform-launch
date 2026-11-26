@@ -23,7 +23,8 @@
     "bidAction": "Place a bid. The agent fills in the budget and the limit.",
     "claimAction": "Claim. Amount 0.",
     "refundAction": "Refund. Amount 0.",
-    "claim": "Claims go through your agent"
+    "claim": "Claims go through your agent",
+    "refund": "Refunds go through your agent"
   },
   "zh": {
     "title": "同价发射",
@@ -49,7 +50,8 @@
     "bidAction": "出价。预算和最高价由代理填写。",
     "claimAction": "领取，金额 0。",
     "refundAction": "退款，金额 0。",
-    "claim": "领取走代理"
+    "claim": "领取走代理",
+    "refund": "退款走代理"
   },
   "ko": {
     "title": "동일가 발행",
@@ -75,6 +77,7 @@
     "bidAction": "입찰합니다. 예산과 상한가는 에이전트가 적습니다.",
     "claimAction": "수령. 금액 0.",
     "refundAction": "환불. 금액 0",
-    "claim": "수령은 에이전트 경유"
+    "claim": "수령은 에이전트 경유",
+    "refund": "환불은 에이전트 경유"
   }
 }

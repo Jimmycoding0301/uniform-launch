@@ -25,63 +25,79 @@ type LauncherProps = {
 const card: CSSProperties = {
   boxSizing: "border-box",
   maxWidth: 560,
-  background: "#0B0B0D",
-  color: "#EDEDED",
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 4,
-  padding: 16,
+  width: "100%",
+  background: "linear-gradient(225deg, #303236 0 8px, transparent 8.5px), #070808",
+  clipPath: "polygon(0 0, calc(100% - 10px) 0, 100% 10px, 100% 100%, 0 100%)",
+  color: "#F2F4F1",
+  border: "1px solid #303236",
+  padding: "clamp(14px, 4%, 24px)",
   fontFamily: "ui-sans-serif, system-ui, sans-serif",
 };
 
-const grid: CSSProperties = {
-  display: "grid",
-  gridTemplateColumns: "1fr 1fr",
+const header: CSSProperties = {
+  display: "flex",
+  justifyContent: "space-between",
+  alignItems: "baseline",
+  flexWrap: "wrap",
   gap: "8px 16px",
-  margin: "12px 0 0",
+  marginBottom: 16,
+};
+
+const metricRow: CSSProperties = {
+  display: "grid",
+  gridTemplateColumns: "minmax(0, 1fr) minmax(0, 1fr)",
+  alignItems: "baseline",
+  columnGap: 8,
+  padding: "7px 0",
+  borderBottom: "1px solid #303236",
 };
 
 const label: CSSProperties = {
   margin: 0,
-  fontSize: 12,
-  lineHeight: "16px",
-  color: "#8A8A93",
+  fontSize: 13,
+  lineHeight: "18px",
+  color: "#ABB0AB",
 };
 
 const value: CSSProperties = {
   margin: 0,
-  fontSize: 14,
-  lineHeight: "20px",
+  fontSize: 15,
+  lineHeight: "21px",
   fontFamily: "ui-monospace, monospace",
   fontVariantNumeric: "tabular-nums",
+  overflowWrap: "anywhere",
   textAlign: "right",
 };
 
 const phaseStyle: CSSProperties = {
   margin: 0,
-  fontSize: 14,
-  lineHeight: "20px",
-  color: "#F0B90B",
-  fontVariantNumeric: "tabular-nums",
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "flex-end",
+  gap: 7,
+  color: "#91F85B",
+  fontSize: 13,
+  fontWeight: 650,
+  textAlign: "right",
 };
 
 const note: CSSProperties = {
-  margin: "16px 0 0",
-  fontSize: 12,
-  lineHeight: "16px",
-  color: "#8A8A93",
+  ...label,
+  margin: "4px 0 0",
+  lineHeight: "20px",
 };
 
 const pre: CSSProperties = {
-  margin: "8px 0 0",
-  padding: 12,
-  border: "1px solid rgba(255,255,255,0.12)",
-  borderRadius: 4,
-  color: "#EDEDED",
-  background: "transparent",
+  margin: "10px 0 0",
+  padding: "12px 14px",
+  border: "1px solid #303236",
+  color: "#E0E4DE",
+  background: "#141616",
   fontFamily: "ui-monospace, monospace",
   fontSize: 12,
-  lineHeight: "16px",
+  lineHeight: "19px",
   whiteSpace: "pre-wrap",
+  overflowWrap: "anywhere",
   textAlign: "left",
 };
 
@@ -98,14 +114,15 @@ function group(text: string): string {
   return text.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 }
 
-function formatBnb(raw: Value): string {
+function formatBnb(raw: Value, display: "amount" | "price" = "amount"): string {
   const wei = asBig(raw);
   if (wei == null) return "";
   const neg = wei < 0n;
   const v = neg ? -wei : wei;
   const whole = v / 1000000000000000000n;
-  const frac = (v % 1000000000000000000n).toString().padStart(18, "0").slice(0, 6);
-  return `${neg ? "-" : ""}${group(whole.toString())}.${frac}`;
+  const fraction = (v % 1000000000000000000n).toString().padStart(18, "0");
+  const digits = display === "price" ? fraction.replace(/0+$/, "") : fraction.slice(0, 6);
+  return `${neg ? "-" : ""}${group(whole.toString())}${digits ? "." + digits : ""}`;
 }
 
 function formatInt(raw: Value): string {
@@ -120,12 +137,12 @@ function shownAddress(raw: string | null | undefined): string {
   return `${raw.slice(0, 6)}…${raw.slice(-4)}`;
 }
 
-function Row({ name, text, gold }: { name: string; text: string; gold?: boolean }) {
+function Row({ name, text }: { name: string; text: string }) {
   return (
-    <>
-      <p style={label}>{name}</p>
-      <p style={gold ? phaseStyle : value}>{text}</p>
-    </>
+    <div style={metricRow}>
+      <dt style={label}>{name}</dt>
+      <dd style={value}>{text}</dd>
+    </div>
   );
 }
 
@@ -134,7 +151,7 @@ export function Launcher({ context, messages }: LauncherProps) {
   if (context.launcherAddress == null || snap == null) {
     return (
       <section style={card}>
-        <p style={{ ...label, color: "#EDEDED" }}>{messages.empty}</p>
+        <p style={label}>{messages.empty}</p>
       </section>
     );
   }
@@ -147,20 +164,26 @@ export function Launcher({ context, messages }: LauncherProps) {
     : status === 1n
       ? `${messages.claimTemplate || messages.bidTemplate}\n${context.launcherAddress}\n${messages.chain}\n${messages.claimAction || messages.bidAction}`
       : `${messages.bidTemplate}\n${context.launcherAddress}\n${messages.chain}\n${messages.bidAction}`;
-  const heading = status === 1n ? messages.claim || messages.agent : messages.agent;
+  const heading = status === 2n ? messages.refund : status === 1n ? messages.claim : messages.agent;
   return (
     <section style={card}>
-      <div style={grid}>
-        <Row name={messages.phase} text={phase} gold />
+      <header style={header}>
+        <h2 style={{ margin: 0, fontSize: 24, lineHeight: 1.2, letterSpacing: "-0.025em" }}>{messages.title}</h2>
+        <p style={phaseStyle} role="status" aria-label={messages.phase}>
+          <span aria-hidden="true" style={{ width: 6, height: 6, borderRadius: "50%", background: "currentColor" }} />
+          {phase}
+        </p>
+      </header>
+      <dl style={{ margin: 0, borderTop: "1px solid #303236" }}>
         <Row name={messages.bids} text={`${formatInt(snap.bidCount)} / 32`} />
-        <Row name={messages.clearing} text={formatBnb(snap.clearingPrice)} />
-        <Row name={messages.floor} text={formatBnb(snap.floorPrice)} />
+        <Row name={messages.clearing} text={formatBnb(snap.clearingPrice, "price")} />
+        <Row name={messages.floor} text={formatBnb(snap.floorPrice, "price")} />
         <Row name={messages.end} text={formatInt(snap.endBlock)} />
         <Row name={messages.poolQuote} text={formatBnb(snap.poolQuote)} />
         <Row name={messages.token} text={token || messages.none} />
         <Row name={messages.pool} text={pool || messages.none} />
-      </div>
-      <p style={note}>{heading}</p>
+      </dl>
+      <h3 style={{ margin: "18px 0 0", fontSize: 15, lineHeight: "21px" }}>{heading}</h3>
       <p style={note}>{messages.agentBody}</p>
       <pre style={pre}>{template}</pre>
     </section>

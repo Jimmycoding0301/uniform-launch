@@ -1,9 +1,25 @@
+import { demoOrigin } from "./demo-origin.mjs";
 import assert from "node:assert/strict";
-import { chromium } from "playwright";
+import { openBrowser } from "./test-browser.mjs";
 
-const browser = await chromium.launch();
+async function assertVisibleBudgetAxis(page) {
+  await page.waitForFunction(() => {
+    const chart = document.querySelector(".demand-plot");
+    return chart?.querySelector(".x-tick") && chart.viewBox.baseVal.height === chart.parentElement.clientHeight;
+  });
+  const bounds = await page.evaluate(() => ({
+    tickBottom: Math.max(...Array.from(document.querySelectorAll(".x-tick"), (tick) => tick.getBoundingClientRect().bottom)),
+    captionTop: document.querySelector(".demand-caption").getBoundingClientRect().top,
+    captionBottom: document.querySelector(".demand-caption").getBoundingClientRect().bottom,
+    cardBottom: document.querySelector(".col-chart").getBoundingClientRect().bottom,
+  }));
+  assert.ok(bounds.tickBottom <= bounds.captionTop, "横轴刻度应位于图例上方");
+  assert.ok(bounds.captionBottom <= bounds.cardBottom, "图例应完整显示在卡片内");
+}
+
+const browser = await openBrowser();
 const page = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-await page.goto("http://127.0.0.1:4317/?demo=1", { waitUntil: "domcontentloaded" });
+await page.goto(`${demoOrigin}/?demo=1`, { waitUntil: "domcontentloaded" });
 await page.waitForSelector(".demo-bar");
 await page.getByText("0.00002").first().waitFor({ timeout: 8000 });
 const expectScene = async (n, text) => {
@@ -13,37 +29,51 @@ const expectScene = async (n, text) => {
 await expectScene(1, "0.00002");
 await page.getByRole("button", { name: "下一幕" }).click();
 await expectScene(2, "复制出价指令");
+await page.waitForFunction(() => {
+  const market = Number(getComputedStyle(document.querySelector(".col-main")).opacity);
+  const priceBorder = getComputedStyle(document.querySelector(".order-input .window")).borderColor;
+  const accent = getComputedStyle(document.querySelector("button.primary")).backgroundColor;
+  return market < .6 && priceBorder === accent;
+}, undefined, { timeout: 3000 });
 await page.getByRole("button", { name: "下一幕" }).click();
 await expectScene(3, "入池");
+await assertVisibleBudgetAxis(page);
+const presets = page.getByRole("group", { name: "以 1 BNB 预算试算限价" });
+await page.locator("#budget").fill("2");
+for (const [price, tokens, spend, refund] of [
+  ["0.000015", "0 枚", "0 BNB", "1 BNB"],
+  ["0.00003", "50,000 枚", "1 BNB", "0 BNB"],
+]) {
+  const preset = presets.getByRole("button", { name: `限价 ${price} BNB/枚`, exact: true });
+  await preset.click();
+  assert.equal(await page.locator("#budget").inputValue(), "1");
+  assert.equal(await page.locator("#price").inputValue(), price);
+  assert.equal(await preset.getAttribute("aria-pressed"), "true");
+  assert.equal((await page.locator(".preview-head .chart-price").innerText()).trim(), tokens);
+  const amounts = page.locator(".preview-head dd");
+  assert.equal((await amounts.nth(0).innerText()).trim(), spend);
+  assert.equal((await amounts.nth(1).innerText()).trim(), refund);
+}
+await page.locator("#price").fill("0.00002");
+await page.locator(".estimate").getByText("限价等于当前清算价，可能部分成交或不成交。").waitFor();
+assert.equal((await page.locator(".preview-head .chart-price").innerText()).trim(), "0 枚");
+await page.locator("#price").fill("0.00003001");
+assert.equal(await presets.locator('[aria-pressed="true"]').count(), 0);
+
 await page.locator("#budget").fill("");
 await page.getByText("还不能算").waitFor();
 await page.locator("#budget").fill("1");
 await page.getByText("入池").first().waitFor();
 await page.getByRole("button", { name: "下一幕" }).click();
 await expectScene(4, "金库余额");
-await page.locator(".slip.metric").waitFor({ timeout: 8000 });
-const vaultMetrics = await page.evaluate(() => {
-  const rows = [...document.querySelectorAll(".result-card .result-row")];
-  const pick = (label) => rows.find((row) => row.innerText.includes(label));
-  const pool = pick("入池");
-  const vault = pick("金库余额");
-  const poolValue = getComputedStyle(pool.querySelector("b"));
-  const vaultValue = getComputedStyle(vault.querySelector("b"));
-  const slipValue = getComputedStyle(document.querySelector(".slip.metric .result-row b"));
-  return {
-    poolSize: poolValue.fontSize,
-    vaultSize: vaultValue.fontSize,
-    slipSize: slipValue.fontSize,
-    poolAlign: getComputedStyle(pool).justifyContent,
-    vaultAlign: getComputedStyle(vault).justifyContent,
-    text: vault.innerText.replace(/\s+/g, " "),
-  };
-});
-assert.equal(vaultMetrics.vaultSize, vaultMetrics.poolSize, `金库字号 ${vaultMetrics.vaultSize} 入池 ${vaultMetrics.poolSize}`);
-assert.equal(vaultMetrics.slipSize, vaultMetrics.poolSize, `金库条字号 ${vaultMetrics.slipSize}`);
-assert.equal(vaultMetrics.vaultAlign, vaultMetrics.poolAlign);
-assert.match(vaultMetrics.text, /金库余额 \d+\.\d{4} BNB/);
-assert.equal(vaultMetrics.text.includes("0.0000"), false, vaultMetrics.text);
+const vaultInSummary = page.locator(".settlement-flow li").filter({ hasText: "金库余额" }).locator("strong");
+const vaultInReceipt = page.locator(".result-card .result-row").filter({ hasText: "金库余额" }).locator("b");
+await vaultInSummary.waitFor();
+await vaultInReceipt.waitFor();
+const vaultAmount = (await vaultInReceipt.innerText()).trim();
+assert.match(vaultAmount, /^\d+\.\d{4} BNB$/);
+assert.notEqual(vaultAmount, "0.0000 BNB");
+assert.equal((await vaultInSummary.innerText()).replace(/\s+/g, " ").trim(), vaultAmount);
 await page.getByText("池子", { exact: true }).waitFor({ timeout: 8000 });
 assert.equal(await page.getByText("PancakeSwap").count(), 0);
 assert.equal(await page.getByText("BscScan").count(), 0);
@@ -62,19 +92,26 @@ await expectScene(6, "单价比");
 await page.locator("#budget").focus();
 await page.keyboard.press("Escape");
 await page.waitForURL((url) => !url.search.includes("demo=1"));
+const shared = await browser.newPage({ viewport: { width: 390, height: 844 } });
+await shared.goto(`${demoOrigin}/?demo=1&scene=3`, { waitUntil: "domcontentloaded" });
+await shared.getByRole("group", { name: "以 1 BNB 预算试算限价" }).waitFor();
+await shared.getByText("第 3 / 6 幕").waitFor();
+await assertVisibleBudgetAxis(shared);
+assert.equal(await shared.evaluate(() => document.documentElement.scrollWidth), 390);
+await shared.goto(`${demoOrigin}/?demo=1&scene=7`, { waitUntil: "domcontentloaded" });
+await shared.getByText("第 1 / 6 幕").waitFor();
+await shared.close();
 const missing = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 await missing.route("**/demo.json", (route) => route.fulfill({ status: 404, body: "" }));
-await missing.goto("http://127.0.0.1:4317/?demo=1", { waitUntil: "domcontentloaded" });
+await missing.goto(`${demoOrigin}/?demo=1`, { waitUntil: "domcontentloaded" });
 await missing.getByText("还没有演示场").first().waitFor();
 await missing.getByText("先跑演示命令").first().waitFor();
+assert.equal(await missing.getByRole("link", { name: "查看公开发射回执" }).getAttribute("href"), "/?network=testnet");
 await missing.close();
 const down = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-await down.goto("http://127.0.0.1:4317/?demo=1", { waitUntil: "domcontentloaded" });
+await down.goto(`${demoOrigin}/?demo=1`, { waitUntil: "domcontentloaded" });
 await down.getByText("0.00002").first().waitFor({ timeout: 8000 });
-await down.route("**/*", (route) => {
-  if (route.request().url().includes(":18545")) return route.abort();
-  return route.continue();
-});
+await down.context().setOffline(true);
 await down.locator(".hash-toggle").evaluate((el) => el.scrollIntoView({ block: "center" }));
 await down.getByRole("button", { name: "已发送？贴哈希核对" }).click();
 await down.locator("#txhash").fill(`0x${"ab".repeat(32)}`);
@@ -82,7 +119,7 @@ await down.getByRole("button", { name: "核对", exact: true }).click();
 await down.getByText("读不到链").waitFor({ timeout: 8000 });
 await down.close();
 const fold = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-await fold.goto("http://127.0.0.1:4317/?demo=1", { waitUntil: "domcontentloaded" });
+await fold.goto(`${demoOrigin}/?demo=1`, { waitUntil: "domcontentloaded" });
 await fold.getByText("0.00002").first().waitFor({ timeout: 8000 });
 await fold.locator(".hash-toggle").evaluate((el) => el.scrollIntoView({ block: "center" }));
 await fold.getByRole("button", { name: "已发送？贴哈希核对" }).click();
@@ -91,7 +128,7 @@ await fold.getByRole("button", { name: "下一幕" }).click();
 await fold.locator("#txhash").waitFor({ state: "detached" });
 await fold.close();
 const keys = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-await keys.goto("http://127.0.0.1:4317/?demo=1", { waitUntil: "domcontentloaded" });
+await keys.goto(`${demoOrigin}/?demo=1`, { waitUntil: "domcontentloaded" });
 await keys.getByText("0.00002").first().waitFor({ timeout: 8000 });
 await keys.getByText("测试网 Agent ID 为替身").first().waitFor({ timeout: 8000 });
 assert.equal(await keys.getByRole("radio").count(), 1);
@@ -104,13 +141,40 @@ await keys.keyboard.press("ArrowRight");
 await keys.getByText("第 2 / 6 幕").waitFor();
 await keys.close();
 const none = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-await none.goto("http://127.0.0.1:4317/?launcher=0x0000000000000000000000000000000000000000", { waitUntil: "domcontentloaded" });
+await none.goto(`${demoOrigin}/?launcher=0x0000000000000000000000000000000000000000`, { waitUntil: "domcontentloaded" });
 await none.getByText("没有这场拍卖").first().waitFor({ timeout: 8000 });
 await none.close();
 const blank = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-await blank.goto("http://127.0.0.1:4317/?empty=1", { waitUntil: "domcontentloaded" });
+await blank.goto(`${demoOrigin}/?empty=1`, { waitUntil: "domcontentloaded" });
 await blank.getByRole("link", { name: "打开演示脚本" }).click();
 await blank.waitForURL((url) => url.search.includes("demo=1"));
 await blank.close();
+for (const width of [390, 1440]) {
+  const proof = await browser.newPage({ viewport: { width, height: 900 }, reducedMotion: "reduce" });
+  await proof.goto(`${demoOrigin}/?network=testnet`, { waitUntil: "domcontentloaded" });
+  const launch = proof.getByRole("heading", { name: "公开测试网发射" });
+  await launch.waitFor();
+  const bodyColor = await proof.locator("body").evaluate((element) => getComputedStyle(element).color);
+  for (const heading of [launch, proof.getByRole("heading", { name: "测试网合约" })]) {
+    assert.equal(await heading.evaluate((element) => getComputedStyle(element).color), bodyColor, "减少动态效果时标题仍应使用浅色文字");
+  }
+  await proof.close();
+}
+// Pending public RPCs should stay in the loading state. Only a rejected response signals failure.
+const pending = await browser.newPage();
+let finishRequest;
+const responseGate = new Promise((resolve) => { finishRequest = resolve; });
+await pending.route("https://bsc-testnet-rpc.publicnode.com/**", async (route) => {
+  await responseGate;
+  const { id } = route.request().postDataJSON();
+  await route.fulfill({ json: { id, jsonrpc: "2.0", error: { code: -32601, message: "Unavailable" } } });
+});
+await pending.goto(`${demoOrigin}/?network=testnet&launcher=0x0000000000000000000000000000000000000001`);
+await pending.getByText("正在读取测试网拍卖。").waitFor();
+await pending.waitForTimeout(3200);
+assert.equal(await pending.getByText(/重试/).count(), 0, "慢响应不应被显示为失败");
+finishRequest();
+await pending.getByText("读取失败，正在重试。", { exact: true }).waitFor();
+await pending.close();
 await browser.close();
 console.log("演示六幕、方向键和退出都通过");

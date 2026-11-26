@@ -1,0 +1,103 @@
+1
+00:00:00,000 --> 00:00:05,000
+Fixed-price presale?
+The founder picks the price.
+
+2
+00:00:05,000 --> 00:00:11,000
+On the curve, the founder bids just before you.
+Same budget, more tokens.
+
+3
+00:00:11,000 --> 00:00:18,000
+In our auction, the bids set one price.
+You both get 125,000 tokens.
+
+4
+00:00:18,000 --> 00:00:24,000
+Each identity bids once. Our public testnet
+bidder used a stand-in Agent ID.
+
+5
+00:00:24,000 --> 00:00:28,000
+Our Factory created this Launcher.
+
+6
+00:00:28,000 --> 00:00:32,000
+One bidder committed 4.45 test BNB.
+
+7
+00:00:32,000 --> 00:00:35,000
+After close, anyone can settle.
+
+8
+00:00:35,000 --> 00:00:39,000
+That call launches through Flap if the pool
+qualifies.
+
+9
+00:00:39,000 --> 00:00:42,000
+Otherwise, bidders can claim full refunds.
+
+10
+00:00:42,000 --> 00:00:50,000
+I give my AI agent one BNB and two price limits.
+It previews both against the local bids.
+
+11
+00:00:50,000 --> 00:00:57,000
+At the higher limit, my one BNB buys fifty
+thousand tokens.
+
+12
+00:00:57,000 --> 00:01:04,000
+The agent prepares an unsigned bid.
+I review it before signing.
+
+13
+00:01:04,000 --> 00:01:12,000
+Now I lower only my limit. The clearing
+price stays at 0.00002.
+
+14
+00:01:12,000 --> 00:01:18,000
+My bid gets zero tokens and the whole BNB
+back.
+
+15
+00:01:18,000 --> 00:01:25,000
+Back on public testnet, that single bid
+funded a real launch.
+
+16
+00:01:25,000 --> 00:01:29,000
+Settlement opened a PancakeSwap V2 pool
+
+17
+00:01:29,000 --> 00:01:34,000
+with half a million UNIFORM and 4.45 test
+BNB.
+
+18
+00:01:34,000 --> 00:01:41,000
+Here is the fifth transaction. The bidder
+claimed the other half million tokens.
+
+19
+00:01:41,000 --> 00:01:45,000
+We built the Launcher interface using
+Flap’s template.
+
+20
+00:01:45,000 --> 00:01:48,000
+The public launch linked the Vault.
+
+21
+00:01:48,000 --> 00:01:55,000
+On a separate fork, trading fees reached it
+and the owner withdrew them.
+
+22
+00:01:55,000 --> 00:02:00,000
+Our code is public for both the Flap and
+Developer tracks.

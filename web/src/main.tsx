@@ -1,3 +1,4 @@
+import { t } from "./locale";
 import { Component, type ReactNode } from "react";
 import { createRoot } from "react-dom/client";
 import { App } from "./App";
@@ -9,7 +10,7 @@ class Boundary extends Component<{ children: ReactNode }, { failed: boolean }> {
     return { failed: true };
   }
   render() {
-    if (this.state.failed) return <p className="status-line">页面出错了。刷新后再试。</p>;
+    if (this.state.failed) return <p className="status-line">{t("页面出错了。刷新后再试。", "The page could not load. Refresh to try again.")}</p>;
     return this.props.children;
   }
 }

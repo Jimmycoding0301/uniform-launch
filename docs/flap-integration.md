@@ -10,7 +10,7 @@
 - 组件包：`flap-ui/launcher-detail/` 三个文件。打包命令 `bash script/flap-zip.sh`，ZIP 在 `dist-flap/launcher-ui.zip`，不提交
 - 预览地址路径：`/launcher/<launcher 地址>?chain=bnb-testnet`。主机域名以 Flap 文档为准，这里只写路径
 
-测试网上还没有一场成功的 Launcher，因为 Flap 还没给工厂开 multiplier。所以现在不能给 Flap 一个可点的测试网 Launcher 地址。本机分叉上的地址见 `docs/e2e-evidence.md`。
+公共测试网已通过同价 Launcher 发射代币，4.45 tBNB 入池。[实际 Launcher 与发射回执](public-testnet-evidence.md) · [固定分叉与签名步骤](e2e-evidence.md)
 
 ## 检查器
 

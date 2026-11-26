@@ -1,39 +1,8 @@
 export type Bid = { budget: bigint; maxPrice: bigint };
 
-export type Tier = {
-  price: bigint;
-  budget: bigint;
-  count: number;
-  x1: number;
-  x2: number;
-  y: number;
-};
-
-export type Pt = { x: number; y: number };
-
-export type Plot = {
-  stroke: string;
-  fill: string;
-  inStroke: string;
-  outStroke: string;
-  pts: Pt[];
-  reserveY: number;
-  clearingY: number | null;
-  crossX: number | null;
-  ticks: { y: number; text: string }[];
-  xTicks: { x: number; text: string }[];
-  tiers: Tier[];
-  left: number;
-  right: number;
-  top: number;
-  bottom: number;
-  lo: bigint;
-  ceil: bigint;
-  total: bigint;
-  rect: { x: number; y: number; w: number; h: number } | null;
-  yourY: number | null;
-  filled: bigint;
-};
+export type Point = { x: number; y: number };
+export type Tier = Point & { price: bigint; budget: bigint; cumulative: bigint; count: number };
+export type Tick = { value: bigint; text: string; position: number };
 
 export function parseBnb(input: string): bigint | null {
   const s = input.trim();
@@ -125,296 +94,89 @@ export function tokensFor(budgetWei: bigint, priceWei: bigint): bigint {
   return (budgetWei * 10n ** 18n) / priceWei;
 }
 
-export function buildStepPath(
-  bids: Bid[],
-  width: number,
-  height: number,
-  floor: bigint,
-  clearing: bigint | null,
-  progress: number,
-  yourPrice: bigint | null = null,
-): Plot {
-  const padT = 14;
-  const padB = 28;
-  const padR = 16;
-  const sorted = [...bids].sort((a, b) => (a.maxPrice > b.maxPrice ? -1 : a.maxPrice < b.maxPrice ? 1 : 0));
-  const total = sorted.reduce((s, b) => s + b.budget, 0n);
-
-  const grouped: { price: bigint; budget: bigint; count: number }[] = [];
-  for (const bid of sorted) {
-    const last = grouped[grouped.length - 1];
-    if (last && last.price === bid.maxPrice) {
-      last.budget += bid.budget;
-      last.count += 1;
-    } else {
-      grouped.push({ price: bid.maxPrice, budget: bid.budget, count: 1 });
-    }
+/** At each price knot, x is exactly the total budget bidding at or above that price. */
+export function demandChart(bids: Bid[], width: number, height: number, floor: bigint, clearing: bigint | null) {
+  const grouped = new Map<bigint, { budget: bigint; count: number }>();
+  for (const bid of bids) {
+    if (bid.budget <= 0n || bid.maxPrice <= 0n) continue;
+    const tier = grouped.get(bid.maxPrice) ?? { budget: 0n, count: 0 };
+    tier.budget += bid.budget;
+    tier.count += 1;
+    grouped.set(bid.maxPrice, tier);
   }
-
-  let hi = floor > 0n ? floor : 1n;
-  let loPrice = hi;
-  for (const g of grouped) {
-    if (g.price > hi) hi = g.price;
-    if (g.price > 0n && g.price < loPrice) loPrice = g.price;
-  }
-  if (clearing && clearing > hi) hi = clearing;
-  if (clearing && clearing > 0n && clearing < loPrice) loPrice = clearing;
-  if (floor > 0n && floor < loPrice) loPrice = floor;
-  if (grouped.length === 0 && floor > 0n) {
-    loPrice = 0n;
-    hi = floor + floor / 2n;
-  }
-  const priceLabels = [hi, floor, clearing ?? 0n].filter((p) => p > 0n).map((p) => formatPrice(p));
-  const labelW = priceLabels.reduce((w, text) => Math.max(w, Math.ceil(text.length * 7.25)), 28);
-  let padL = 16 + labelW + 10;
-  if (padL + padR > width - 80) padL = Math.max(48, width - padR - 80);
-  const innerW = Math.max(40, width - padL - padR);
-  const innerH = height - padT - padB;
-  let span = hi > loPrice ? hi - loPrice : hi > 0n ? hi / 5n : 1n;
-  if (span === 0n) span = 1n;
-  const below = span / 4n === 0n ? 1n : span / 4n;
-  const above = span / 8n === 0n ? 1n : span / 8n;
-  const lo = loPrice - below;
-  const ceil = hi + above;
-  const yOf = (p: bigint) => {
-    const scale = Math.max(Number(ceil - lo), 1);
-    const t = (Number(p) - Number(lo)) / scale;
-    return padT + innerH - Math.min(1, Math.max(0, t)) * innerH;
-  };
-  const xOf = (q: bigint) => padL + (total === 0n ? 0 : (Number(q) / Number(total)) * innerW);
-
-  const bottom = padT + innerH;
-  const left = padL;
-  const right = width - padR;
-  const ticks = niceYTicks(lo, ceil, yOf, bottom);
-  const frame = { ticks, xTicks: [] as { x: number; text: string }[], left, right, top: padT, bottom, lo, ceil, total };
-
-  if (grouped.length === 0) {
-    const reserveY = floor > 0n ? yOf(floor) : bottom;
-    frame.xTicks = xMarks(left, right, 0n, total, xOf);
-    return {
-      stroke: "",
-      fill: "",
-      inStroke: "",
-      outStroke: "",
-      pts: [],
-      reserveY,
-      clearingY: clearing && clearing > 0n ? yOf(clearing) : null,
-      crossX: null,
-      tiers: [],
-      rect: null,
-      yourY: yourPrice && yourPrice > 0n ? yOf(yourPrice) : null,
-      filled: 0n,
-      ...frame,
-    };
-  }
-
-  const target = clearing && clearing > 0n ? Number(clearing) : null;
-  const pts: { x: number; y: number }[] = [];
-  const tiers: Tier[] = [];
-  let acc = 0n;
+  const prices = [...grouped.keys()].sort((a, b) => a > b ? -1 : a < b ? 1 : 0);
+  const total = [...grouped.values()].reduce((sum, tier) => sum + tier.budget, 0n);
+  const highest = [prices[0] ?? 0n, floor, clearing ?? 0n].reduce((a, b) => a > b ? a : b, 1n);
+  const step = niceStep(highest);
+  const intervals = Number((highest + step - 1n) / step);
+  const axisMax = BigInt(intervals) * step;
+  const axisLabels = Array.from({ length: intervals + 1 }, (_, i) => formatPrice(BigInt(i) * step));
+  const left = Math.max(33, Math.ceil(Math.max(...axisLabels.map((text) => text.length)) * 7.3) + 11);
+  const right = Math.max(left + 1, width - 9);
+  const top = 10;
+  const bottom = Math.max(top + 1, height - 24);
+  const x = (value: bigint) => left + (total ? Number(value) / Number(total) : 0) * (right - left);
+  const y = (value: bigint) => bottom - Number(value) / Number(axisMax) * (bottom - top);
+  const yTicks: Tick[] = axisLabels.map((text, i) => ({ value: BigInt(i) * step, text, position: y(BigInt(i) * step) }));
   let filled = 0n;
-  for (const g of grouped) {
-    const y = yOf(priceAt(g.price, target, progress));
-    const x1 = xOf(acc);
-    const x2 = xOf(acc + g.budget);
-    pts.push({ x: x1, y }, { x: x2, y });
-    tiers.push({ price: g.price, budget: g.budget, count: g.count, x1, x2, y });
-    if (clearing && clearing > 0n && g.price >= clearing) filled += g.budget;
-    acc += g.budget;
+  let cumulative = 0n;
+  const tiers: Tier[] = prices.map((price) => {
+    const tier = grouped.get(price)!;
+    cumulative += tier.budget;
+    if (clearing !== null && price >= clearing) filled += tier.budget;
+    return { ...tier, price, cumulative, x: x(cumulative), y: y(price) };
+  });
+  const clear = clearing !== null && clearing > 0n && tiers.length ? { x: x(filled), y: y(clearing) } : null;
+  // Reserve both endpoint labels first. Keep a clearing tick only if it fits between them.
+  const xTicks: Tick[] = [{ value: 0n, position: left, text: "0" }];
+  if (total > 0n) {
+    const last = { value: total, position: right, text: formatBnb(total) };
+    xTicks.push(last);
+    const middle = filled > 0n && filled < total ? filled : total / 2n;
+    const candidates = [middle];
+    const budgetStep = niceStep(total);
+    for (let value = budgetStep; value < total; value += budgetStep) candidates.push(value);
+    for (const value of candidates) {
+      const text = formatBnb(value);
+      const position = x(value);
+      if (xTicks.some((tick) => Math.abs(tick.position - position) < 16 + (tick.text.length + text.length) * 4)) continue;
+      xTicks.push({ value, text, position });
+    }
+    xTicks.sort((a, b) => a.position - b.position);
   }
-  const corners = dedupe(pts);
-  const painted = pathFromPoints(corners, bottom);
-  const rounded = roundPolyline(corners, 2);
-  const clearingY = clearing && clearing > 0n ? yOf(clearing) : null;
-  const crossX = clearingY == null ? null : xOf(filled);
-  const split = splitAt(corners, crossX);
-  frame.xTicks = xMarks(left, right, filled, total, xOf);
-  const rect =
-    clearingY != null && crossX != null && crossX > left + 1
-      ? { x: left, y: Math.min(clearingY, bottom), w: crossX - left, h: Math.abs(bottom - clearingY) }
-      : null;
-  return {
-    stroke: rounded || painted.stroke,
-    fill: painted.fill,
-    inStroke: roundPolyline(split.left, 2),
-    outStroke: roundPolyline(split.right, 2),
-    pts: corners,
-    reserveY: yOf(floor),
-    clearingY,
-    crossX,
-    tiers,
-    rect,
-    yourY: yourPrice && yourPrice > 0n ? yOf(yourPrice) : null,
-    filled,
-    ...frame,
-  };
+  const stroke = monotonePath(tiers);
+  return { width, height, left, right, top, bottom, total, tiers, clear, filled, yTicks, xTicks, stroke };
 }
 
-function niceYTicks(lo: bigint, hi: bigint, yOf: (p: bigint) => number, bottom: number) {
-  const span = Number(hi - lo);
-  const step = niceStep(Math.max(span, 1), 4);
-  const start = Math.ceil(Number(lo) / step) * step;
-  const values: bigint[] = [];
-  for (let v = start; v <= Number(hi) + step * 0.01 && values.length < 5; v += step) {
-    if (v >= Number(lo) && v <= Number(hi)) values.push(BigInt(Math.round(v)));
+function niceStep(highest: bigint): bigint {
+  const rough = highest > 4n ? highest / 4n : 1n;
+  const unit = 10n ** BigInt(rough.toString().length - 1);
+  return [unit, 2n * unit, 5n * unit, 10n * unit].reduce((best, next) =>
+    Math.abs(Number(highest) / Number(next) - 4) < Math.abs(Number(highest) / Number(best) - 4) ? next : best
+  );
+}
+
+/** Shape-preserving cubic interpolation through observed tiers. No interpolated point is a bid. */
+export function monotonePath(points: Point[]): string {
+  if (!points.length) return "";
+  const slopes = points.slice(1).map((p, i) => (p.y - points[i].y) / (p.x - points[i].x));
+  const tangents = points.map((p, i) => {
+    if (i === 0) return slopes[0] ?? 0;
+    if (i === points.length - 1) return slopes[i - 1];
+    const before = slopes[i - 1], after = slopes[i];
+    if (before * after <= 0) return 0;
+    const prevWidth = p.x - points[i - 1].x, nextWidth = points[i + 1].x - p.x;
+    const w1 = 2 * nextWidth + prevWidth, w2 = nextWidth + 2 * prevWidth;
+    return (w1 + w2) / (w1 / before + w2 / after);
+  });
+  const coord = (value: number) => Number(value.toFixed(3));
+  let path = `M ${coord(points[0].x)} ${coord(points[0].y)}`;
+  for (let i = 1; i < points.length; i++) {
+    const start = points[i - 1], end = points[i];
+    const dx = (end.x - start.x) / 3;
+    path += ` C ${coord(start.x + dx)} ${coord(start.y + dx * tangents[i - 1])} ${coord(end.x - dx)} ${coord(end.y - dx * tangents[i])} ${coord(end.x)} ${coord(end.y)}`;
   }
-  while (values.length < 4) {
-    const mid = lo + ((hi - lo) * BigInt(values.length + 1)) / 5n;
-    values.push(mid);
-    if (values.length > 6) break;
-  }
-  const ticks: { y: number; text: string }[] = [];
-  for (const p of values) {
-    if (p <= 0n) continue;
-    const y = yOf(p);
-    if (y < 8 || y > bottom - 4) continue;
-    if (ticks.some((t) => Math.abs(t.y - y) < 18)) continue;
-    ticks.push({ y, text: formatPrice(p) });
-  }
-  return ticks.slice(0, 5);
-}
-
-function niceStep(span: number, count: number) {
-  const rough = span / Math.max(count, 1);
-  const exp = Math.floor(Math.log10(Math.max(rough, 1e-12)));
-  const base = 10 ** exp;
-  const err = rough / base;
-  const nice = err >= 7.5 ? 10 : err >= 3.5 ? 5 : err >= 1.5 ? 2 : 1;
-  return nice * base;
-}
-
-function xMarks(left: number, right: number, filled: bigint, total: bigint, xOf: (q: bigint) => number) {
-  const mid = filled > 0n && filled < total ? filled : total > 1n ? total / 2n : 0n;
-  const marks = [
-    { x: left, text: "0" },
-    { x: xOf(mid), text: formatBnb(mid) },
-    { x: right, text: `${formatBnb(total)} BNB` },
-  ];
-  const out: { x: number; text: string }[] = [];
-  for (const mark of marks) {
-    if (out.some((item) => Math.abs(item.x - mark.x) < 28)) continue;
-    out.push(mark);
-  }
-  if (out.length < 3 && !out.some((item) => item.x === right)) out.push(marks[2]);
-  return out;
-}
-
-function splitAt(pts: Pt[], x: number | null): { left: Pt[]; right: Pt[] } {
-  if (x == null || pts.length < 2) return { left: pts, right: [] };
-  const left: Pt[] = [];
-  const right: Pt[] = [];
-  for (let i = 0; i < pts.length; i++) {
-    const p = pts[i];
-    const prev = pts[i - 1];
-    if (p.x < x - 0.01) left.push(p);
-    else if (prev && prev.x < x && p.x > x) {
-      const t = (x - prev.x) / (p.x - prev.x || 1);
-      const mid = { x, y: prev.y + (p.y - prev.y) * t };
-      left.push(mid);
-      right.push(mid, p);
-    } else right.push(p);
-  }
-  return { left, right };
-}
-
-function roundPolyline(pts: Pt[], radius: number): string {
-  const clean = dedupe(pts);
-  if (clean.length < 2) return "";
-  if (clean.length === 2) return polyline(clean);
-  const r = radius;
-  let d = `M ${clean[0].x.toFixed(2)} ${clean[0].y.toFixed(2)}`;
-  for (let i = 1; i < clean.length - 1; i++) {
-    const a = clean[i - 1];
-    const b = clean[i];
-    const c = clean[i + 1];
-    const ab = Math.hypot(b.x - a.x, b.y - a.y) || 1;
-    const bc = Math.hypot(c.x - b.x, c.y - b.y) || 1;
-    const r1 = Math.min(r, ab / 2, bc / 2);
-    const p1 = { x: b.x - ((b.x - a.x) / ab) * r1, y: b.y - ((b.y - a.y) / ab) * r1 };
-    const p2 = { x: b.x + ((c.x - b.x) / bc) * r1, y: b.y + ((c.y - b.y) / bc) * r1 };
-    d += ` L ${p1.x.toFixed(2)} ${p1.y.toFixed(2)} Q ${b.x.toFixed(2)} ${b.y.toFixed(2)} ${p2.x.toFixed(2)} ${p2.y.toFixed(2)}`;
-  }
-  const last = clean[clean.length - 1];
-  d += ` L ${last.x.toFixed(2)} ${last.y.toFixed(2)}`;
-  return d;
-}
-
-export function pathFromPoints(pts: Pt[], bottom: number): { stroke: string; fill: string } {
-  const clean = dedupe(pts);
-  const stroke = polyline(clean);
-  if (!stroke || clean.length < 2) return { stroke: "", fill: "" };
-  const first = clean[0];
-  const last = clean[clean.length - 1];
-  return {
-    stroke,
-    fill: `${stroke} L ${last.x.toFixed(2)} ${bottom.toFixed(2)} L ${first.x.toFixed(2)} ${bottom.toFixed(2)} Z`,
-  };
-}
-
-export function resample(pts: Pt[], n: number): Pt[] {
-  if (n < 2) return pts.map((p) => ({ ...p }));
-  if (pts.length === 0) return Array.from({ length: n }, () => ({ x: 0, y: 0 }));
-  if (pts.length === 1) return Array.from({ length: n }, () => ({ ...pts[0] }));
-  const seg = [0];
-  for (let i = 1; i < pts.length; i++) seg.push(seg[i - 1] + Math.hypot(pts[i].x - pts[i - 1].x, pts[i].y - pts[i - 1].y));
-  const total = seg[seg.length - 1] || 1;
-  const out: Pt[] = [];
-  for (let i = 0; i < n; i++) {
-    const d = (total * i) / (n - 1);
-    let k = 1;
-    while (k < seg.length - 1 && seg[k] < d) k++;
-    const span = seg[k] - seg[k - 1] || 1;
-    const t = Math.min(1, Math.max(0, (d - seg[k - 1]) / span));
-    out.push({
-      x: pts[k - 1].x + (pts[k].x - pts[k - 1].x) * t,
-      y: pts[k - 1].y + (pts[k].y - pts[k - 1].y) * t,
-    });
-  }
-  return out;
-}
-
-function priceAt(maxPrice: bigint, clearing: number | null, progress: number): bigint {
-  if (clearing == null || progress <= 0) return maxPrice;
-  const y = maxPrice === 0n ? 0 : Number(maxPrice) + (clearing - Number(maxPrice)) * easeOut(progress);
-  return BigInt(Math.max(0, Math.round(y)));
-}
-
-function dedupe(pts: { x: number; y: number }[]) {
-  const out: { x: number; y: number }[] = [];
-  for (const p of pts) {
-    const prev = out[out.length - 1];
-    if (prev && Math.abs(prev.x - p.x) < 0.01 && Math.abs(prev.y - p.y) < 0.01) continue;
-    out.push(p);
-  }
-  return out;
-}
-
-export function easeOut(t: number): number {
-  const x1 = 0.16;
-  const y1 = 1;
-  const x2 = 0.3;
-  const y2 = 1;
-  const cx = 3 * x1;
-  const bx = 3 * (x2 - x1) - cx;
-  const ax = 1 - cx - bx;
-  const cy = 3 * y1;
-  const by = 3 * (y2 - y1) - cy;
-  const ay = 1 - cy - by;
-  let u = t;
-  for (let i = 0; i < 6; i++) {
-    const x = ((ax * u + bx) * u + cx) * u - t;
-    const dx = (3 * ax * u + 2 * bx) * u + cx;
-    if (Math.abs(dx) < 1e-6) break;
-    u -= x / dx;
-  }
-  u = Math.min(1, Math.max(0, u));
-  return ((ay * u + by) * u + cy) * u;
-}
-
-function polyline(pts: { x: number; y: number }[]): string {
-  if (pts.length < 2) return "";
-  return pts.map((p, i) => `${i === 0 ? "M" : "L"} ${p.x.toFixed(2)} ${p.y.toFixed(2)}`).join(" ");
+  return path;
 }
 
 export function formatRemain(blocks: bigint): string {

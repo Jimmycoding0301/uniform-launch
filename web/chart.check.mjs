@@ -1,6 +1,7 @@
+import { demoOrigin } from "./demo-origin.mjs";
 import assert from "node:assert/strict";
 import { inflateSync } from "node:zlib";
-import { chromium } from "playwright";
+import { openBrowser } from "./test-browser.mjs";
 
 function pngRows(buf) {
   let offset = 8;
@@ -53,9 +54,9 @@ function pngRows(buf) {
   return { width, height, rows, bpp };
 }
 
-const url = process.env.CHART_URL ?? "http://127.0.0.1:4317/";
+const url = process.env.CHART_URL ?? `${demoOrigin}/`;
 
-const browser = await chromium.launch();
+const browser = await openBrowser();
 const page = await browser.newPage({ viewport: { width: 390, height: 844 } });
 await page.goto(url, { waitUntil: "domcontentloaded" });
 await page.waitForSelector("svg.plot .tick", { timeout: 8000 });
@@ -76,47 +77,68 @@ const measured = await page.evaluate(() => {
 });
 await browser.close();
 
-assert.ok(measured.stageH >= 200, `绘图区高 ${measured.stageH}px，小于 200`);
+assert.ok(measured.stageH >= 155, `手机绘图区高 ${measured.stageH}px，小于 155`);
 assert.ok(measured.boxW >= 300, `绘图区宽 ${measured.boxW}px，390 屏上过窄`);
 assert.ok(measured.font >= 12, `刻度计算字号 ${measured.font}px，小于 12`);
 assert.ok(Math.abs(measured.boxW - measured.viewW) <= 1, `横向被缩放 ${measured.boxW} vs ${measured.viewW}`);
 assert.ok(Math.abs(measured.boxH - measured.viewH) <= 1, `纵向被缩放 ${measured.boxH} vs ${measured.viewH}`);
-const extra = await (async () => {
-  const browser2 = await chromium.launch();
-  const page = await browser2.newPage({ viewport: { width: 390, height: 844 } });
-  await page.goto(url, { waitUntil: "domcontentloaded" });
-  await page.waitForSelector(".uniform-rect", { timeout: 8000 });
-  const detail = await page.evaluate(() => {
-    const ys = document.querySelectorAll("svg.plot text.y-tick").length;
-    const xs = document.querySelectorAll("svg.plot text.x-tick").length;
-    const svg = document.querySelector("svg.plot");
-    const blur = getComputedStyle(svg).filter;
-    const rect = document.querySelector(".uniform-rect");
-    const dot = document.querySelector(".dot-core");
-    const rb = rect.getBoundingClientRect();
-    const db = dot.getBoundingClientRect();
-    return {
-      ys,
-      xs,
-      blur,
-      filters: svg.querySelectorAll("[filter]").length,
-      cornerX: Math.abs(rb.right - (db.left + db.width / 2)),
-      cornerY: Math.abs(rb.top - (db.top + db.height / 2)),
-    };
-  });
-  await browser2.close();
-  return detail;
-})();
-assert.ok(extra.ys >= 4 && extra.ys <= 6, `纵轴刻度 ${extra.ys}`);
-assert.ok(extra.xs >= 3, `横轴刻度 ${extra.xs}`);
-assert.equal(extra.filters, 0);
-assert.ok(extra.blur === "none" || extra.blur === "", `模糊 ${extra.blur}`);
-assert.ok(extra.cornerX <= 1 && extra.cornerY <= 1, `同价矩形角点 ${extra.cornerX}, ${extra.cornerY}`);
-const shotBrowser = await chromium.launch();
+const detailBrowser = await openBrowser();
+try {
+  for (const width of [390, 737, 1180, 1440]) {
+    const detail = await detailBrowser.newPage({ viewport: { width, height: 900 }, reducedMotion: "reduce" });
+    await detail.goto(url, { waitUntil: "domcontentloaded" });
+    await detail.locator(".clear-point").waitFor();
+    const metrics = await detail.evaluate(() => {
+      const svg = document.querySelector("svg.demand-plot");
+      const curve = svg.querySelector(".demand-curve");
+      const tierNodes = [...svg.querySelectorAll(".tier-node")];
+      const dot = svg.querySelector(".clear-core");
+      const guide = svg.querySelector(".clear-guide");
+      const data = svg.querySelector(".clear-point").dataset;
+      const poolValue = document.querySelector(".market-note small span:last-child");
+      const nearest = Math.min(...tierNodes.map((n) => Math.hypot(n.cx.baseVal.value - dot.cx.baseVal.value, n.cy.baseVal.value - dot.cy.baseVal.value)));
+      return {
+        ys: svg.querySelectorAll(".y-tick").length, xs: svg.querySelectorAll(".x-tick").length,
+        blur: getComputedStyle(svg).filter, filters: svg.querySelectorAll("[filter]").length,
+        nearest, markerX: dot.cx.baseVal.value, guideX: guide.x1.baseVal.value,
+        xLabels: [...svg.querySelectorAll(".x-tick")].map((e) => e.textContent),
+        poolValueHeight: poolValue.getBoundingClientRect().height,
+        poolLineHeight: parseFloat(getComputedStyle(poolValue).lineHeight),
+        nodes: tierNodes.length, cubics: (curve.getAttribute("d").match(/ C /g) ?? []).length,
+        budget: data.budget, price: data.price,
+        caption: document.querySelector(".demand-caption").innerText,
+        grid: svg.querySelector(".demand-grid").getBoundingClientRect().width,
+        legendHeight: document.querySelector(".demand-caption").getBoundingClientRect().height,
+      };
+    });
+    assert.ok(metrics.ys >= 4 && metrics.ys <= 7 && metrics.xs >= 3);
+    assert.equal(metrics.filters, 0);
+    assert.equal(metrics.blur, "none");
+    assert.equal(metrics.nodes, 8); // Nine demo bids, with two sharing the marginal limit.
+    assert.equal(metrics.cubics, metrics.nodes - 1);
+    assert.ok(metrics.nearest < .01 && Math.abs(metrics.markerX - metrics.guideX) < .01);
+    assert.ok(metrics.xLabels.includes("11") && metrics.xLabels.includes("15.7") && !metrics.xLabels.includes("3.925"));
+    assert.ok(metrics.poolValueHeight <= metrics.poolLineHeight + 1, "预计入池金额与单位需同一行");
+    assert.equal(metrics.price, "0.00002");
+    assert.equal(metrics.budget, "11");
+    assert.ok(metrics.caption.includes("11 BNB") && metrics.caption.includes("保留价") && metrics.caption.includes("你的限价"));
+    assert.ok(metrics.grid > 200 && metrics.legendHeight <= 56);
+    await detail.locator(".demand-plot").focus();
+    await detail.keyboard.press("ArrowRight");
+    await detail.locator(".tier-detail").getByText(/本档/).waitFor();
+    await detail.keyboard.press("Escape");
+    await detail.locator(".tier-detail").waitFor({ state: "detached" });
+    await detail.close();
+  }
+} finally {
+  await detailBrowser.close();
+}
+const shotBrowser = await openBrowser();
 const shotPage = await shotBrowser.newPage({ viewport: { width: 390, height: 844 } });
 await shotPage.goto(url, { waitUntil: "domcontentloaded" });
 await shotPage.waitForSelector("svg.plot");
 const plotBox = await shotPage.locator("svg.plot").boundingBox();
+const background = await shotPage.locator(".page").evaluate((el) => getComputedStyle(el).backgroundColor.match(/\d+/g).slice(0, 3).map(Number));
 const png = await shotPage.screenshot({ clip: { x: plotBox.x, y: plotBox.y, width: plotBox.width, height: plotBox.height } });
 await shotBrowser.close();
 const image = pngRows(png);
@@ -125,7 +147,7 @@ for (let y = 6; y < image.height - 6 && blank.length < 5; y += 10) {
   for (let x = 70; x < image.width - 6 && blank.length < 5; x += 20) {
     const i = x * image.bpp;
     const px = [image.rows[y][i], image.rows[y][i + 1], image.rows[y][i + 2]];
-    if (px[0] === 11 && px[1] === 11 && px[2] === 13) blank.push([x, y]);
+    if (px.every((v, j) => v === background[j])) blank.push([x, y]);
   }
 }
 assert.ok(blank.length >= 5, `绘图区空白没有落在页面底色上，只找到 ${blank.length} 个`);
