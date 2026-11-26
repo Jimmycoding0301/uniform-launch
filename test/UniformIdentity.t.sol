@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {FixtureNamePolicy} from "./FixtureNamePolicy.sol";
 import {Test} from "forge-std/Test.sol";
 import {LaunchVaultAddresses} from "src/flap/LaunchVaultAddresses.sol";
 import {UniformLauncher, LaunchConfig} from "src/uniform/UniformLauncher.sol";
@@ -79,10 +80,11 @@ contract UniformIdentityTest is Test {
         address portal = LaunchVaultAddresses.hub();
         vm.etch(portal, address(new FeePortal()).code);
         vm.deal(portal, 1 ether);
+        address namePolicy = address(new FixtureNamePolicy());
         uint256 nonce = vm.getNonce(address(this));
         address predicted = vm.computeCreateAddress(address(this), nonce + 1);
         UniformVaultFactory vaultFactory = new UniformVaultFactory(predicted);
-        launcherFactory = new UniformLauncherFactory(address(vaultFactory));
+        launcherFactory = new UniformLauncherFactory(address(vaultFactory), namePolicy);
         listed = new ListedNft();
         balanceOnly = new BalanceOnlyNft();
         listedSource = new BinanceAgentIdSource(address(listed));
@@ -115,6 +117,23 @@ contract UniformIdentityTest is Test {
         sources = new address[](2);
         sources[0] = address(balanceSource);
         sources[1] = address(erc8004);
+    }
+
+    function test_mainnetUsesRealAgentTokenIdWithoutAddressFallback() public {
+        vm.chainId(56);
+        address nft = AgentIdentityAddresses.AGENT_ID_MAINNET;
+        IdentityMock identity = new IdentityMock();
+        address who = address(0xA11CE);
+        vm.prank(who);
+        uint256 id = identity.register();
+        vm.etch(nft, address(identity).code);
+        vm.mockCall(nft, abi.encodeWithSignature("ownerOf(uint256)", id), abi.encode(who));
+        vm.mockCallRevert(nft, abi.encodeWithSignature("ownerOf(uint256)", uint160(who)), "missing");
+        BinanceAgentIdSource adapter = new BinanceAgentIdSource(nft);
+        (bool ok,) = adapter.verify(who, id);
+        assertTrue(ok);
+        (ok,) = adapter.verify(who, uint160(who));
+        assertFalse(ok);
     }
 
     function test_onlyAgentIdPassesWithUint160WhenEnumerationMissing() public {

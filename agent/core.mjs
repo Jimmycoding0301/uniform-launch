@@ -56,7 +56,7 @@ function sourceName(id) {
 async function read(rpc, launcher) {
   const client = clientOf(rpc);
   const address = addr(launcher);
-  const [block, status, bids, floor, clearing, start, end, poolQuote, token, pool, minQuote, preview, sourceCount, maxBids, minSettleGas] =
+  const [block, status, bids, floor, clearing, start, end, poolQuote, token, pool, minQuote, preview, sourceCount, maxBids, minSettleGas, admittedWalletCount] =
     await Promise.all([
       client.getBlockNumber(),
       client.readContract({ address, abi: launcherAbi, functionName: "statusCode" }),
@@ -68,11 +68,12 @@ async function read(rpc, launcher) {
       client.readContract({ address, abi: launcherAbi, functionName: "poolQuote" }),
       client.readContract({ address, abi: launcherAbi, functionName: "token" }),
       client.readContract({ address, abi: launcherAbi, functionName: "pool" }),
-      client.readContract({ address, abi: launcherAbi, functionName: "minPoolQuote" }).catch(() => 4335714285714285715n),
+      client.readContract({ address, abi: launcherAbi, functionName: "minPoolQuote" }).catch(() => null),
       client.readContract({ address, abi: launcherAbi, functionName: "preview" }),
       client.readContract({ address, abi: launcherAbi, functionName: "identitySourceCount" }).catch(() => 0n),
       client.readContract({ address, abi: launcherAbi, functionName: "MAX_BIDS" }),
       client.readContract({ address, abi: launcherAbi, functionName: "MIN_SETTLE_GAS" }),
+      client.readContract({ address, abi: launcherAbi, functionName: "admittedWalletCount" }).catch(() => 0n),
     ]);
   const sources = [];
   const count = typeof sourceCount === "bigint" ? sourceCount : 0n;
@@ -102,7 +103,8 @@ async function read(rpc, launcher) {
     token,
     pool,
     minQuote,
-    maxBids,
+    maxBids: admittedWalletCount || maxBids,
+    admittedWalletCount,
     minSettleGas,
     previewOk: preview[0],
     previewPrice: preview[1],
@@ -125,7 +127,7 @@ export async function status(rpc, launcher) {
       clearingPrice: formatBnb(clearing),
       bidCount: Number(snap.bids),
       seatsLeft: Number(snap.bids >= snap.maxBids ? 0n : snap.maxBids - snap.bids),
-      minPoolQuote: formatBnb(snap.minQuote),
+      minPoolQuote: snap.minQuote === null ? null : formatBnb(snap.minQuote),
       sources: snap.sources.map((item, index) => ({ index, address: item })),
     };
   } catch (error) {
@@ -182,7 +184,7 @@ export async function simulate(rpc, launcher, budgetText, priceText) {
       tokens: (mine.tokens / WAD).toString(),
       spend: formatBnb(mine.spend),
       refund: formatBnb(mine.refund),
-      meetsMinPool: out.ok && out.poolQuote >= snap.minQuote,
+      meetsMinPool: snap.minQuote === null ? null : out.ok && out.poolQuote >= snap.minQuote,
       poolQuote: formatBnb(out.poolQuote),
     };
   } catch (error) {
@@ -196,7 +198,7 @@ function explainInput(error) {
     return { ok: false, reason: text, next: "按 BNB 填写，例如 1 或 0.00003。" };
   }
   if (text.includes("身份编号")) {
-    return { ok: false, reason: "身份编号要用整数", next: "Agent ID 填地址对应的整数，ERC-8004 填登记编号。" };
+    return { ok: false, reason: "身份编号要用整数", next: "正式 Agent ID 填 NFT token ID，ERC-8004 填登记编号。测试网替身使用钱包地址编号。" };
   }
   return explain(error);
 }
@@ -216,6 +218,9 @@ export async function identity(rpc, launcher, account, agentId) {
     const id = agentIdOf(agentId);
     const who = addr(account);
     const snap = await read(rpc, launcher);
+    if (snap.admittedWalletCount && !await snap.client.readContract({
+      address: addr(launcher), abi: launcherAbi, functionName: "admittedWallet", args: [who],
+    })) return { ok: false, reason: "不在本场名单", next: "核对该场拍卖登记的钱包。", results: [] };
     const results = [];
     for (let i = 0; i < snap.sources.length; i++) {
       const source = snap.sources[i];

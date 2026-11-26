@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {FixtureNamePolicy} from "../test/FixtureNamePolicy.sol";
 import {Script, console} from "forge-std/Script.sol";
 import {IERC20} from "@openzeppelin/contracts/token/ERC20/IERC20.sol";
 import {Clones} from "@openzeppelin/contracts/proxy/Clones.sol";
@@ -145,11 +146,12 @@ contract LocalForkScript is Script {
     function _boot() internal returns (IPortal portal, UniformLauncherFactory launcherFactory, uint256 fee) {
         portal = IPortal(LaunchVaultAddresses.hub());
         address admin = IProxyAdminLike(PROXY_ADMIN).owner();
+        vm.startBroadcast(creator);
+        address namePolicy = address(new FixtureNamePolicy());
         uint256 nonce = vm.getNonce(creator);
         address predicted = vm.computeCreateAddress(creator, nonce + 1);
-        vm.startBroadcast(creator);
         UniformVaultFactory vaultFactory = new UniformVaultFactory(predicted);
-        launcherFactory = new UniformLauncherFactory(address(vaultFactory));
+        launcherFactory = new UniformLauncherFactory(address(vaultFactory), namePolicy);
         vm.stopBroadcast();
         vm.startBroadcast(admin);
         portal.setLauncherFactoryMultiplier(address(launcherFactory), 10_000, true);

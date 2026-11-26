@@ -5,6 +5,8 @@ const keep = new Set([
   "statusCode",
   "bidCount",
   "MAX_BIDS",
+  "admittedWalletCount",
+  "admittedWallet",
   "MIN_SETTLE_GAS",
   "clearingPrice",
   "floorPrice",

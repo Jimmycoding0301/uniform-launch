@@ -27,6 +27,38 @@ export const launcherAbi = [
   },
   {
     "type": "function",
+    "name": "admittedWallet",
+    "inputs": [
+      {
+        "name": "",
+        "type": "address",
+        "internalType": "address"
+      }
+    ],
+    "outputs": [
+      {
+        "name": "",
+        "type": "bool",
+        "internalType": "bool"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
+    "name": "admittedWalletCount",
+    "inputs": [],
+    "outputs": [
+      {
+        "name": "",
+        "type": "uint256",
+        "internalType": "uint256"
+      }
+    ],
+    "stateMutability": "view"
+  },
+  {
+    "type": "function",
     "name": "bid",
     "inputs": [
       {
@@ -183,7 +215,7 @@ export const launcherAbi = [
         "internalType": "uint256"
       }
     ],
-    "stateMutability": "pure"
+    "stateMutability": "view"
   },
   {
     "type": "function",
@@ -362,6 +394,16 @@ export const launcherAbi = [
   },
   {
     "type": "error",
+    "name": "NoUnallocatedTokens",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "NotAdmitted",
+    "inputs": []
+  },
+  {
+    "type": "error",
     "name": "NotAgent",
     "inputs": []
   },
@@ -405,6 +447,11 @@ export const launcherAbi = [
   {
     "type": "error",
     "name": "NothingToRefund",
+    "inputs": []
+  },
+  {
+    "type": "error",
+    "name": "PortalQuoteUnavailable",
     "inputs": []
   },
   {

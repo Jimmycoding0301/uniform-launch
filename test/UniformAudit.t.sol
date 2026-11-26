@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {FixtureNamePolicy} from "./FixtureNamePolicy.sol";
 import {Test, console2} from "forge-std/Test.sol";
 import {LibClone} from "solady/utils/LibClone.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
@@ -60,13 +61,13 @@ contract ReenterPortal {
         pure
         returns (IPortal.GraduationFloorResultV2 memory r)
     {
-        uint256 usd = p.poolQuote * 700 ether * p.poolToken / p.totalSupply / 1 ether;
+        uint256 usd = p.poolQuote * p.quotePriceUsd / 1 ether;
         r.quoteUsdWad = usd;
-        r.createFloorUsdWad = 750 ether;
-        r.floorUsdWad = 1500 ether;
+        r.createFloorUsdWad = 1500 ether;
+        r.floorUsdWad = 3000 ether;
         r.multiplierBps = 10_000;
-        r.meetsCreateFloor = usd >= 750 ether;
-        r.meetsFloor = usd >= 1500 ether;
+        r.meetsCreateFloor = usd >= 1500 ether;
+        r.meetsFloor = usd >= 3000 ether;
     }
 
     function launchTaxTokenV2(
@@ -149,10 +150,11 @@ contract UniformAuditTest is Test {
         portal = LaunchVaultAddresses.hub();
         vm.etch(portal, address(new ReenterPortal()).code);
         vm.deal(portal, 100 ether);
+        address namePolicy = address(new FixtureNamePolicy());
         uint256 nonce = vm.getNonce(address(this));
         address predicted = vm.computeCreateAddress(address(this), nonce + 1);
         vaultFactory = new UniformVaultFactory(predicted);
-        launcherFactory = new UniformLauncherFactory(address(vaultFactory));
+        launcherFactory = new UniformLauncherFactory(address(vaultFactory), namePolicy);
         vm.deal(address(this), 10 ether);
         vm.deal(creator, 1 ether);
     }

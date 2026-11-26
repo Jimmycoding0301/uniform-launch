@@ -28,11 +28,12 @@ contract DeployTestnet is Script {
             require(erc8004Registry.code.length > 0, "8004");
         }
 
+        address namePolicy = vm.envAddress("FLAP_NAME_POLICY");
         vm.startBroadcast(key);
         uint256 nonce = vm.getNonce(deployer);
         address predictedLauncher = vm.computeCreateAddress(deployer, nonce + 1);
         UniformVaultFactory vaultFactory = new UniformVaultFactory(predictedLauncher);
-        UniformLauncherFactory launcherFactory = new UniformLauncherFactory(address(vaultFactory));
+        UniformLauncherFactory launcherFactory = new UniformLauncherFactory(address(vaultFactory), namePolicy);
 
         address agentNft;
         bool standIn;

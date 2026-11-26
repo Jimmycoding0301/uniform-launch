@@ -58,7 +58,7 @@ npm --prefix agent ci
 bash script/check.sh
 ```
 
-The browser tests use installed Google Chrome or Playwright Chromium. For the latter, run `(cd web && npx playwright install chromium)` before the web tests. Forge runs the unit suite without an RPC. To include the BSC Testnet fork suite, set `BSC_TESTNET_RPC_URL` to a public testnet RPC. [Foundry configuration](foundry.toml) · [Tests](test/)
+The browser tests use installed Google Chrome or Playwright Chromium. For the latter, run `(cd web && npx playwright install chromium)` before the web tests. Forge runs the unit suite without an RPC. To include the BSC Testnet fork suite, set `BSC_TESTNET_RPC_URL` to a public testnet RPC. [Foundry configuration](foundry.toml) · [Tests](test/) · [Flap review responses and four-bid walkthrough](docs/preaudit-response.md)
 
 中文操作顺序：先初始化子模块并运行 `bash script/demo.sh`，打开终端打印的演示地址。按左右键切换六幕，再运行网页和合约测试。网页可复制出价指令，代理预览，买家确认签名，页面核对回执。
 

@@ -15,6 +15,7 @@ import { TESTNET, TESTNET_ROWS } from "./networks";
 import { FundingProgress, PriceComparison, SettlementSummary, SimulationSummary, type Comparison } from "./AuctionFigures";
 
 const ABI = [
+  { type: "function", name: "admittedWalletCount", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "MAX_BIDS", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "MIN_SETTLE_GAS", stateMutability: "view", inputs: [], outputs: [{ type: "uint256" }] },
   { type: "function", name: "status", stateMutability: "view", inputs: [], outputs: [{ type: "uint8" }] },
@@ -136,6 +137,7 @@ type Row = {
 type SourceInfo = { sourceId: `0x${string}`; standIn: boolean };
 type Snap = {
   maxBids: number;
+  rostered: boolean;
   minSettleGas: bigint;
   status: number;
   floor: bigint;
@@ -326,7 +328,7 @@ export function App() {
           }
           verifiedNetwork = true;
         }
-        const [b, status, floor, clearing, softCap, minPoolQuote, start, end, token, pool, poolQuote, vaultFactory, preview, fills, got, sources, maxBids, minSettleGas] = await Promise.all([
+        const [b, status, floor, clearing, softCap, minPoolQuote, start, end, token, pool, poolQuote, vaultFactory, preview, fills, got, sources, maxBids, minSettleGas, admittedWalletCount] = await Promise.all([
           client.getBlockNumber(),
           client.readContract({ address: launcher, abi: ABI, functionName: "status" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "floorPrice" }),
@@ -345,6 +347,7 @@ export function App() {
           readSources(),
           client.readContract({ address: launcher, abi: ABI, functionName: "MAX_BIDS" }),
           client.readContract({ address: launcher, abi: ABI, functionName: "MIN_SETTLE_GAS" }),
+          client.readContract({ address: launcher, abi: ABI, functionName: "admittedWalletCount" }).catch(() => 0n),
         ]);
         if (stop) return;
         const agents = got[0] as Address[];
@@ -355,7 +358,8 @@ export function App() {
         const quotes = fills[1] as bigint[];
         const pulled = fills[2] as boolean[];
         const next: Snap = {
-          maxBids: Number(maxBids),
+          maxBids: Number(admittedWalletCount || maxBids),
+          rostered: admittedWalletCount > 0n,
           minSettleGas,
           status: Number(status),
           floor: floor as bigint,
@@ -622,18 +626,18 @@ export function App() {
     if (!snap || !draft || previewing || claimNotice || (publicTestnet && (!isAddress(sender.trim(), { strict: false }) || !block))) return;
     const picked = snap?.sources[sourceIndex];
     const sourceName = sourceTag(picked?.sourceId ?? "") || t(`来源 ${sourceIndex}`, `Source ${sourceIndex}`);
-    const autoAgent = !picked || sourceTag(picked.sourceId) !== "8004";
+    const autoAgent = !picked || (sourceTag(picked.sourceId) === "Agent ID" && picked.standIn);
     const agentLine = autoAgent
       ? t("按钱包地址自动识别。合约能调用 tokenOfOwnerByIndex 时用 tokenId，否则用 uint160(你的地址)，把这个数作为第三参。", "Derive the third argument from the wallet. Use tokenId if tokenOfOwnerByIndex is supported, otherwise use uint160(wallet address).")
       : /^\d+$/.test(agentIdInput.trim())
         ? agentIdInput.trim()
-        : t("（你在 ERC-8004 登记的编号）", "(your registered ERC-8004 ID)");
+        : t("（链上身份 token ID）", "(your on-chain identity token ID)");
     const settlementGasLimit = snap ? snap.minSettleGas + 1_000_000n : null;
     const action =
       phase === "open" || !snap
         ? t(
-          `data: bid(uint256,uint8,uint256)\n- maxPrice wei: ${priceWei}\n- 最高价：${priceWei ? formatPrice(priceWei) : ""} BNB/枚\n- sourceIndex: ${sourceIndex}\n- 来源：${sourceName}\n- agentId: ${agentLine}\n- agentId 说明：Agent ID 不用手填，按上面的规则从钱包地址得出。8004 填官方 Identity Registry 的编号，并且这个钱包必须是 ownerOf(agentId) 或 getAgentWallet(agentId)。同一来源的同一个 agentId 只能出一笔。\n- value wei: ${budgetWei}\n- 预算：${budget} BNB`,
-          `data: bid(uint256,uint8,uint256)\n- maxPrice wei: ${priceWei}\n- Limit: ${priceWei ? formatPrice(priceWei) : ""} BNB/token\n- sourceIndex: ${sourceIndex}\n- Source: ${sourceName}\n- agentId: ${agentLine}\n- Agent ID: derive the ID from the wallet as specified above. For ERC-8004, use the official Identity Registry ID. This wallet must be ownerOf(agentId) or getAgentWallet(agentId). Each ID can bid once per source.\n- value wei: ${budgetWei}\n- Budget: ${budget} BNB`,
+          `data: bid(uint256,uint8,uint256)\n- maxPrice wei: ${priceWei}\n- 最高价：${priceWei ? formatPrice(priceWei) : ""} BNB/枚\n- sourceIndex: ${sourceIndex}\n- 来源：${sourceName}\n- agentId: ${agentLine}\n- agentId 说明：真实 Agent ID 使用 NFT token ID，测试网替身按上面的规则确认。8004 填官方 Identity Registry 的编号，并且这个钱包必须是 ownerOf(agentId) 或 getAgentWallet(agentId)。同一来源的同一个 agentId 只能出一笔。\n- value wei: ${budgetWei}\n- 预算：${budget} BNB`,
+          `data: bid(uint256,uint8,uint256)\n- maxPrice wei: ${priceWei}\n- Limit: ${priceWei ? formatPrice(priceWei) : ""} BNB/token\n- sourceIndex: ${sourceIndex}\n- Source: ${sourceName}\n- agentId: ${agentLine}\n- Use the NFT token ID for a real Agent ID. For a testnet stand-in, verify the ID as described above. For ERC-8004, use the official Identity Registry ID. This wallet must be ownerOf(agentId) or getAgentWallet(agentId). Each ID can bid once per source.\n- value wei: ${budgetWei}\n- Budget: ${budget} BNB`,
         )
         : phase === "ready"
           ? t(
@@ -713,6 +717,7 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
           </nav>
         </div>
         <span className="top-meta">
+          {snap?.rostered && <span className="meta-line">{t("名单场", "Wallet roster required")}</span>}
           {snap?.sources.some((item) => item.standIn) ? <span className="meta-line"><Zh text={t("测试网 Agent ID 为替身", "Testnet Agent ID is a stand-in")} /></span> : null}
           <span className="meta-line network-label">{localFork ? <Zh text={t("本地分叉，不是测试网", "Local fork")} /> : t("BSC 测试网", "BSC Testnet")}</span>
           {block > 0n && <span className="meta-line">{t("区块 ", "Block ")}{groupFull(block)}</span>}
@@ -865,9 +870,9 @@ Run contract-call preview and show me the simulation. Wait for my confirmation b
                       ))}
                     </div>
                     <label htmlFor="agent">{t("代理编号", "Agent ID")}</label>
-                    {sourceTag(snap.sources[sourceIndex]?.sourceId ?? "") === "8004" ? (
+                    {snap.sources[sourceIndex] && !snap.sources[sourceIndex].standIn ? (
                       <div className={phase === "open" ? "window" : "window ro"}>
-                        <input id="agent" required={publicTestnet && phase === "open"} maxLength={78} value={agentIdInput} readOnly={phase !== "open"} inputMode="numeric" autoComplete="off" spellCheck={false} placeholder={t("你在 ERC-8004 登记的编号", "Your registered ERC-8004 ID")} onChange={(e) => setAgentIdInput(e.target.value.replace(/[^\d]/g, ""))} />
+                        <input id="agent" required={publicTestnet && phase === "open"} maxLength={78} value={agentIdInput} readOnly={phase !== "open"} inputMode="numeric" autoComplete="off" spellCheck={false} placeholder={t("链上身份 token ID", "On-chain identity token ID")} onChange={(e) => setAgentIdInput(e.target.value.replace(/[^\d]/g, ""))} />
                       </div>
                     ) : (
                       <p className="id-lock" id="agent">{t("按钱包地址自动识别", "Detected from wallet address")}<i>{t("只读", "Read only")}</i></p>
@@ -1168,7 +1173,7 @@ function groupFull(value: bigint): string {
 }
 
 function sameSnap(a: Snap, b: Snap) {
-  if (a.maxBids !== b.maxBids || a.minSettleGas !== b.minSettleGas) return false;
+  if (a.maxBids !== b.maxBids || a.rostered !== b.rostered || a.minSettleGas !== b.minSettleGas) return false;
   if (a.status !== b.status || a.floor !== b.floor || a.clearing !== b.clearing || a.softCap !== b.softCap || a.minPoolQuote !== b.minPoolQuote) return false;
   if (a.start !== b.start || a.end !== b.end || a.token !== b.token || a.pool !== b.pool || a.poolQuote !== b.poolQuote) return false;
   if (a.vaultFactory !== b.vaultFactory || a.previewQuote !== b.previewQuote) return false;

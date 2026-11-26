@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: MIT
 pragma solidity ^0.8.26;
 
+import {FixtureNamePolicy} from "./FixtureNamePolicy.sol";
 import {Test} from "forge-std/Test.sol";
 import {LibClone} from "solady/utils/LibClone.sol";
 import {UpgradeableBeacon} from "solady/utils/UpgradeableBeacon.sol";
@@ -58,13 +59,13 @@ contract MockPortal {
         pure
         returns (IPortal.GraduationFloorResultV2 memory r)
     {
-        uint256 usd = p.poolQuote * 700 ether * p.poolToken / p.totalSupply / 1 ether;
+        uint256 usd = p.poolQuote * p.quotePriceUsd / 1 ether;
         r.quoteUsdWad = usd;
-        r.createFloorUsdWad = 750 ether;
-        r.floorUsdWad = 1500 ether;
+        r.createFloorUsdWad = 1500 ether;
+        r.floorUsdWad = 3000 ether;
         r.multiplierBps = 10_000;
-        r.meetsCreateFloor = usd >= 750 ether;
-        r.meetsFloor = usd >= 1500 ether;
+        r.meetsCreateFloor = usd >= 1500 ether;
+        r.meetsFloor = usd >= 3000 ether;
     }
 
     function launchTaxTokenV2(
@@ -98,10 +99,11 @@ contract UniformLauncherTest is Test {
         portal = LaunchVaultAddresses.hub();
         vm.etch(portal, address(new MockPortal()).code);
         vm.deal(portal, 10 ether);
+        address namePolicy = address(new FixtureNamePolicy());
         uint256 nonce = vm.getNonce(address(this));
         address predicted = vm.computeCreateAddress(address(this), nonce + 1);
         vaultFactory = new UniformVaultFactory(predicted);
-        launcherFactory = new UniformLauncherFactory(address(vaultFactory));
+        launcherFactory = new UniformLauncherFactory(address(vaultFactory), namePolicy);
         vm.deal(address(this), 10 ether);
         vm.deal(alice, 100 ether);
         vm.deal(bob, 100 ether);
@@ -125,6 +127,168 @@ contract UniformLauncherTest is Test {
         launcher = UniformLauncher(
             payable(launcherFactory.newLauncher{value: 0.005 ether}(creator, abi.encode(_config(symbol, floor))))
         );
+    }
+
+    function test_nameAndSymbolScreenedBeforeSaltIsLocked() public {
+        LaunchConfig memory c = _config("TJ", 1e13);
+        c.name = "BLOCKED";
+        vm.prank(portal);
+        vm.expectRevert(UniformLauncherFactory.ScamNameOrSymbol.selector);
+        launcherFactory.newLauncher{value: 0.005 ether}(creator, abi.encode(c));
+
+        c.name = "Tongjia";
+        c.symbol = "BLOCKED";
+        vm.prank(portal);
+        vm.expectRevert(UniformLauncherFactory.ScamNameOrSymbol.selector);
+        launcherFactory.newLauncher{value: 0.005 ether}(creator, abi.encode(c));
+
+        c.symbol = "TJ";
+        FixtureNamePolicy(address(launcherFactory.namePolicy())).setUnavailable(true);
+        vm.prank(portal);
+        vm.expectRevert(UniformLauncherFactory.NameScreenUnavailable.selector);
+        launcherFactory.newLauncher{value: 0.005 ether}(creator, abi.encode(c));
+        FixtureNamePolicy(address(launcherFactory.namePolicy())).setUnavailable(false);
+        assertTrue(address(_new("TJ", 1e13)) != address(0));
+    }
+
+    function test_protectedAuctionReservesSeatsForAdmittedWallets() public {
+        LaunchConfig memory c = _config("TJ", 1e13);
+        c.admittedWallets = new address[](1);
+        c.admittedWallets[0] = alice;
+        vm.prank(portal);
+        UniformLauncher launcher =
+            UniformLauncher(payable(launcherFactory.newLauncher{value: 0.005 ether}(creator, abi.encode(c))));
+
+        vm.prank(bob);
+        vm.expectRevert(UniformLauncher.NotAdmitted.selector);
+        launcher.bid{value: 0.01 ether}(1e16, 0, uint160(bob));
+
+        vm.prank(alice);
+        launcher.bid{value: 0.01 ether}(1e16, 0, uint160(alice));
+        assertEq(launcher.admittedWalletCount(), 1);
+        assertEq(launcher.bidCount(), 1);
+
+        vm.roll(launcher.endBlock());
+        launcher.settle();
+        uint256 before = alice.balance;
+        vm.prank(alice);
+        launcher.refund();
+        assertEq(alice.balance - before, 0.01 ether);
+    }
+
+    function test_reviewExampleSuccessAndFullRefundPaths() public {
+        address carol = address(0xCA401);
+        address dan = address(0xDA4);
+        vm.deal(carol, 4 ether);
+        vm.deal(dan, 2 ether);
+        UniformLauncher launched = _new("TJ", 1e13);
+        vm.prank(alice);
+        launched.bid{value: 4 ether}(3e13, 0, uint160(alice));
+        vm.prank(bob);
+        launched.bid{value: 3 ether}(2e13, 0, uint160(bob));
+        vm.prank(carol);
+        launched.bid{value: 2 ether}(12e12, 0, uint160(carol));
+        vm.prank(dan);
+        launched.bid{value: 1 ether}(1e13, 0, uint160(dan));
+        assertEq(address(launched).balance, 10 ether);
+        vm.roll(launched.endBlock());
+        launched.settle();
+        assertEq(launched.clearingPrice(), 14e12);
+        assertEq(launched.poolQuote(), 7 ether);
+        (uint256[] memory tokens, uint256[] memory refunds,) = launched.getFills();
+        assertEq(tokens[0], 285_714_285714285714285714);
+        assertEq(tokens[1], 214_285_714285714285714285);
+        assertEq(tokens[2] + tokens[3], 0);
+        assertEq(refunds[0] + refunds[1], 0);
+        assertEq(refunds[2], 2 ether);
+        assertEq(refunds[3], 1 ether);
+        assertEq(launched.unallocatedTokens(), 1);
+        vm.prank(carol);
+        vm.expectRevert(UniformLauncher.RefundUnavailable.selector);
+        launched.refund();
+        vm.prank(carol);
+        launched.claim();
+        vm.prank(dan);
+        launched.claim();
+        assertEq(carol.balance, 4 ether);
+        assertEq(dan.balance, 2 ether);
+
+        LaunchConfig memory failedConfig = _config("TJ", 1e13);
+        failedConfig.salt = bytes32(uint256(2));
+        vm.prank(portal);
+        UniformLauncher failed = UniformLauncher(
+            payable(launcherFactory.newLauncher{value: 0.005 ether}(creator, abi.encode(failedConfig)))
+        );
+        vm.prank(carol);
+        failed.bid{value: 2 ether}(12e12, 0, uint160(carol));
+        vm.prank(dan);
+        failed.bid{value: 1 ether}(1e13, 0, uint160(dan));
+        vm.roll(failed.endBlock());
+        failed.settle();
+        assertEq(failed.statusCode(), uint8(UniformLauncher.Status.Failed));
+        assertEq(failed.token(), address(0));
+        vm.prank(carol);
+        failed.refund();
+        vm.prank(dan);
+        failed.refund();
+        assertEq(carol.balance, 4 ether);
+        assertEq(dan.balance, 2 ether);
+        assertEq(address(failed).balance, 0);
+    }
+
+    function test_mainnetRequiresAdmissionRoster() public {
+        vm.chainId(56);
+        LaunchConfig memory c = _config("TJ", 1e13);
+        vm.prank(portal);
+        vm.expectRevert(UniformLauncher.InvalidConfig.selector);
+        launcherFactory.newLauncher{value: 0.005 ether}(creator, abi.encode(c));
+    }
+
+    function test_liveQuoteAndExplicitPriceUnavailable() public {
+        UniformLauncher launcher = _new("TJ", 1e13);
+        bytes memory input = abi.encodeWithSelector(IPortal.launchQuoteConfig.selector, uint8(0), address(0));
+        vm.mockCall(portal, input, abi.encode(true, 600 ether));
+        assertEq(launcher.minPoolQuote(), 5.05 ether);
+        vm.prank(alice);
+        launcher.bid{value: 5.05 ether}(1e16, 0, uint160(alice));
+        vm.roll(launcher.endBlock());
+
+        vm.mockCall(portal, input, abi.encode(false, 0));
+        vm.expectRevert(UniformLauncher.PortalQuoteUnavailable.selector);
+        launcher.settle();
+        assertEq(launcher.statusCode(), uint8(UniformLauncher.Status.Open));
+
+        vm.mockCall(portal, input, abi.encode(true, 600 ether));
+        launcher.settle();
+        assertEq(launcher.statusCode(), uint8(UniformLauncher.Status.Succeeded));
+    }
+
+    function test_burnOnlyUnallocatedTokensAndKeepClaims() public {
+        UniformLauncher launcher = _new("TJ", 1e13);
+        vm.prank(alice);
+        launcher.bid{value: 2 ether}(1e16, 0, uint160(alice));
+        vm.prank(bob);
+        launcher.bid{value: 3 ether + 1}(1e16, 0, uint160(bob));
+        vm.roll(launcher.endBlock());
+        launcher.settle();
+
+        FakeToken issued = FakeToken(launcher.token());
+        (uint256[] memory owed,,) = launcher.getFills();
+        assertGt(launcher.unallocatedTokens(), 0);
+        assertEq(launcher.unallocatedTokens() + owed[0] + owed[1], launcher.SELL_AMOUNT());
+        uint256 residue = launcher.unallocatedTokens();
+        launcher.burnUnallocatedTokens();
+        assertEq(issued.balanceOf(address(0xdEaD)), residue);
+        assertEq(issued.balanceOf(address(launcher)), owed[0] + owed[1]);
+        vm.expectRevert(UniformLauncher.NoUnallocatedTokens.selector);
+        launcher.burnUnallocatedTokens();
+        vm.prank(alice);
+        launcher.claim();
+        vm.prank(bob);
+        launcher.claim();
+        assertEq(issued.balanceOf(alice), owed[0]);
+        assertEq(issued.balanceOf(bob), owed[1]);
+        assertEq(issued.balanceOf(address(launcher)), 0);
     }
 
     function test_versionsAndDescription() public {

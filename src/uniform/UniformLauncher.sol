@@ -2,6 +2,7 @@
 pragma solidity ^0.8.26;
 
 import {Initializable} from "@openzeppelin-contracts-upgradeable/proxy/utils/Initializable.sol";
+import {FixedPointMathLib} from "solady/utils/FixedPointMathLib.sol";
 import {SafeTransferLib} from "solady/utils/SafeTransferLib.sol";
 import {LauncherBase} from "src/flap/LauncherBase.sol";
 import {LauncherDescription} from "src/flap/LauncherHelper.sol";
@@ -27,6 +28,7 @@ struct LaunchConfig {
     uint256 floorPrice;
     uint64 durationBlocks;
     address[] identitySources;
+    address[] admittedWallets;
 }
 
 contract UniformLauncher is LauncherBase, Initializable, IStrategy {
@@ -46,10 +48,7 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
     uint64 public constant MAX_DURATION = 20_000;
     uint16 public constant BUY_TAX_BPS = 300;
     uint16 public constant SELL_TAX_BPS = 300;
-    /// @dev Portal 测试网按 700 美元/BNB 给 V2 地板计价。毕业线是池子报价 1500 美元，只在发射时判断。
-    uint256 public constant BNB_USD_WAD = 700 ether;
-    uint256 public constant GRADUATION_USD_WAD = 1500 ether;
-    /// @dev 加在精确毕业报价上的余量，避免整除后卡在毕业线上。
+    /// @dev Additional liquidity retained above the Portal's current larger floor.
     uint256 public constant LAUNCH_MARGIN = 0.05 ether;
 
     enum Status {
@@ -96,6 +95,10 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
     bool internal distributionInitialized;
     bool internal busy;
 
+    uint256 public admittedWalletCount;
+    mapping(address => bool) public admittedWallet;
+    uint256 public unallocatedTokens;
+
     event BidPlaced(
         address indexed agent,
         uint256 indexed bidId,
@@ -108,6 +111,7 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
     event AuctionFailed(uint8 reason);
     event Claimed(address indexed agent, uint256 tokens, uint256 quoteRefunded);
     event Refunded(address indexed agent, uint256 amount);
+    event UnallocatedTokensSentToBurnAddress(uint256 amount);
 
     error InvalidConfig();
     error Closed();
@@ -126,6 +130,9 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
     error InsufficientGas();
     error NotAgent();
     error AgentAlreadyBid();
+    error NotAdmitted();
+    error NoUnallocatedTokens();
+    error PortalQuoteUnavailable();
 
     modifier nonReentrant() {
         if (busy) revert Busy();
@@ -154,6 +161,15 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         for (uint256 i; i < c.identitySources.length; ++i) {
             if (c.identitySources[i].code.length == 0) revert InvalidConfig();
             identitySources.push(c.identitySources[i]);
+        }
+        if (c.admittedWallets.length > MAX_BIDS || (block.chainid == 56 && c.admittedWallets.length == 0)) {
+            revert InvalidConfig();
+        }
+        admittedWalletCount = c.admittedWallets.length;
+        for (uint256 i; i < c.admittedWallets.length; ++i) {
+            address wallet = c.admittedWallets[i];
+            if (wallet == address(0) || admittedWallet[wallet]) revert InvalidConfig();
+            admittedWallet[wallet] = true;
         }
 
         hub = hub_;
@@ -196,11 +212,10 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         return floorPrice * SELL_AMOUNT / 1e18;
     }
 
-    /// @notice 入池 BNB 至少要到毕业线，再加 `LAUNCH_MARGIN`。50% 入池时约为 4.3357 BNB。
-    function minPoolQuote() public pure returns (uint256) {
-        uint256 num = GRADUATION_USD_WAD * 1 ether * TOTAL_SUPPLY;
-        uint256 den = BNB_USD_WAD * POOL_AMOUNT;
-        return (num + den - 1) / den + LAUNCH_MARGIN;
+    /// @notice Current Portal floor plus the auction's liquidity margin.
+    function minPoolQuote() public view returns (uint256) {
+        (uint256 price, IPortal.GraduationFloorResultV2 memory floor) = _portalFloor(0);
+        return _minimumQuote(price, floor);
     }
 
     function bidCount() external view returns (uint256) {
@@ -295,12 +310,13 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
     }
 
     /// @notice `sourceIndex` 选择创建时固定的身份来源。`agentId` 由代理自己申报。
-    ///         Agent ID：有 `tokenOfOwnerByIndex` 时填 tokenId，否则填 `uint160(msg.sender)`。
+    ///         Agent ID on mainnet takes the ERC-721 token ID.
     ///         ERC-8004：填官方 Identity Registry 的编号，且本地址是 owner 或 `getAgentWallet`。
     function bid(uint256 maxPrice, uint8 sourceIndex, uint256 agentId) external payable nonReentrant {
         if (status != Status.Open) revert Closed();
         if (block.number < startBlock || block.number >= endBlock - CLOSE_BUFFER) revert Closed();
         if (bidOf[msg.sender] != 0) revert AlreadyBid();
+        if (admittedWalletCount != 0 && !admittedWallet[msg.sender]) revert NotAdmitted();
         if (msg.value < MIN_BUDGET || msg.value > MAX_BUDGET) revert BadBudget();
         if (maxPrice < floorPrice) revert BelowFloor();
         if (_bids.length >= MAX_BIDS) revert Full();
@@ -336,7 +352,7 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         if (block.number < endBlock) revert Early();
 
         UniformSettle.Outcome memory o = _quote();
-        if (!o.ok || o.poolQuote == 0 || o.poolQuote < minPoolQuote() || !_portalAllowsLaunch(o.poolQuote)) {
+        if (!o.ok || o.poolQuote == 0 || !_portalAllowsLaunch(o.poolQuote)) {
             status = Status.Failed;
             emit AuctionFailed(1);
             return;
@@ -402,32 +418,48 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         emit FlapDistributionInitialized(token_, amount);
     }
 
-    /// @dev 读 Portal 的毕业预检。调用失败或不达标都当不能发射，后面走全额退款。
+    function burnUnallocatedTokens() external nonReentrant {
+        uint256 amount = unallocatedTokens;
+        if (status != Status.Succeeded || amount == 0) revert NoUnallocatedTokens();
+        unallocatedTokens = 0;
+        token.safeTransfer(address(0xdEaD), amount);
+        emit UnallocatedTokensSentToBurnAddress(amount);
+    }
+
     function _portalAllowsLaunch(uint256 quoteIn) internal view returns (bool) {
-        uint256 price = BNB_USD_WAD;
-        try IPortal(hub).launchQuoteConfig(uint8(IPortalTypes.LaunchKind.DIRECT_V2_POOL_TAX), address(0)) returns (
-            bool enabled, uint256 quotePriceUsd
-        ) {
-            if (enabled && quotePriceUsd != 0) price = quotePriceUsd;
-        } catch {}
-        try IPortal(hub)
+        (uint256 price, IPortal.GraduationFloorResultV2 memory floor) = _portalFloor(quoteIn);
+        return floor.meetsCreateFloor && floor.meetsFloor && quoteIn >= _minimumQuote(price, floor);
+    }
+
+    function _portalFloor(uint256 quoteIn)
+        internal
+        view
+        returns (uint256 price, IPortal.GraduationFloorResultV2 memory floor)
+    {
+        bool enabled;
+        (enabled, price) = IPortal(hub).launchQuoteConfig(uint8(IPortalTypes.LaunchKind.DIRECT_V2_POOL_TAX), address(0));
+        if (!enabled || price == 0) revert PortalQuoteUnavailable();
+        floor = IPortal(hub)
             .graduationFloorV2ForLauncher(
                 IPortal.GraduationFloorParams({
-                    quoteToken: address(0),
-                    quotePriceUsd: price,
-                    poolQuote: quoteIn,
-                    poolToken: POOL_AMOUNT,
-                    totalSupply: TOTAL_SUPPLY,
-                    vaultFactory: vaultFactory
-                }),
+                quoteToken: address(0),
+                quotePriceUsd: price,
+                poolQuote: quoteIn,
+                poolToken: POOL_AMOUNT,
+                totalSupply: TOTAL_SUPPLY,
+                vaultFactory: vaultFactory
+            }),
                 address(this)
-            ) returns (
-            IPortal.GraduationFloorResultV2 memory floor
-        ) {
-            return floor.meetsCreateFloor && floor.meetsFloor;
-        } catch {
-            return false;
-        }
+            );
+    }
+
+    function _minimumQuote(uint256 price, IPortal.GraduationFloorResultV2 memory floor)
+        internal
+        pure
+        returns (uint256)
+    {
+        uint256 usd = FixedPointMathLib.max(floor.floorUsdWad, floor.createFloorUsdWad);
+        return FixedPointMathLib.fullMulDivUp(usd, 1 ether, price) + LAUNCH_MARGIN;
     }
 
     function _quote() internal view returns (UniformSettle.Outcome memory) {
@@ -446,10 +478,13 @@ contract UniformLauncher is LauncherBase, Initializable, IStrategy {
         token = token_;
         pool = pool_;
         uint256 n = _bids.length;
+        uint256 remaining = SELL_AMOUNT;
         for (uint256 i; i < n; ++i) {
+            remaining -= o.fills[i].tokens;
             _bids[i].tokensOwed = o.fills[i].tokens;
             _bids[i].quoteOwed = o.fills[i].refundQuote;
         }
+        unallocatedTokens = remaining;
         emit AuctionSettled(o.clearingPrice, o.poolQuote, token_, pool_);
     }
 
