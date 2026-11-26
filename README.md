@@ -20,7 +20,7 @@ On a rising bonding curve, buying earlier can get you more tokens for the same b
 | Our custom Flap interface | [Launcher detail component and manifest](flap-ui/launcher-detail/) · [Mini App source for create, bid, settle, claim and refund](flap-ui/mini-app/) · [Flap integration](docs/flap-integration.md) |
 | Open code and mechanism | [Auction contracts](src/uniform/) · [Agent CLI and MCP tools](agent/) · [Short submission brief](docs/hackquest-submission.md) |
 
-[Bilingual pitch deck](qa/submission/Uniform-Launch-Bangkok-Pitch.pptx) · [60-second walkthrough](docs/judge-demo.md) · [Six demo screens](qa/submission/README.md) · [Pitch script and judge Q&A](docs/pitch-runbook.md)
+[Bilingual pitch deck with two Q&A slides](qa/submission/Uniform-Launch-Bangkok-Pitch.pptx) · [60-second walkthrough](docs/judge-demo.md) · [Six demo screens](qa/submission/README.md) · [Pitch script and judge Q&A](docs/pitch-runbook.md)
 
 ## Try the bidding desk
 

@@ -9,17 +9,16 @@
 - 读本场 `MAX_BIDS()` 确认容量。当前合约每场上限为 128 笔。每个地址一笔，每个身份来源加身份编号一笔。主网只使用 Binance Agent ID 的真实 NFT 编号。名单场还要用 `admittedWallet(address)` 确认钱包已入选。
 - 最高价不能低于保留价，也不得高于 `MAX_PRICE()`（新版为 1e36 报价 wei/枚）
 - 窗口结束后任何人可以结算。为当前 Launcher 读取 `minPoolQuote()`。未满足门槛时结算失败，可全退出价本金。读不到门槛时先检查 Portal 报价服务。
-- 成功后，竞拍者调用 Launcher 的 `claim()` 领取成交代币和剩余预算。买入税和卖出税各 3%。
+- 成功后，竞拍者调用 Launcher 的 `claim()` 领取成交代币和剩余预算。买入税和卖出税各 3%，持续 30 天。
 - 公开测试网投产配置通过 Flap 的 MARKETING 槽将项目侧交易税支付给 `creator()` 返回的创建者。
 - 结算的交易 gas 上限用本场 `MIN_SETTLE_GAS()` 加 1,000,000。若进入结算时剩余 gas 低于合约门槛，调用回滚，拍卖保持开放
 
 ## 合约
 
 - 发射工厂：https://testnet.bscscan.com/address/0x5A995C7ee958a631FDD151C9582604d347D7799A
-- 旧版公开发射的金库工厂：https://testnet.bscscan.com/address/0x2EF7a93b2fE4FBF520D5210b3ea39a72E5133dc6
-- Agent ID 来源：https://testnet.bscscan.com/address/0xe4f7B9aBA67FEDAbF9B9a151C604466D448DAb09
-- ERC-8004 来源：https://testnet.bscscan.com/address/0x0526f00B99e952cE55F1b7BDaf9E6Ae42b42cf22
-- 机器可读地址和错误码：/agent.json
+- Agent ID 来源：https://testnet.bscscan.com/address/0x5aBdA470ed6A8dad942F6ff125b172c4274A7d32
+- ERC-8004 来源：https://testnet.bscscan.com/address/0x55fa503668E5c32A8FB49aBcF3FD1CCCA0e6AF2D
+- 机器可读地址和错误码：https://jimmycoding0301.github.io/uniform-launch/agent.json
 
 ## 阶段能做的事
 
@@ -46,6 +45,6 @@ MCP 用 stdio。方法是 initialize、ping、tools/list、tools/call。工具�
 
 ## 网页与回执
 
-本地六幕演示的复制指令只读取分叉并模拟。真实测试网拍卖用 /?network=testnet&launcher=<Launcher地址> 打开。网页先检查链 97 和 Portal 中登记的工厂。填入代理钱包公开地址后复制指令，代理确认钱包支持该测试网，运行 preview，经用户确认后运行 execute。页面从复制时的区块起匹配发送者、目标合约、方法、金额和出价参数，找到成功回执后显示。手贴哈希可补查。钱包的链列表须以现场实际返回为准。
+本地六幕演示的复制指令只读取分叉并模拟。已发射的公开测试网拍卖：https://jimmycoding0301.github.io/uniform-launch/?network=testnet&launcher=0xADD4e8b95B194D457611b4754e53c45A6E2A41d6 。网页先检查链 97 和 Portal 中登记的工厂。填入代理钱包公开地址后复制指令，代理确认钱包支持该测试网，运行 preview，经用户确认后运行 execute。页面从复制时的区块起匹配发送者、目标合约、方法、金额和出价参数，找到成功回执后显示。手贴哈希可补查。钱包的链列表须以现场实际返回为准。
 
-网页保留历史测试网工厂。运营方核实新版 MARKETING Launcher Factory 的公开地址后，可在构建网页时用 `VITE_MARKETING_LAUNCHER_FACTORY` 加入该地址。页面以 Portal 返回的工厂地址核对场次来源。
+网页以 Portal 返回的工厂地址核对场次来源。当前公开拍卖使用上面的 MARKETING 工厂。
