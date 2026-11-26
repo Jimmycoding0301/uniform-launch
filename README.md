@@ -2,7 +2,7 @@
 
 基于 Agent ID 的 BNB Chain 同价发行协议：窗口结束一次清算，成功经 Flap 建池，失败全额退款。
 
-![第 1 幕，接单场](qa/r15/demo-1-1440.png)
+![接单场的需求曲线、清算价和出价簿](qa/submission/scene-1.png)
 
 代理用限价和预算参加新币开盘，窗口结束只清算一次，成交的人付同一个价。
 
@@ -10,7 +10,7 @@
 
 先到先得的曲线让第一笔和最后一笔差很多。用本机分叉演示场的 9 笔真实出价做模拟：同价的单价比是 1，常数乘积曲线是 1.7789，价差 0.00000875 BNB/枚。参数和算法在 [docs/why-uniform.md](docs/why-uniform.md)。这是模拟，不是行情。
 
-同一区块里的顺序不影响清算价。一个身份只能出一笔。测试网的身份是替身，防女巫要等主网接上币安 Agent ID 真合约。
+同一区块内的出价顺序不影响清算价。每场分别按钱包地址和「身份来源＋编号」限制重复出价。测试网的 Binance Agent ID 使用替身。
 
 Agents submit a limit and a budget. One clearing at the end, one price for every fill. On the live demo bids, the uniform price ratio is 1 and a constant-product curve is 1.7789. Simulated, not market data.
 
@@ -24,7 +24,7 @@ Agents submit a limit and a budget. One clearing at the end, one price for every
 | 机制为什么不同 | [docs/why-uniform.md](docs/why-uniform.md) |
 | Developer：建在 BNB Chain | 链编号 97。[发射工厂已验证](https://testnet.bscscan.com/address/0xE82642aC5c3B3B4b7D4cDeaf6a251Dc0BB7AcEfd) |
 | BNB Chain 集成 | 同一份已验证工厂。页面和代理用 viem 读链 97，见 [llms.txt](web/public/llms.txt) |
-| 设计与可用性 | [架构和路径](docs/architecture.md)、[演示稿](docs/demo-script.md) |
+| 设计与可用性 | [六幕截图与验收](qa/submission/README.md)、[演示稿](docs/demo-script.md) |
 | 技术实现 | [LICENSE](LICENSE)、[依赖](#依赖与致谢)、[.env.example](.env.example)、[docker-compose.yml](docker-compose.yml) |
 | 创新 | [代理接口](agent/README.md)，命令行和 MCP，只给未签名交易 |
 | 可持续 | [路线图](docs/roadmap.md)。协议现在不收费 |
@@ -110,9 +110,17 @@ Foundry, Node 22 or newer, python3 and curl. On Windows, use WSL2. The fork read
 bash script/demo.sh
 ```
 
-跑完后终端打印页面地址和 `/?demo=1`。没有演示场时，这条命令会在本机分叉上造三场：9 笔接单、一场已发射、一场失败，并写 `web/public/demo.json`。接单场清算价 0.00002、入池 10 BNB。已发射场开盘价 0.00008、入池 40 BNB。造完后买 1 BNB 再卖出一半，税进金库。金库余额从链上读，保留 4 位小数，这一步是 0.0275 BNB。已有能读到代码的场次就接着用，不重造；金库还是 0 时补这笔买卖。演示条有六幕，左右方向键切换，Esc 退出。`docker-compose.yml` 只起分叉和页面，不造场。演示请用 `bash script/demo.sh`。本环境没有 Docker，未实测。检查顺序：先 `bash script/demo.sh`，再 `cd web && npm test`，然后 `forge test`、`node agent/edge.test.mjs`、`node script/check-links.mjs`、`node script/check-why.mjs`、`node script/check-evidence.mjs`。
+终端会打印本机演示地址。打开 `/?demo=1`，左右方向键切幕，Esc 退出。默认网页端口是 4317，遇到占用会自动选择空闲端口。脚本在 Anvil 生成或校验三个场次，并将地址写入 `web/public/demo.json`。
 
-One command starts the local fork and the page, then prints both URLs. If no demo file is present it creates an open book (clearing price 0.00002, 10 BNB), a launched auction (open price 0.00008, 40 BNB) and a failed auction, buys 1 BNB and sells half, then writes `web/public/demo.json`. The vault is read from the chain and shows 0.0275 BNB. An existing book is reused; a zero vault gets the same trade. `docker-compose.yml` only starts the fork and the page. It does not create auctions. Use `bash script/demo.sh` for the demo. Docker was not run here. Checks run in this order: `bash script/demo.sh`, then `cd web && npm test`, then `forge test` and the node scripts in the paragraph above.
+| 分叉演示场 | 可以核对的结果 |
+| --- | --- |
+| 接单 | 9 笔，提交预算 15.7 BNB，当前清算价 0.00002 BNB/枚，预计入池 10 BNB |
+| 发射成功 | 开盘价 0.00008 BNB/枚，入池 40 BNB；买卖后的 Vault 余额从链上读取 |
+| 未达门槛 | 三笔共 3 BNB，可清算但低于约 4.3357 BNB 的最低入池额，三人均可申请全额退款 |
+
+从仓库根目录执行 `npm --prefix web test` 和 `forge test`。浏览器验收可使用已安装的 Google Chrome，也可先在 `web/` 中执行 `npx playwright install chromium`。本地演示复制只读预览指令。公开测试网场次使用 `/?network=testnet&launcher=<地址>`，填入代理钱包公开地址即可跟踪本次操作的回执。
+
+Run the demo script to create and validate three local auctions. The printed URL follows the active web port. The public testnet view checks the Launcher’s factory and tracks the copied instruction against the sender, method and bid parameters.
 
 ## 测试网
 
@@ -138,9 +146,9 @@ No signing and no broadcasting in the app, the CLI, or the MCP server. Forge scr
 
 ## 已知限制
 
-每个身份只能出一笔：Binance Agent ID 或 ERC-8004 编号，一场固定一种来源。测试网 Agent ID 是演示替身，防女巫要在主网上才成立。单人预设需准备 4.6 tBNB。公共测试网发射待项目方执行。
+每场可配置一至四个身份来源。合约校验钱包和来源内的身份编号，并限制重复出价。测试网 Binance Agent ID 是替身。身份的唯一性取决于来源的发放规则。单人预设需准备 4.6 tBNB。公共测试网发射待项目方执行。
 
-Each identity bids once: a Binance Agent ID or an ERC-8004 number, one source for the auction. The testnet Agent ID is a stand-in. Sybil checks hold on mainnet. The single-signer preset requires 4.6 tBNB. Public testnet launch evidence is pending.
+Each auction accepts one to four configured identity sources. A wallet and a source-specific identifier can each bid once. Identity uniqueness depends on the issuer. The testnet Binance Agent ID is a stand-in. The single-signer preset requires 4.6 tBNB. Public testnet launch evidence is pending.
 
 ## 商业模式
 
