@@ -1,5 +1,9 @@
 # Uniform Launch · One-Price Auctions
 
+## Current MARKETING release
+
+For the new public auction, say: “On a successful launch, Flap routes the configured project trading tax directly to the creator. This testnet auction accepts verified identities without a wallet roster; the mainnet contract requires a roster.” The earlier video and Vault receipts document the original release. [Current public receipts](marketing-testnet-evidence.md)
+
 ## Two-minute submission video
 
 Use the English column as the voiceover. The Chinese columns direct the screen capture and give the meaning of each line. Start each shot at the marked second and hold the result until the next cut. These timings belong to this recording. [English subtitles](video-subtitles.en.srt) · [Five-slide deck](../qa/submission/Uniform-Launch-BNB-Bangkok.pptx) · [Offline cue clock](../qa/submission/presenter-clock.html)
