@@ -113,6 +113,14 @@ contract E2ETestnet is Script {
         view
         returns (address to, uint256 value, uint256 gasLimit, bytes memory data)
     {
+        return prepareBudget(stage, signer, instance, runNumber, 200);
+    }
+
+    function prepareBudget(string calldata stage, address signer, address instance, uint256 runNumber, uint64 durationBlocks)
+        public
+        view
+        returns (address to, uint256 value, uint256 gasLimit, bytes memory data)
+    {
         require(!vm.isContext(VmSafe.ForgeContext.ScriptBroadcast), "unsigned-only");
         require(block.chainid == 97 && signer != address(0), "wrong-chain-or-signer");
         bytes32 action = keccak256(bytes(stage));
@@ -129,16 +137,19 @@ contract E2ETestnet is Script {
             c.meta = "bafkreig4y5nwb4izyilbbmiydumvkld446d4k7j4ohg3x3q2lfel3fo4yq";
             c.salt = _mine(keccak256(abi.encode("uniform-budget", block.chainid, signer, runNumber)));
             c.floorPrice = 8e12; // 500,000 tokens at the reserve require 4 tBNB.
-            c.durationBlocks = 200;
+            c.durationBlocks = durationBlocks;
             c.identitySources = new address[](1);
             c.identitySources[0] = AGENT_SOURCE;
             return (PORTAL, fee, 3_000_000, abi.encodeCall(portal.newLauncher, (FACTORY, abi.encode(c))));
         }
 
-        require(IPortal(PORTAL).getLauncher(instance).launcherFactory == FACTORY, "wrong-factory");
         UniformLauncher l = UniformLauncher(payable(instance));
-        require(l.creator() == signer && l.hub() == PORTAL && l.floorPrice() == 8e12, "wrong-auction");
-        require(l.identitySourceCount() == 1 && l.identitySources(0) == AGENT_SOURCE, "wrong-identity");
+        // Registration belongs to the signing account and can be prepared before an auction exists.
+        if (instance != address(0) || action != keccak256("identity")) {
+            require(IPortal(PORTAL).getLauncher(instance).launcherFactory == FACTORY, "wrong-factory");
+            require(l.creator() == signer && l.hub() == PORTAL && l.floorPrice() == 8e12, "wrong-auction");
+            require(l.identitySourceCount() == 1 && l.identitySources(0) == AGENT_SOURCE, "wrong-identity");
+        }
         if (action == keccak256("identity")) {
             return (STAND_IN, 0, 100_000, abi.encodeCall(IStandIn.claim, ()));
         }

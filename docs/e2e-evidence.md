@@ -69,17 +69,22 @@ node script/budget-launch.mjs rehearse
 
 ### 项目方签名
 
-公共测试网发射由 Jimmy 或指定操作者完成。运行以下命令只读取链并输出当前步骤的未签名交易。使用一个新编号区分同一地址创建的不同场次。重试同一场沿用编号。确认创建回执后，从工厂的 `UniformLauncherCreated` 事件填写 Launcher 地址。
+Jimmy 或指定操作者用同一地址完成创建、出价和领取。以下 `plan` 命令会模拟当前步骤并输出未签名交易。先准备好签名设备，查该地址在测试身份替身中的 `balanceOf`。余额为 0 时，先登记身份并等回执。已登记的地址从创建开始。
 
 ```sh
 SIGNER=0x36ABB7cC5C3d3b944eC2c88cDB0DFE40f9a4712c
-node script/budget-launch.mjs plan create --signer "$SIGNER" --run 1
-# 确认创建交易后，将 LAUNCHER 设为这场的实际地址
-node script/budget-launch.mjs plan identity --signer "$SIGNER" --launcher "$LAUNCHER"
+cast call 0x89c60E8E5aF13508900152e5FEE149bf5708d8a0 'balanceOf(address)(uint256)' "$SIGNER" --rpc-url https://bsc-testnet-rpc.publicnode.com
+# 余额为 0 时，准备这笔登记并由操作者签名
+node script/budget-launch.mjs plan identity --signer "$SIGNER"
+# 身份就绪后创建。每一场换新 run 编号，同一场重试保持编号与时长。
+node script/budget-launch.mjs plan create --signer "$SIGNER" --run 1 --duration 1200
+# 从创建回执里的 UniformLauncherCreated 事件取本场地址，设为 LAUNCHER
 node script/budget-launch.mjs plan bid --signer "$SIGNER" --launcher "$LAUNCHER"
 # 等到 endBlock 后再准备结算
 node script/budget-launch.mjs plan settle --signer "$SIGNER" --launcher "$LAUNCHER"
 node script/budget-launch.mjs plan claim --signer "$SIGNER" --launcher "$LAUNCHER"
 ```
 
-每一步等上一步实际回执成功后运行。拍卖共 200 个区块，最后 20 个区块停止接单。准备好签名设备后再创建。将输出交给代理预览，核对链 97、目标、金额、calldata、gas 上限及价格，在币安 App 确认。创建准备时会读取当时的工厂状态、Portal 暂停位和创建费。出价前会检查窗口。结算前会核对预期清算结果。如果公开场次出现其他出价，先重新评估该场的清算预览。结算后检查 Launcher 的 `statusCode() = 1`、`AuctionSettled` 事件以及 token、pool 地址，再准备领取。若实际状态是 2，出价人按失败场流程申请退款。领取后核对 500,000 枚代币到账。公共测试网的创建、结算哈希与 BscScan 链接待实际回执。
+创建时可选 200 至 20,000 个区块，默认 200。人工签名建议用 1,200 个区块，前 1,180 个区块接单，按平均每块 0.45 秒估算约 9 分钟。以链上区块为准，出价须在 `endBlock - 20` 前上链，结算从 `endBlock` 开始。已经创建的场次也支持 `plan identity --signer "$SIGNER" --launcher "$LAUNCHER"`，拍卖窗口会继续计时。
+
+逐笔等实际回执成功。可将每一步输出交给代理预览。核对链 97、目标、金额、calldata、gas 上限及价格后，由操作者使用支持 BSC 测试网的签名工具确认。创建准备时会读取当时的工厂状态、Portal 暂停位和创建费。出价前会检查窗口。结算前会核对预期清算结果。如果公开场次出现其他出价，先重新评估该场的清算预览。结算后检查 Launcher 的 `statusCode() = 1`、`AuctionSettled` 事件以及 token、pool 地址，再准备领取。若实际状态是 2，出价人按失败场流程申请退款。领取后核对 500,000 枚代币到账。公共测试网的创建、结算哈希与 BscScan 链接待实际回执。

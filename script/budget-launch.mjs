@@ -30,13 +30,13 @@ function read(client, address, signature, args = []) {
   return client.readContract({ address, abi, functionName: abi[0].name, args });
 }
 
-async function plan(client, rpc, stage, signer, launcher, runNumber) {
+async function plan(client, rpc, stage, signer, launcher, runNumber, duration) {
   if (!stages.includes(stage)) throw new Error("Expected create, identity, bid, settle or claim");
   if (await client.getChainId() !== 97) throw new Error("Expected BSC testnet (97)");
-  if (stage !== "create" && !launcher) throw new Error("Supply the Launcher address from the creation receipt");
+  if (stage !== "create" && stage !== "identity" && !launcher) throw new Error("Supply the Launcher address from the creation receipt");
   const raw = execFileSync("forge", [
     "script", "script/E2ETestnet.s.sol:E2ETestnet", "--json", "--rpc-url", rpc,
-    "--sig", "prepareBudget(string,address,address,uint256)", stage, signer, launcher ?? zeroAddress, runNumber,
+    "--sig", "prepareBudget(string,address,address,uint256,uint64)", stage, signer, launcher ?? zeroAddress, runNumber, String(duration),
   ], { cwd: root, encoding: "utf8", maxBuffer: 8_000_000, stdio: ["ignore", "pipe", "pipe"] });
   const result = JSON.parse(raw).returns;
   const gasPrice = await client.getGasPrice();
@@ -61,7 +61,7 @@ async function availablePort() {
   return port;
 }
 
-async function rehearse(upstream, runNumber) {
+async function rehearse(upstream, runNumber, duration) {
   const port = await availablePort();
   const local = "http://127.0.0.1:" + port;
   const child = spawn("anvil", [
@@ -100,9 +100,12 @@ async function rehearse(upstream, runNumber) {
       if (stage === "settle") {
         const end = await read(client, launcher, "endBlock() view returns (uint64)");
         const height = await client.getBlockNumber({ cacheTime: 0 });
-        if (end > height) await rpc("anvil_mine", toHex(end - height));
+        // Bound each RPC call for long operator-selected windows on remote-backed forks.
+        for (let remaining = end - height; remaining > 0n; remaining -= 200n) {
+          await rpc("anvil_mine", toHex(remaining < 200n ? remaining : 200n));
+        }
       }
-      const tx = await plan(client, local, stage, signer, launcher, runNumber);
+      const tx = await plan(client, local, stage, signer, launcher, runNumber, duration);
       const hash = await rpc("eth_sendTransaction", tx);
       const receipt = await client.waitForTransactionReceipt({ hash });
       if (receipt.status !== "success") throw new Error(stage + " reverted");
@@ -139,17 +142,21 @@ async function rehearse(upstream, runNumber) {
 try {
   const { values, positionals: [command, stage] } = parseArgs({ allowPositionals: true, options: {
     rpc: { type: "string", default: defaultFork }, signer: { type: "string" }, launcher: { type: "string" },
-    run: { type: "string", default: "1" },
+    run: { type: "string", default: "1" }, duration: { type: "string", default: "200" },
   } });
   if (!/^\d+$/.test(values.run)) throw new Error("Run number must be a nonnegative integer");
+  const duration = Number(values.duration);
+  if (!/^\d+$/.test(values.duration) || duration < 200 || duration > 20000) {
+    throw new Error("Duration must be between 200 and 20000 whole blocks");
+  }
   const runNumber = BigInt(values.run).toString();
   let result;
   if (command === "plan") {
     if (!values.signer) throw new Error("Supply the public signer address with --signer");
     const launcher = values.launcher && getAddress(values.launcher);
-    result = await plan(makeClient(values.rpc), values.rpc, stage, getAddress(values.signer), launcher, runNumber);
+    result = await plan(makeClient(values.rpc), values.rpc, stage, getAddress(values.signer), launcher, runNumber, duration);
   } else if (command === "rehearse") {
-    result = await rehearse(values.rpc, runNumber);
+    result = await rehearse(values.rpc, runNumber, duration);
   } else {
     throw new Error("Use plan STAGE --signer ADDRESS [--launcher ADDRESS] or rehearse [--rpc PUBLIC_READ_RPC]");
   }
