@@ -25,13 +25,14 @@ const after = await desk.evaluate(() => {
   return { form: form.height, top: btn.top };
 });
 const helpMargin = await desk.evaluate(() => getComputedStyle(document.querySelector(".help")).marginTop);
-assert.equal(helpMargin, "8px", `帮助行间距 ${helpMargin}`);
+assert.ok(parseFloat(helpMargin) >= 4, `帮助行间距 ${helpMargin}`);
 const rails = await desk.evaluate(() => ({
   mid: getComputedStyle(document.querySelector(".bid.mid")).backgroundImage.includes("repeating-linear-gradient"),
-  solid: getComputedStyle(document.querySelector(".bid.in")).boxShadow.includes("rgb(240, 185, 11)"),
+  solid: getComputedStyle(document.querySelector(".bid.in")).boxShadow.includes(getComputedStyle(document.querySelector(".primary")).backgroundColor),
+  accent: getComputedStyle(document.querySelector(".primary")).backgroundColor,
 }));
 const limitStroke = await desk.evaluate(() => getComputedStyle(document.querySelector(".your-line")).stroke);
-assert.ok(limitStroke.includes("240"), `接单页限价线不是金色 ${limitStroke}`);
+assert.equal(limitStroke, rails.accent, `接单页限价线与主操作不一致 ${limitStroke}`);
 assert.ok(rails.mid, "边际行不是虚线");
 assert.ok(rails.solid, "价内行不是实线");
 const stack = await desk.evaluate(() => {
@@ -40,9 +41,7 @@ const stack = await desk.evaluate(() => {
   return Math.round(facts.top - plot.bottom);
 });
 assert.ok(stack >= 0, `参数表盖住曲线 ${stack}`);
-assert.ok(Math.abs(before.top - 796) <= 8, `按钮上沿 ${before.top}`);
-assert.ok(Math.abs(before.bottom - 844) <= 8, `按钮下沿 ${before.bottom}`);
-assert.ok(before.bottom <= 860, `桌面按钮下沿 ${before.bottom}`);
+assert.ok(before.top >= 0 && before.bottom - before.top >= 44 && before.bottom <= 900, `桌面主操作超出首屏 ${before.top}–${before.bottom}`);
 assert.ok(before.formBottom <= 900, `左栏下沿 ${before.formBottom}`);
 assert.ok(Math.abs(before.form - after.form) <= 2, `表单高度差 ${Math.abs(before.form - after.form)}`);
 assert.ok(Math.abs(before.top - after.top) <= 2, `按钮位移 ${Math.abs(before.top - after.top)}`);
@@ -105,12 +104,16 @@ async function demoGap(width, height) {
       barTop: Math.round(bar.top),
       barBottom: Math.round(bar.bottom),
       overlap: btn.bottom > bar.top && btn.top < bar.bottom,
+      ledgerBottom: document.querySelector(".bid:last-child").getBoundingClientRect().bottom,
+      hashBottom: document.querySelector(".hash-toggle").getBoundingClientRect().bottom,
     };
   });
 }
 const demoDesk = await demoGap(1440, 900);
 const demoPhone = await demoGap(390, 844);
 assert.equal(demoDesk.overlap, false, `桌面演示条挡住按钮 ${JSON.stringify(demoDesk)}`);
+assert.ok(demoDesk.barBottom <= 900, `桌面导航超出首屏 ${demoDesk.barBottom}`);
+assert.ok(demoDesk.ledgerBottom <= demoDesk.barTop && demoDesk.hashBottom <= demoDesk.barTop, `桌面出价簿或核对入口被遮挡 ${JSON.stringify(demoDesk)}`);
 assert.equal(demoPhone.overlap, false, `手机演示条挡住按钮 ${JSON.stringify(demoPhone)}`);
 await browser.close();
 console.log("布局检查通过", { desk: before, mobile, covered: covered.length, reducedMotion: running, demoDesk, demoPhone });

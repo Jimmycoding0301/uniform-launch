@@ -118,6 +118,7 @@ const shotPage = await shotBrowser.newPage({ viewport: { width: 390, height: 844
 await shotPage.goto(url, { waitUntil: "domcontentloaded" });
 await shotPage.waitForSelector("svg.plot");
 const plotBox = await shotPage.locator("svg.plot").boundingBox();
+const background = await shotPage.locator(".page").evaluate((el) => getComputedStyle(el).backgroundColor.match(/\d+/g).slice(0, 3).map(Number));
 const png = await shotPage.screenshot({ clip: { x: plotBox.x, y: plotBox.y, width: plotBox.width, height: plotBox.height } });
 await shotBrowser.close();
 const image = pngRows(png);
@@ -126,7 +127,7 @@ for (let y = 6; y < image.height - 6 && blank.length < 5; y += 10) {
   for (let x = 70; x < image.width - 6 && blank.length < 5; x += 20) {
     const i = x * image.bpp;
     const px = [image.rows[y][i], image.rows[y][i + 1], image.rows[y][i + 2]];
-    if (px[0] === 11 && px[1] === 11 && px[2] === 13) blank.push([x, y]);
+    if (px.every((v, j) => v === background[j])) blank.push([x, y]);
   }
 }
 assert.ok(blank.length >= 5, `绘图区空白没有落在页面底色上，只找到 ${blank.length} 个`);

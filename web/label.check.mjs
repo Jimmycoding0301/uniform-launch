@@ -1,6 +1,6 @@
 import { demoOrigin } from "./demo-origin.mjs";
 import assert from "node:assert/strict";
-import { buildStepPath, formatBnb, formatPrice } from "./src/curve.ts";
+import { buildStepPath, formatPrice } from "./src/curve.ts";
 
 function box(text, x, y, anchor) {
   const width = text.length * 7.2;
@@ -22,10 +22,6 @@ function labels(plot, floor, clearing, yourPrice, width, height) {
   }
   if (plot.clearingY != null) {
     out.push(box(`清算价 ${formatPrice(clearing)}`, plot.right - 4, Math.max(14, plot.clearingY - 8), "end"));
-    const near = plot.right - (plot.crossX ?? plot.left) < 96;
-    const x = near ? (plot.crossX ?? plot.left) - 10 : (plot.crossX ?? plot.left) + 10;
-    const y = Math.min(plot.bottom - 16, plot.clearingY + 16);
-    out.push(box(`成交 ${formatBnb(plot.filled)} BNB`, x, y, near ? "end" : "start"));
   }
   for (const item of out) {
     assert.ok(item.left >= -1 && item.right <= width + 1, `标注出左右边界 ${item.text}`);
@@ -85,7 +81,6 @@ const pages = [
   ["1440", 1440, 900, `${demoOrigin}/?launcher=${book.open}`],
   ["390", 390, 844, `${demoOrigin}/?launcher=${book.open}`],
   ["done", 1440, 900, `${demoOrigin}/?launcher=${book.launched}`],
-  ["failed", 1440, 900, `${demoOrigin}/?launcher=${book.failed}`],
 ];
 for (const [name, width, height, url] of pages) {
   const page = await browser.newPage({ viewport: { width, height } });
@@ -112,5 +107,11 @@ for (const [name, width, height, url] of pages) {
   assert.deepEqual(problem, [], `${name} 标注：${problem.join("；")}`);
   await page.close();
 }
+const failed = await browser.newPage({ viewport: { width: 1440, height: 900 } });
+await failed.goto(`http://127.0.0.1:4317/?launcher=${book.failed}`, { waitUntil: "domcontentloaded" });
+const meter = failed.getByRole("meter", { name: "入池门槛完成度" });
+await meter.waitFor();
+const completion = Number(await meter.getAttribute("aria-valuenow"));
+assert.ok(completion >= 0 && completion <= 100, `入池进度 ${completion}`);
 await browser.close();
 console.log("页面上的标注也不出图、不重叠");
