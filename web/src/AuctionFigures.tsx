@@ -1,3 +1,4 @@
+import { useEffect, useRef } from "react";
 import { formatBnb, formatBnb4, formatPrice, formatTokens, parseBnb } from "./curve";
 
 type Preview = {
@@ -19,6 +20,16 @@ export function SimulationSummary({ simulation, selectedPrice, onPreset }: {
   onPreset: (price: string) => void;
 }) {
   const fill = simulation?.fills.at(-1);
+  const result = useRef<HTMLDivElement>(null);
+  const resultKey = fill ? `${fill.tokens}:${fill.spend}:${fill.refund}` : "";
+  const previous = useRef(resultKey);
+  useEffect(() => {
+    const changed = previous.current !== resultKey;
+    previous.current = resultKey;
+    if (!changed || !resultKey || window.matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+    const animation = result.current?.animate([{ opacity: 0.58 }, { opacity: 1 }], { duration: 180, easing: "ease-out" });
+    return () => animation?.cancel();
+  }, [resultKey]);
   return (
     <section className="simulation" aria-label="本笔模拟">
       <div className="simulation-presets" role="group" aria-label="以 1 BNB 预算试算限价">
@@ -31,16 +42,24 @@ export function SimulationSummary({ simulation, selectedPrice, onPreset }: {
         ))}
       </div>
       <div className="preview-head" aria-live="polite" aria-atomic="true">
-        <div><div className="kicker">本笔模拟 <span>预计成交</span></div>
-          <div className="chart-price">{fill ? formatTokens(fill.tokens) : "—"} <small>枚</small></div>
+        <div>
+          <div className="kicker">本笔预计成交</div>
+          <div className="preview-fill" ref={result}>
+            <div className="chart-price">{fill ? formatTokens(fill.tokens) : "—"} <small>枚</small></div>
+            {fill && fill.tokens === 0n && fill.refund > 0n && <span className="preview-outcome">全额退回</span>}
+          </div>
         </div>
         {simulation && fill ? (
-          <dl>
-            <div><dt>实付</dt><dd>{formatBnb(fill.spend)} BNB</dd></div>
-            <div><dt>退回</dt><dd>{formatBnb(fill.refund)} BNB</dd></div>
-            <div><dt>预计入池</dt><dd>{formatBnb(simulation.poolQuote)} BNB</dd></div>
-            <div><dt>模拟清算价</dt><dd>{formatPrice(simulation.clearingPrice)}</dd></div>
-          </dl>
+          <div className="preview-metrics">
+            <dl aria-label="本笔资金">
+              <div><dt>本笔实付</dt><dd>{formatBnb(fill.spend)} BNB</dd></div>
+              <div><dt>本笔退回</dt><dd>{formatBnb(fill.refund)} BNB</dd></div>
+            </dl>
+            <dl className="preview-market" aria-label="全场模拟">
+              <div><dt>全场入池</dt><dd>{formatBnb(simulation.poolQuote)} BNB</dd></div>
+              <div><dt>全场清算价</dt><dd>{formatPrice(simulation.clearingPrice)}</dd></div>
+            </dl>
+          </div>
         ) : <p>还不能算。请检查预算、限价及剩余席位。</p>}
       </div>
     </section>
