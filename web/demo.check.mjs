@@ -63,10 +63,7 @@ await missing.close();
 const down = await browser.newPage({ viewport: { width: 1440, height: 900 } });
 await down.goto(`${demoOrigin}/?demo=1`, { waitUntil: "domcontentloaded" });
 await down.getByText("0.00002").first().waitFor({ timeout: 8000 });
-await down.route("**/*", (route) => {
-  if (route.request().url().includes(":18545")) return route.abort();
-  return route.continue();
-});
+await down.context().setOffline(true);
 await down.locator(".hash-toggle").evaluate((el) => el.scrollIntoView({ block: "center" }));
 await down.getByRole("button", { name: "已发送？贴哈希核对" }).click();
 await down.locator("#txhash").fill(`0x${"ab".repeat(32)}`);
