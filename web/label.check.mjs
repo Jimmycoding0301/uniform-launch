@@ -108,7 +108,7 @@ for (const [name, width, height, url] of pages) {
   await page.close();
 }
 const failed = await browser.newPage({ viewport: { width: 1440, height: 900 } });
-await failed.goto(`http://127.0.0.1:4317/?launcher=${book.failed}`, { waitUntil: "domcontentloaded" });
+await failed.goto(`${demoOrigin}/?launcher=${book.failed}`, { waitUntil: "domcontentloaded" });
 const meter = failed.getByRole("meter", { name: "入池门槛完成度" });
 await meter.waitFor();
 const completion = Number(await meter.getAttribute("aria-valuenow"));
