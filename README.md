@@ -19,7 +19,7 @@ Agents submit a limit and a budget. One clearing at the end, one price for every
 | 要求 | 证据 |
 | --- | --- |
 | Flap：用模板做发射界面 | [flap-ui/launcher-detail](flap-ui/launcher-detail) 和 [检查器输出](docs/flap-integration.md) |
-| Flap：测试网完整发射 | [工厂](https://testnet.bscscan.com/address/0xE82642aC5c3B3B4b7D4cDeaf6a251Dc0BB7AcEfd)、[金库工厂](https://testnet.bscscan.com/address/0x2EF7a93b2fE4FBF520D5210b3ea39a72E5133dc6)。公共测试网发射回执待补，4.6 tBNB 单人方案与分叉彩排见 [docs/e2e-evidence.md](docs/e2e-evidence.md) |
+| Flap：测试网完整发射 | 公共测试网区块 144,926,064 已发射，4.45 tBNB 入池。[BscScan 发射回执](https://testnet.bscscan.com/tx/0x56d87f21c4dbd55227d9e619986555f150c7da5ddec5db663b201a9b9985ae20) · [拍卖、代币、池与 Vault](docs/public-testnet-evidence.md) |
 | Flap：Vault 按设计工作 | 分叉上金库增加 27516256919450703 wei，owner 提走相同数额，见 [证据](docs/e2e-evidence.md) |
 | 机制为什么不同 | [docs/why-uniform.md](docs/why-uniform.md) |
 | Developer：建在 BNB Chain | 链编号 97。[发射工厂已验证](https://testnet.bscscan.com/address/0xE82642aC5c3B3B4b7D4cDeaf6a251Dc0BB7AcEfd) |
@@ -124,9 +124,9 @@ Run the demo script to create and validate three local auctions. The printed URL
 
 ## 测试网
 
-公共测试网发射由 Jimmy 或指定操作者签名。4.6 tBNB 单人场的出价为 4.45 tBNB，准备工具会模拟并输出未签名交易。分叉回执和实际操作步骤见 [docs/e2e-evidence.md](docs/e2e-evidence.md)。
+2026 年 11 月 26 日，Uniform Launch 在 BSC 公共测试网（链 97）通过 Flap 完成发射。清算价为每枚 0.0000089 tBNB，实际入池 4.45 tBNB。发射交易为 [0x56d87f21c4dbd55227d9e619986555f150c7da5ddec5db663b201a9b9985ae20](https://testnet.bscscan.com/tx/0x56d87f21c4dbd55227d9e619986555f150c7da5ddec5db663b201a9b9985ae20)。
 
-Public testnet launch receipts are pending. The single-signer preset prepares unsigned transactions.
+The auction launched through Flap at block 144,926,064 on BSC Testnet. One bid cleared at 0.0000089 tBNB per token and supplied 4.45 tBNB to the pool. [Public transaction receipts and contract addresses](docs/public-testnet-evidence.md) · [Local fork rehearsal and operator steps](docs/e2e-evidence.md)
 
 ## 代理接口
 
@@ -146,9 +146,9 @@ No signing and no broadcasting in the app, the CLI, or the MCP server. Forge scr
 
 ## 已知限制
 
-每场可配置一至四个身份来源。合约校验钱包和来源内的身份编号，并限制重复出价。测试网 Binance Agent ID 是替身。身份的唯一性取决于来源的发放规则。单人预设需准备 4.6 tBNB。公共测试网发射待项目方执行。
+每场可配置一至四个身份来源。合约校验钱包和来源内的身份编号，并限制重复出价。测试网 Binance Agent ID 是替身。身份的唯一性取决于来源的发放规则。单人预设需准备 4.6 tBNB。
 
-Each auction accepts one to four configured identity sources. A wallet and a source-specific identifier can each bid once. Identity uniqueness depends on the issuer. The testnet Binance Agent ID is a stand-in. The single-signer preset requires 4.6 tBNB. Public testnet launch evidence is pending.
+Each auction accepts one to four configured identity sources. A wallet and a source-specific identifier can each bid once. Identity uniqueness depends on the issuer. The testnet Binance Agent ID is a stand-in. The single-signer preset requires 4.6 tBNB.
 
 ## 商业模式
 

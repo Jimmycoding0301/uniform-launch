@@ -14,7 +14,7 @@
 | 1:30–1:45 | 点下一幕 | 窗口结束后一次结算。开盘价、入池和金库都在这里。 | 第 4 幕，已发射，开盘价 0.00008，入池 40 BNB，金库显示分叉上买卖产生的税款余额 |
 | 1:45–2:00 | 点下一幕 | 三笔共 3 BNB，距离入池门槛还差约 1.34 BNB。每个人都能领回全部预算。 | 第 5 幕，已募 3 BNB，门槛约 4.34 BNB，可以复制退款指令 |
 | 2:00–2:15 | 点下一幕，指向两个单价比 | 这一幕单独做了对照模拟。同一组九笔出价，从第一笔到最后一笔成交，统一清算的单价比是 1，常数乘积曲线是 1.7789。 | 第 6 幕，两种机制下最后与最先成交的单价比 |
-| 2:15–2:30 | 停在第 6 幕 | 组件包过了 Flap 检查器。测试网合约已验证。代理可以用 MCP 调用。这六幕在本机分叉上运行，真实测试网发射回执待补。 | 对照数字还在 |
+| 2:15–2:30 | 停在第 6 幕 | 组件包过了 Flap 检查器。测试网合约已验证。代理可以用 MCP 调用。这六幕在本机分叉上运行。公开测试网也已完成发射，4.45 tBNB 入池。 | 对照数字还在 |
 
 ## English
 
@@ -28,7 +28,7 @@
 | 1:30–1:45 | Click 下一幕 | After the window, one settlement. Open price, pool and vault are here. | Scene 4. 已发射, open price 0.00008, 40 BNB in the pool, live vault balance from trades on the fork |
 | 1:45–2:00 | Click 下一幕 | Three bids total 3 BNB, about 1.34 BNB short of the pool minimum. Each bidder can claim a full refund. | Scene 5. 3 BNB in bids, minimum about 4.34 BNB, button 复制退款指令 |
 | 2:00–2:15 | Click 下一幕 and point to the two price ratios | This separate simulation uses the same nine bids for both mechanisms. The last fill costs the same per token as the first under uniform clearing, and 1.7789 times as much on the constant-product curve. | Scene 6, last-to-first fill price ratios of 1 and 1.7789 |
-| 2:15–2:30 | Stay on scene 6 | The component passed Flap's checker. The testnet contracts are verified. An agent can call the MCP server. These six scenes run on a local fork. A live testnet launch receipt is pending. | The comparison stays on screen |
+| 2:15–2:30 | Stay on scene 6 | The component passed Flap's checker. The testnet contracts are verified. An agent can call the MCP server. These six scenes run on a local fork. We also launched on public BSC Testnet, with 4.45 tBNB deposited into the pool. | The comparison stays on screen |
 
 ## 出事预案
 
