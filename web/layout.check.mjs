@@ -31,8 +31,8 @@ const rails = await desk.evaluate(() => ({
   solid: getComputedStyle(document.querySelector(".bid.in")).boxShadow.includes(getComputedStyle(document.querySelector(".primary")).backgroundColor),
   accent: getComputedStyle(document.querySelector(".primary")).backgroundColor,
 }));
-const limitStroke = await desk.evaluate(() => getComputedStyle(document.querySelector(".your-line")).stroke);
-assert.equal(limitStroke, rails.accent, `接单页限价线与主操作不一致 ${limitStroke}`);
+const limitStroke = await desk.evaluate(() => getComputedStyle(document.querySelector(".demand-curve")).stroke);
+assert.equal(limitStroke, rails.accent, `接单页需求曲线与主操作不一致 ${limitStroke}`);
 assert.ok(rails.mid, "边际行不是虚线");
 assert.ok(rails.solid, "价内行不是实线");
 const stack = await desk.evaluate(() => {
@@ -86,7 +86,7 @@ const covered = await phone.evaluate(() => {
 assert.deepEqual(covered, [], `被挡住的出价行：${covered.join(" | ")}`);
 const reduced = await browser.newPage({ viewport: { width: 1440, height: 900 }, reducedMotion: "reduce" });
 await reduced.goto(`${demoOrigin}/?launcher=${book.launched}`, { waitUntil: "domcontentloaded" });
-await reduced.waitForSelector(".uniform-rect");
+await reduced.waitForSelector(".clear-point");
 await reduced.waitForTimeout(300);
 const running = await reduced.evaluate(() => document.getAnimations().filter((item) => item.playState === "running").length);
 assert.equal(running, 0, `减少动态后仍有 ${running} 个动画`);

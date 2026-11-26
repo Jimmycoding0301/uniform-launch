@@ -885,7 +885,7 @@ export function App() {
                       <div className="market-note">
                         <div><strong>已募 {formatBnb(raised)} BNB</strong><span aria-hidden="true"> · </span>
                           <span title={poolSetsTarget ? "最低入池额" : "按保留价售完所需的最低预算"}>门槛 {formatBnb(targetRaise)} BNB</span></div>
-                        <small>{poolSetsTarget ? "按最低入池额" : "按保留价售完"}，{phase === "done" ? "实际入池" : "预计入池"} {formatBnb(phase === "done" ? snap.poolQuote : snap.previewQuote)} BNB</small>
+                        <small><span>{poolSetsTarget ? "按最低入池额" : "按保留价售完"}，</span><span>{phase === "done" ? "实际入池" : "预计入池"} {formatBnb(phase === "done" ? snap.poolQuote : snap.previewQuote)} BNB</span></small>
                       </div>
                     </div>
                   )}
@@ -898,10 +898,6 @@ export function App() {
                       bids={phase === "wait" ? [] : snap.bids}
                       floor={snap.floor}
                       clearing={phase === "wait" || failed ? null : clearingNow > 0n ? clearingNow : null}
-                      failed={failed}
-                      settle={snap.status === 1}
-                      intro={showIntro}
-                      reduced={reduced}
                       yourPrice={phase === "open" ? priceWei : null}
                       hideEmpty={phase === "wait"}
                     />
