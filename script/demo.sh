@@ -8,7 +8,7 @@ if [[ -n "${DEMO_WEB_PORT:-}" ]] && { [[ ! "$DEMO_WEB_PORT" =~ ^[1-9][0-9]{0,4}$
   echo "DEMO_WEB_PORT 应为 1 到 65535 的整数。" >&2
   exit 1
 fi
-ANVIL_PORT=18545 DEMO_JSON="$ROOT/web/public/demo.json" bash script/local-fork.sh
+DEMO_JSON="$ROOT/web/public/demo.json" bash script/local-fork.sh
 if [ ! -d web/node_modules ]; then
   (cd web && npm ci)
 fi

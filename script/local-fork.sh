@@ -6,6 +6,10 @@ ROOT="$(cd "$(dirname "$0")/.." && pwd)"
 cd "$ROOT"
 RPC="${BSC_TESTNET_RPC_URL:-https://bsc-testnet-rpc.publicnode.com}"
 PORT="${ANVIL_PORT:-18545}"
+if [[ ! "$PORT" =~ ^[1-9][0-9]{0,4}$ ]] || (( PORT > 65535 )); then
+  echo "ANVIL_PORT 应为 1 到 65535 的整数。" >&2
+  exit 1
+fi
 ANVIL_RPC="http://127.0.0.1:${PORT}"
 DEMO_JSON="${DEMO_JSON:-$ROOT/web/public/demo.json}"
 case "$ANVIL_RPC" in
@@ -22,6 +26,8 @@ if ! cast block-number --rpc-url "$ANVIL_RPC" >/dev/null 2>&1; then
     sleep 1
   done
 fi
+
+cast rpc anvil_nodeInfo --rpc-url "$ANVIL_RPC" >/dev/null || { echo "此端口没有运行本机 Anvil。" >&2; exit 1; }
 
 fund() {
   cast rpc anvil_setBalance "$1" 0x3635C9ADC5DEA00000 --rpc-url "$ANVIL_RPC" >/dev/null
